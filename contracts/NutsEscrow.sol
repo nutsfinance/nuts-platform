@@ -26,14 +26,14 @@ contract NutsEscrow is Secondary {
 
     function deposit() public payable {
         uint256 amount = msg.value;
-        _etherBalance[msg.sender].add(amount);
+        _etherBalance[msg.sender] = _etherBalance[msg.sender].add(amount);
 
         emit EtherDeposited(msg.sender, amount);
     }
 
     function withdraw(uint256 amount) public {
         require(_etherBalance[msg.sender] >= amount, "Insufficial ether balance to withdraw");
-        _etherBalance[msg.sender].sub(amount);
+        _etherBalance[msg.sender] = _etherBalance[msg.sender].sub(amount);
 
         msg.sender.transfer(amount);
 
@@ -48,14 +48,14 @@ contract NutsEscrow is Secondary {
     }
 
     function depositToken(ERC20 token, uint256 amount) public {
-        _tokenBalance[msg.sender][address(token)].add(amount);
+        _tokenBalance[msg.sender][address(token)] = _tokenBalance[msg.sender][address(token)].add(amount);
         require(token.transferFrom(msg.sender, address(this), amount), "Insufficient balance to deposit");
 
         emit TokenDeposited(msg.sender, address(token), amount);
     }
 
     function withdrawToken(ERC20 token, uint256 amount) public {
-        _tokenBalance[msg.sender][address(token)].sub(amount);
+        _tokenBalance[msg.sender][address(token)] = _tokenBalance[msg.sender][address(token)].sub(amount);
         require(token.transferFrom(address(this), msg.sender, amount), "Insufficient balance to withdraw");
 
         emit TokenWithdrawn(msg.sender, address(token), amount);
@@ -67,25 +67,25 @@ contract NutsEscrow is Secondary {
 
     function transferToIssuance(address payee, string memory issuance_id, uint256 amount) public onlyPrimary {
         require(_etherBalance[payee] >= amount, "Insufficient Ether balance");
-        _etherBalance[payee].sub(amount);
+        _etherBalance[payee] = _etherBalance[payee].sub(amount);
         _issuanceEther[issuance_id].add(amount);
     }
 
     function transferFromIssuance(address payee, string memory issuance_id, uint256 amount) public onlyPrimary {
         require(_issuanceEther[issuance_id] >= amount, "Insufficient Ether balance");
-        _issuanceEther[issuance_id].sub(amount);
+        _etherBalance[payee] = _issuanceEther[issuance_id].sub(amount);
         _etherBalance[payee].add(amount);
     }
 
     function transferTokenToIssuance(address payee, string memory issuance_id, ERC20 token, uint256 amount) public onlyPrimary {
         require(_tokenBalance[payee][address(token)] >= amount, "Inssufficient token balance");
-        _tokenBalance[payee][address(token)].sub(amount);
-        _issuanceTokens[issuance_id][address(token)].add(amount);
+        _tokenBalance[payee][address(token)] = _tokenBalance[payee][address(token)].sub(amount);
+        _issuanceTokens[issuance_id][address(token)] = _issuanceTokens[issuance_id][address(token)].add(amount);
     }
 
     function transferTokenFromIssuance(address payee, string memory issuance_id, ERC20 token, uint256 amount) public onlyPrimary {
         require(_issuanceTokens[issuance_id][address(token)] >= amount, "Insufficient token balance");
-        _issuanceTokens[issuance_id][address(token)].sub(amount);
-        _tokenBalance[payee][address(token)].add(amount);
+        _tokenBalance[payee][address(token)] = _issuanceTokens[issuance_id][address(token)].sub(amount);
+        _issuanceTokens[issuance_id][address(token)] = _tokenBalance[payee][address(token)].add(amount);
     }
 }
