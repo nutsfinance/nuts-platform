@@ -1,0 +1,103 @@
+{
+  "contractName": "Lockup",
+  "abi": [],
+  "bytecode": "0x6080604052348015600f57600080fd5b50603580601d6000396000f3fe6080604052600080fdfea165627a7a72305820688b2880ff8391edf43627e0f1a522c232f6981dadef87eb044b7bc0816088da0029",
+  "deployedBytecode": "0x6080604052600080fdfea165627a7a72305820688b2880ff8391edf43627e0f1a522c232f6981dadef87eb044b7bc0816088da0029",
+  "sourceMap": "25:24:9:-;;;;8:9:-1;5:2;;;30:1;27;20:12;5:2;25:24:9;;;;;;;",
+  "deployedSourceMap": "25:24:9:-;;;;;",
+  "source": "pragma solidity ^0.5.0;\n\ncontract Lockup {\n    \n}",
+  "sourcePath": "/Users/shengdading/git/nuts-platform/contracts/instrument/Lockup.sol",
+  "ast": {
+    "absolutePath": "/Users/shengdading/git/nuts-platform/contracts/instrument/Lockup.sol",
+    "exportedSymbols": {
+      "Lockup": [
+        517
+      ]
+    },
+    "id": 518,
+    "nodeType": "SourceUnit",
+    "nodes": [
+      {
+        "id": 516,
+        "literals": [
+          "solidity",
+          "^",
+          "0.5",
+          ".0"
+        ],
+        "nodeType": "PragmaDirective",
+        "src": "0:23:9"
+      },
+      {
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "contract",
+        "documentation": null,
+        "fullyImplemented": true,
+        "id": 517,
+        "linearizedBaseContracts": [
+          517
+        ],
+        "name": "Lockup",
+        "nodeType": "ContractDefinition",
+        "nodes": [],
+        "scope": 518,
+        "src": "25:24:9"
+      }
+    ],
+    "src": "0:49:9"
+  },
+  "legacyAST": {
+    "absolutePath": "/Users/shengdading/git/nuts-platform/contracts/instrument/Lockup.sol",
+    "exportedSymbols": {
+      "Lockup": [
+        517
+      ]
+    },
+    "id": 518,
+    "nodeType": "SourceUnit",
+    "nodes": [
+      {
+        "id": 516,
+        "literals": [
+          "solidity",
+          "^",
+          "0.5",
+          ".0"
+        ],
+        "nodeType": "PragmaDirective",
+        "src": "0:23:9"
+      },
+      {
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "contract",
+        "documentation": null,
+        "fullyImplemented": true,
+        "id": 517,
+        "linearizedBaseContracts": [
+          517
+        ],
+        "name": "Lockup",
+        "nodeType": "ContractDefinition",
+        "nodes": [],
+        "scope": 518,
+        "src": "25:24:9"
+      }
+    ],
+    "src": "0:49:9"
+  },
+  "compiler": {
+    "name": "solc",
+    "version": "0.5.0+commit.1d4f565a.Emscripten.clang"
+  },
+  "networks": {},
+  "schemaVersion": "3.0.1",
+  "updatedAt": "2019-03-01T02:11:19.238Z",
+  "devdoc": {
+    "methods": {}
+  },
+  "userdoc": {
+    "methods": {}
+  }
+}

@@ -1,0 +1,103 @@
+{
+  "contractName": "Loan",
+  "abi": [],
+  "bytecode": "0x6080604052348015600f57600080fd5b50603580601d6000396000f3fe6080604052600080fdfea165627a7a7230582022c728dab41f72d40092d558a113a7488a126645541a7d20ae3bf85b4d4403b70029",
+  "deployedBytecode": "0x6080604052600080fdfea165627a7a7230582022c728dab41f72d40092d558a113a7488a126645541a7d20ae3bf85b4d4403b70029",
+  "sourceMap": "25:22:8:-;;;;8:9:-1;5:2;;;30:1;27;20:12;5:2;25:22:8;;;;;;;",
+  "deployedSourceMap": "25:22:8:-;;;;;",
+  "source": "pragma solidity ^0.5.0;\n\ncontract Loan {\n    \n}",
+  "sourcePath": "/Users/shengdading/git/nuts-platform/contracts/instrument/Loan.sol",
+  "ast": {
+    "absolutePath": "/Users/shengdading/git/nuts-platform/contracts/instrument/Loan.sol",
+    "exportedSymbols": {
+      "Loan": [
+        514
+      ]
+    },
+    "id": 515,
+    "nodeType": "SourceUnit",
+    "nodes": [
+      {
+        "id": 513,
+        "literals": [
+          "solidity",
+          "^",
+          "0.5",
+          ".0"
+        ],
+        "nodeType": "PragmaDirective",
+        "src": "0:23:8"
+      },
+      {
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "contract",
+        "documentation": null,
+        "fullyImplemented": true,
+        "id": 514,
+        "linearizedBaseContracts": [
+          514
+        ],
+        "name": "Loan",
+        "nodeType": "ContractDefinition",
+        "nodes": [],
+        "scope": 515,
+        "src": "25:22:8"
+      }
+    ],
+    "src": "0:47:8"
+  },
+  "legacyAST": {
+    "absolutePath": "/Users/shengdading/git/nuts-platform/contracts/instrument/Loan.sol",
+    "exportedSymbols": {
+      "Loan": [
+        514
+      ]
+    },
+    "id": 515,
+    "nodeType": "SourceUnit",
+    "nodes": [
+      {
+        "id": 513,
+        "literals": [
+          "solidity",
+          "^",
+          "0.5",
+          ".0"
+        ],
+        "nodeType": "PragmaDirective",
+        "src": "0:23:8"
+      },
+      {
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "contract",
+        "documentation": null,
+        "fullyImplemented": true,
+        "id": 514,
+        "linearizedBaseContracts": [
+          514
+        ],
+        "name": "Loan",
+        "nodeType": "ContractDefinition",
+        "nodes": [],
+        "scope": 515,
+        "src": "25:22:8"
+      }
+    ],
+    "src": "0:47:8"
+  },
+  "compiler": {
+    "name": "solc",
+    "version": "0.5.0+commit.1d4f565a.Emscripten.clang"
+  },
+  "networks": {},
+  "schemaVersion": "3.0.1",
+  "updatedAt": "2019-03-01T02:11:19.237Z",
+  "devdoc": {
+    "methods": {}
+  },
+  "userdoc": {
+    "methods": {}
+  }
+}

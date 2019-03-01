@@ -1,0 +1,103 @@
+{
+  "contractName": "ESOP",
+  "abi": [],
+  "bytecode": "0x6080604052348015600f57600080fd5b50603580601d6000396000f3fe6080604052600080fdfea165627a7a723058200a213a2801db174579367a00e165f9d1121f5eb3f9c26087744250621b377e3f0029",
+  "deployedBytecode": "0x6080604052600080fdfea165627a7a723058200a213a2801db174579367a00e165f9d1121f5eb3f9c26087744250621b377e3f0029",
+  "sourceMap": "25:22:7:-;;;;8:9:-1;5:2;;;30:1;27;20:12;5:2;25:22:7;;;;;;;",
+  "deployedSourceMap": "25:22:7:-;;;;;",
+  "source": "pragma solidity ^0.5.0;\n\ncontract ESOP {\n    \n}",
+  "sourcePath": "/Users/shengdading/git/nuts-platform/contracts/instrument/ESOP.sol",
+  "ast": {
+    "absolutePath": "/Users/shengdading/git/nuts-platform/contracts/instrument/ESOP.sol",
+    "exportedSymbols": {
+      "ESOP": [
+        511
+      ]
+    },
+    "id": 512,
+    "nodeType": "SourceUnit",
+    "nodes": [
+      {
+        "id": 510,
+        "literals": [
+          "solidity",
+          "^",
+          "0.5",
+          ".0"
+        ],
+        "nodeType": "PragmaDirective",
+        "src": "0:23:7"
+      },
+      {
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "contract",
+        "documentation": null,
+        "fullyImplemented": true,
+        "id": 511,
+        "linearizedBaseContracts": [
+          511
+        ],
+        "name": "ESOP",
+        "nodeType": "ContractDefinition",
+        "nodes": [],
+        "scope": 512,
+        "src": "25:22:7"
+      }
+    ],
+    "src": "0:47:7"
+  },
+  "legacyAST": {
+    "absolutePath": "/Users/shengdading/git/nuts-platform/contracts/instrument/ESOP.sol",
+    "exportedSymbols": {
+      "ESOP": [
+        511
+      ]
+    },
+    "id": 512,
+    "nodeType": "SourceUnit",
+    "nodes": [
+      {
+        "id": 510,
+        "literals": [
+          "solidity",
+          "^",
+          "0.5",
+          ".0"
+        ],
+        "nodeType": "PragmaDirective",
+        "src": "0:23:7"
+      },
+      {
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "contract",
+        "documentation": null,
+        "fullyImplemented": true,
+        "id": 511,
+        "linearizedBaseContracts": [
+          511
+        ],
+        "name": "ESOP",
+        "nodeType": "ContractDefinition",
+        "nodes": [],
+        "scope": 512,
+        "src": "25:22:7"
+      }
+    ],
+    "src": "0:47:7"
+  },
+  "compiler": {
+    "name": "solc",
+    "version": "0.5.0+commit.1d4f565a.Emscripten.clang"
+  },
+  "networks": {},
+  "schemaVersion": "3.0.1",
+  "updatedAt": "2019-03-01T02:11:19.237Z",
+  "devdoc": {
+    "methods": {}
+  },
+  "userdoc": {
+    "methods": {}
+  }
+}

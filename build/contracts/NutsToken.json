@@ -1,0 +1,103 @@
+{
+  "contractName": "NutsToken",
+  "abi": [],
+  "bytecode": "0x6080604052348015600f57600080fd5b50603580601d6000396000f3fe6080604052600080fdfea165627a7a7230582009fcfb1864a2ff40663ad9705e245b1523f647be34288290ec0bc3a20e538abb0029",
+  "deployedBytecode": "0x6080604052600080fdfea165627a7a7230582009fcfb1864a2ff40663ad9705e245b1523f647be34288290ec0bc3a20e538abb0029",
+  "sourceMap": "25:27:4:-;;;;8:9:-1;5:2;;;30:1;27;20:12;5:2;25:27:4;;;;;;;",
+  "deployedSourceMap": "25:27:4:-;;;;;",
+  "source": "pragma solidity ^0.5.0;\n\ncontract NutsToken {\n    \n}",
+  "sourcePath": "/Users/shengdading/git/nuts-platform/contracts/NutsToken.sol",
+  "ast": {
+    "absolutePath": "/Users/shengdading/git/nuts-platform/contracts/NutsToken.sol",
+    "exportedSymbols": {
+      "NutsToken": [
+        465
+      ]
+    },
+    "id": 466,
+    "nodeType": "SourceUnit",
+    "nodes": [
+      {
+        "id": 464,
+        "literals": [
+          "solidity",
+          "^",
+          "0.5",
+          ".0"
+        ],
+        "nodeType": "PragmaDirective",
+        "src": "0:23:4"
+      },
+      {
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "contract",
+        "documentation": null,
+        "fullyImplemented": true,
+        "id": 465,
+        "linearizedBaseContracts": [
+          465
+        ],
+        "name": "NutsToken",
+        "nodeType": "ContractDefinition",
+        "nodes": [],
+        "scope": 466,
+        "src": "25:27:4"
+      }
+    ],
+    "src": "0:52:4"
+  },
+  "legacyAST": {
+    "absolutePath": "/Users/shengdading/git/nuts-platform/contracts/NutsToken.sol",
+    "exportedSymbols": {
+      "NutsToken": [
+        465
+      ]
+    },
+    "id": 466,
+    "nodeType": "SourceUnit",
+    "nodes": [
+      {
+        "id": 464,
+        "literals": [
+          "solidity",
+          "^",
+          "0.5",
+          ".0"
+        ],
+        "nodeType": "PragmaDirective",
+        "src": "0:23:4"
+      },
+      {
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "contract",
+        "documentation": null,
+        "fullyImplemented": true,
+        "id": 465,
+        "linearizedBaseContracts": [
+          465
+        ],
+        "name": "NutsToken",
+        "nodeType": "ContractDefinition",
+        "nodes": [],
+        "scope": 466,
+        "src": "25:27:4"
+      }
+    ],
+    "src": "0:52:4"
+  },
+  "compiler": {
+    "name": "solc",
+    "version": "0.5.0+commit.1d4f565a.Emscripten.clang"
+  },
+  "networks": {},
+  "schemaVersion": "3.0.1",
+  "updatedAt": "2019-03-01T02:11:19.237Z",
+  "devdoc": {
+    "methods": {}
+  },
+  "userdoc": {
+    "methods": {}
+  }
+}

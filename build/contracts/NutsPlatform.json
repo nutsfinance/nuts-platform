@@ -1,0 +1,103 @@
+{
+  "contractName": "NutsPlatform",
+  "abi": [],
+  "bytecode": "0x6080604052348015600f57600080fd5b50603580601d6000396000f3fe6080604052600080fdfea165627a7a7230582003e8cf3d1a4c3b4e559fab7274e28d9a973489e4d74e20500eb54be1733777a40029",
+  "deployedBytecode": "0x6080604052600080fdfea165627a7a7230582003e8cf3d1a4c3b4e559fab7274e28d9a973489e4d74e20500eb54be1733777a40029",
+  "sourceMap": "25:30:3:-;;;;8:9:-1;5:2;;;30:1;27;20:12;5:2;25:30:3;;;;;;;",
+  "deployedSourceMap": "25:30:3:-;;;;;",
+  "source": "pragma solidity ^0.5.0;\n\ncontract NutsPlatform {\n    \n}",
+  "sourcePath": "/Users/shengdading/git/nuts-platform/contracts/NutsPlatform.sol",
+  "ast": {
+    "absolutePath": "/Users/shengdading/git/nuts-platform/contracts/NutsPlatform.sol",
+    "exportedSymbols": {
+      "NutsPlatform": [
+        462
+      ]
+    },
+    "id": 463,
+    "nodeType": "SourceUnit",
+    "nodes": [
+      {
+        "id": 461,
+        "literals": [
+          "solidity",
+          "^",
+          "0.5",
+          ".0"
+        ],
+        "nodeType": "PragmaDirective",
+        "src": "0:23:3"
+      },
+      {
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "contract",
+        "documentation": null,
+        "fullyImplemented": true,
+        "id": 462,
+        "linearizedBaseContracts": [
+          462
+        ],
+        "name": "NutsPlatform",
+        "nodeType": "ContractDefinition",
+        "nodes": [],
+        "scope": 463,
+        "src": "25:30:3"
+      }
+    ],
+    "src": "0:55:3"
+  },
+  "legacyAST": {
+    "absolutePath": "/Users/shengdading/git/nuts-platform/contracts/NutsPlatform.sol",
+    "exportedSymbols": {
+      "NutsPlatform": [
+        462
+      ]
+    },
+    "id": 463,
+    "nodeType": "SourceUnit",
+    "nodes": [
+      {
+        "id": 461,
+        "literals": [
+          "solidity",
+          "^",
+          "0.5",
+          ".0"
+        ],
+        "nodeType": "PragmaDirective",
+        "src": "0:23:3"
+      },
+      {
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "contract",
+        "documentation": null,
+        "fullyImplemented": true,
+        "id": 462,
+        "linearizedBaseContracts": [
+          462
+        ],
+        "name": "NutsPlatform",
+        "nodeType": "ContractDefinition",
+        "nodes": [],
+        "scope": 463,
+        "src": "25:30:3"
+      }
+    ],
+    "src": "0:55:3"
+  },
+  "compiler": {
+    "name": "solc",
+    "version": "0.5.0+commit.1d4f565a.Emscripten.clang"
+  },
+  "networks": {},
+  "schemaVersion": "3.0.1",
+  "updatedAt": "2019-03-01T02:11:19.237Z",
+  "devdoc": {
+    "methods": {}
+  },
+  "userdoc": {
+    "methods": {}
+  }
+}

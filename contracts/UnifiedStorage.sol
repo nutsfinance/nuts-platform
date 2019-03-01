@@ -1,6 +1,6 @@
-pragma solidity ^0.5.2;
+pragma solidity ^0.5.0;
 
-import "node_modules/openzeppelin-solidity/contracts/ownership/Secondary.sol";
+import "../node_modules/openzeppelin-solidity/contracts/ownership/Secondary.sol";
 
 contract UnifiedStorage is Secondary {
     mapping(string => string) private _data;
