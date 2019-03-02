@@ -1,0 +1,26 @@
+{
+  "name": "nuts-platform",
+  "version": "1.0.0",
+  "description": "The NUTS Platform",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "openzeppelin-solidity": "^2.1.3"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "truffle test --development"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nutsfoundation/nuts-platform.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nutsfoundation/nuts-platform/issues"
+  },
+  "homepage": "https://github.com/nutsfoundation/nuts-platform#readme"
+}
