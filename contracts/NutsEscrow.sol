@@ -7,10 +7,11 @@ import "../node_modules/openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 contract NutsEscrow is Secondary {
     using SafeMath for uint256;
 
-    event EtherDeposited(address indexed, uint256 amount);
-    event EtherWithdrawn(address indexed, uint256 amount);
+    event EtherDeposited(address indexed payee, uint256 amount);
+    event EtherWithdrawn(address indexed payee, uint256 amount);
     event TokenDeposited(address indexed payee, address indexed token, uint256 amount);
     event TokenWithdrawn(address indexed payee, address indexed token, uint256 amount);
+    event EtherTransfered(address indexed payee, string indexed insurance_id, bool indexed fromIssuance, uint256 amount);
 
     mapping(address => uint256) private _etherBalance;                          // Balance of Ether deposited by user
     mapping(address => mapping(address => uint256)) private _tokenBalance;      // Balance of token deposited by user
@@ -56,7 +57,7 @@ contract NutsEscrow is Secondary {
 
     function withdrawToken(ERC20 token, uint256 amount) public {
         _tokenBalance[msg.sender][address(token)] = _tokenBalance[msg.sender][address(token)].sub(amount);
-        require(token.transferFrom(address(this), msg.sender, amount), "Insufficient balance to withdraw");
+        require(token.transfer(msg.sender, amount), "Insufficient balance to withdraw");
 
         emit TokenWithdrawn(msg.sender, address(token), amount);
     }
@@ -65,16 +66,24 @@ contract NutsEscrow is Secondary {
         API used by NUTS platform to hold tokens for issuance
      */
 
+    function balanceOfIssuance(string memory issuance_id) public view onlyPrimary returns (uint256) {
+        return _issuanceEther[issuance_id];
+    }
+
     function transferToIssuance(address payee, string memory issuance_id, uint256 amount) public onlyPrimary {
         require(_etherBalance[payee] >= amount, "Insufficient Ether balance");
         _etherBalance[payee] = _etherBalance[payee].sub(amount);
-        _issuanceEther[issuance_id].add(amount);
+        _issuanceEther[issuance_id] = _issuanceEther[issuance_id].add(amount);
     }
 
     function transferFromIssuance(address payee, string memory issuance_id, uint256 amount) public onlyPrimary {
         require(_issuanceEther[issuance_id] >= amount, "Insufficient Ether balance");
-        _etherBalance[payee] = _issuanceEther[issuance_id].sub(amount);
-        _etherBalance[payee].add(amount);
+        _issuanceEther[issuance_id] = _issuanceEther[issuance_id].sub(amount);
+        _etherBalance[payee] = _etherBalance[payee].add(amount);
+    }
+
+    function tokenBalanceOfIssuance(string memory issuance_id, ERC20 token) public view onlyPrimary returns (uint256) {
+        return _issuanceTokens[issuance_id][address(token)];
     }
 
     function transferTokenToIssuance(address payee, string memory issuance_id, ERC20 token, uint256 amount) public onlyPrimary {
@@ -85,7 +94,7 @@ contract NutsEscrow is Secondary {
 
     function transferTokenFromIssuance(address payee, string memory issuance_id, ERC20 token, uint256 amount) public onlyPrimary {
         require(_issuanceTokens[issuance_id][address(token)] >= amount, "Insufficient token balance");
-        _tokenBalance[payee][address(token)] = _issuanceTokens[issuance_id][address(token)].sub(amount);
-        _issuanceTokens[issuance_id][address(token)] = _tokenBalance[payee][address(token)].add(amount);
+        _tokenBalance[payee][address(token)] = _tokenBalance[payee][address(token)].add(amount);
+        _issuanceTokens[issuance_id][address(token)] = _issuanceTokens[issuance_id][address(token)].sub(amount);
     }
 }

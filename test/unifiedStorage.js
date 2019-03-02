@@ -21,7 +21,7 @@ contract('UnifiedStorage', (accounts) => {
       assert.equal(valueContent, 'this is new value', 'The content of the value is not correct');
    }),
    it('should return empty value', async () => {
-      const valueContent = await contractInstance.lookup('this is another key');
+      const valueContent = await contractInstance.lookup('this is another   key');
       
       assert.equal(valueContent, '', 'The content of the value is not correct');
    })

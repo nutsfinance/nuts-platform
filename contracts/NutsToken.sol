@@ -1,5 +1,7 @@
 pragma solidity ^0.5.0;
 
-contract NutsToken {
+import "../node_modules/openzeppelin-solidity/contracts/token/ERC20/ERC20Mintable.sol";
+
+contract NutsToken is ERC20Mintable {
     
 }
