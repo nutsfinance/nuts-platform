@@ -48,7 +48,7 @@ contract('NutsEscrow', (accounts) => {
         // console.log(escrowInstance.address);
         // console.log(tokenInstance.address);
         let amount = 10000000000000000000;
-        let issuanceId = '100';
+        let issuanceId = 100;
         await escrowInstance.deposit({from: accounts[0], value: amount});
         await escrowInstance.transferToIssuance(accounts[0], issuanceId, new web3.utils.BN('4000000000000000000'));
         let accountBalance = web3.utils.fromWei(await escrowInstance.balanceOf(), 'Ether');
@@ -67,7 +67,7 @@ contract('NutsEscrow', (accounts) => {
     it('should allow issuance to hold ERC20 tokens', async () => {
         // console.log(escrowInstance.address);
         // console.log(tokenInstance.address);
-        let issuanceId = '100';
+        let issuanceId = 100;
         await tokenInstance.mint(accounts[0], 200);
         await tokenInstance.approve(escrowInstance.address, 150);
         
