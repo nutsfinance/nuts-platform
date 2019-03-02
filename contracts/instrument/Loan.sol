@@ -1,5 +1,7 @@
 pragma solidity ^0.5.0;
 
-contract Loan {
+import "../Instrument.sol";
+
+contract Loan is Instrument {
     
 }

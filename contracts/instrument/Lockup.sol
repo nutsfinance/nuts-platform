@@ -1,5 +1,7 @@
 pragma solidity ^0.5.0;
 
-contract Lockup {
+import "../Instrument.sol";
+
+contract Lockup is Instrument {
     
 }

@@ -4,7 +4,7 @@ import "./UnifiedStorage.sol";
 import "./InstrumentRegistry.sol";
 import "./NutsToken.sol";
 import "./NutsEscrow.sol";
-import "./IInstrument.sol";
+import "./Instrument.sol";
 
 contract NutsPlatform {
     uint256 private lastIssuanceId = 0;
@@ -35,11 +35,27 @@ contract NutsPlatform {
         require(_instrumentRegistry.validate(instrument_address), "Instrument invalid");
         lastIssuanceId = lastIssuanceId + 1;
         uint issuance_id = lastIssuanceId;
-        IInstrument instrument = IInstrument(instrument_address);
+        Instrument instrument = Instrument(instrument_address);
         string memory new_state = instrument.createIssuance(issuance_id, state);
         _storage.save(bytes32ToString(bytes32(issuance_id)), new_state);
 
         return issuance_id;
+    }
+
+    function engageIssuance(uint256 issuance_id, string memory buyer_state) public returns (uint256) {
+        return 0;
+    }
+
+    function deposit(uint256 issuance_id, uint256 amount) public {
+
+    }
+
+    function depositToken(uint256 issuance_id, address token, uint256 amount) public {
+
+    }
+
+    function notify(uint256 issuance_id, string memory event_name, string memory event_payload) public {
+
     }
 
     function bytes32ToString (bytes32 data) internal pure returns (string memory) {

@@ -1,5 +1,7 @@
 pragma solidity ^0.5.0;
 
-contract ESOP {
+import "../Instrument.sol";
+
+contract ESOP is Instrument {
     
 }

@@ -1,5 +1,7 @@
 pragma solidity ^0.5.0;
 
-contract PIPE {
+import "../Instrument.sol";
+
+contract PIPE is Instrument {
     
 }
