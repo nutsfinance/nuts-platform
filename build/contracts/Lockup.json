@@ -75,29 +75,6 @@
           "type": "uint256"
         },
         {
-          "name": "seller_data",
-          "type": "string"
-        }
-      ],
-      "name": "createIssuance",
-      "outputs": [
-        {
-          "name": "",
-          "type": "string"
-        }
-      ],
-      "payable": false,
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "constant": false,
-      "inputs": [
-        {
-          "name": "issuance_id",
-          "type": "uint256"
-        },
-        {
           "name": "state",
           "type": "string"
         },
@@ -113,7 +90,7 @@
       "name": "engage",
       "outputs": [
         {
-          "name": "",
+          "name": "new_state",
           "type": "string"
         }
       ],
@@ -153,6 +130,33 @@
       "type": "function"
     },
     {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "issuance_id",
+          "type": "uint256"
+        },
+        {
+          "name": "seller_address",
+          "type": "address"
+        },
+        {
+          "name": "seller_data",
+          "type": "string"
+        }
+      ],
+      "name": "createIssuance",
+      "outputs": [
+        {
+          "name": "state",
+          "type": "string"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
       "anonymous": false,
       "inputs": [
         {
@@ -161,14 +165,14 @@
           "type": "string"
         },
         {
-          "indexed": true,
-          "name": "event_name",
-          "type": "string"
-        },
-        {
           "indexed": false,
           "name": "timestamp",
           "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "name": "event_name",
+          "type": "string"
         },
         {
           "indexed": false,
@@ -191,14 +195,14 @@
     "absolutePath": "/Users/daphnedalala/git/nuts-platform/contracts/instrument/Lockup.sol",
     "exportedSymbols": {
       "Lockup": [
-        3631
+        3799
       ]
     },
-    "id": 3632,
+    "id": 3800,
     "nodeType": "SourceUnit",
     "nodes": [
       {
-        "id": 3627,
+        "id": 3795,
         "literals": [
           "solidity",
           "^",
@@ -211,10 +215,10 @@
       {
         "absolutePath": "/Users/daphnedalala/git/nuts-platform/contracts/Instrument.sol",
         "file": "../Instrument.sol",
-        "id": 3628,
+        "id": 3796,
         "nodeType": "ImportDirective",
-        "scope": 3632,
-        "sourceUnit": 76,
+        "scope": 3800,
+        "sourceUnit": 78,
         "src": "25:27:15",
         "symbolAliases": [],
         "unitAlias": ""
@@ -225,36 +229,36 @@
             "arguments": null,
             "baseName": {
               "contractScope": null,
-              "id": 3629,
+              "id": 3797,
               "name": "Instrument",
               "nodeType": "UserDefinedTypeName",
-              "referencedDeclaration": 75,
+              "referencedDeclaration": 77,
               "src": "73:10:15",
               "typeDescriptions": {
-                "typeIdentifier": "t_contract$_Instrument_$75",
+                "typeIdentifier": "t_contract$_Instrument_$77",
                 "typeString": "contract Instrument"
               }
             },
-            "id": 3630,
+            "id": 3798,
             "nodeType": "InheritanceSpecifier",
             "src": "73:10:15"
           }
         ],
         "contractDependencies": [
-          75
+          77
         ],
         "contractKind": "contract",
         "documentation": null,
         "fullyImplemented": false,
-        "id": 3631,
+        "id": 3799,
         "linearizedBaseContracts": [
-          3631,
-          75
+          3799,
+          77
         ],
         "name": "Lockup",
         "nodeType": "ContractDefinition",
         "nodes": [],
-        "scope": 3632,
+        "scope": 3800,
         "src": "54:38:15"
       }
     ],
@@ -264,14 +268,14 @@
     "absolutePath": "/Users/daphnedalala/git/nuts-platform/contracts/instrument/Lockup.sol",
     "exportedSymbols": {
       "Lockup": [
-        3631
+        3799
       ]
     },
-    "id": 3632,
+    "id": 3800,
     "nodeType": "SourceUnit",
     "nodes": [
       {
-        "id": 3627,
+        "id": 3795,
         "literals": [
           "solidity",
           "^",
@@ -284,10 +288,10 @@
       {
         "absolutePath": "/Users/daphnedalala/git/nuts-platform/contracts/Instrument.sol",
         "file": "../Instrument.sol",
-        "id": 3628,
+        "id": 3796,
         "nodeType": "ImportDirective",
-        "scope": 3632,
-        "sourceUnit": 76,
+        "scope": 3800,
+        "sourceUnit": 78,
         "src": "25:27:15",
         "symbolAliases": [],
         "unitAlias": ""
@@ -298,36 +302,36 @@
             "arguments": null,
             "baseName": {
               "contractScope": null,
-              "id": 3629,
+              "id": 3797,
               "name": "Instrument",
               "nodeType": "UserDefinedTypeName",
-              "referencedDeclaration": 75,
+              "referencedDeclaration": 77,
               "src": "73:10:15",
               "typeDescriptions": {
-                "typeIdentifier": "t_contract$_Instrument_$75",
+                "typeIdentifier": "t_contract$_Instrument_$77",
                 "typeString": "contract Instrument"
               }
             },
-            "id": 3630,
+            "id": 3798,
             "nodeType": "InheritanceSpecifier",
             "src": "73:10:15"
           }
         ],
         "contractDependencies": [
-          75
+          77
         ],
         "contractKind": "contract",
         "documentation": null,
         "fullyImplemented": false,
-        "id": 3631,
+        "id": 3799,
         "linearizedBaseContracts": [
-          3631,
-          75
+          3799,
+          77
         ],
         "name": "Lockup",
         "nodeType": "ContractDefinition",
         "nodes": [],
-        "scope": 3632,
+        "scope": 3800,
         "src": "54:38:15"
       }
     ],
@@ -339,18 +343,32 @@
   },
   "networks": {},
   "schemaVersion": "3.0.6",
-  "updatedAt": "2019-04-17T06:47:56.987Z",
+  "updatedAt": "2019-04-17T18:53:46.744Z",
   "devdoc": {
-    "methods": {}
+    "methods": {
+      "createIssuance(uint256,address,string)": {
+        "details": "Create a new issuance of the financial instrument",
+        "params": {
+          "issuance_id": "The id of the issuance",
+          "seller_address": "The address of the seller who creates this issuance",
+          "seller_data": "The custom parameters to the newly created issuance"
+        },
+        "return": "state The updated issuance state"
+      },
+      "engage(uint256,string,address,string)": {
+        "details": "A buyer engages to the issuance",
+        "params": {
+          "buyer_address": "The address of the buyer who engages in the issuance",
+          "buyer_data": "The custom parameters to the new engagement",
+          "issuance_id": "The id of the issuance",
+          "state": "The current state of the issuance"
+        },
+        "return": "new_state The updated issuance state"
+      }
+    }
   },
   "userdoc": {
     "methods": {
-      "createIssuance(uint256,string)": {
-        "notice": "Create a new issuance of the financial instrument"
-      },
-      "engage(uint256,string,address,string)": {
-        "notice": "A buyer engages to the issuance"
-      },
       "processEvent(uint256,string,string,string)": {
         "notice": "Process customer event"
       },

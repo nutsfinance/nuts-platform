@@ -10,8 +10,8 @@ contract Instrument {
      * @dev An event used to schedule contract events in specific time.
      * @param issuance_id The id of the issuance
      * @param timestamp When the issuance is notified
-     * @param event_name
-     * @param event_payload
+     * @param event_name The name of the custom event
+     * @param event_payload The payload the custom event
      */
     event EventScheduled(string indexed issuance_id, uint256 timestamp, 
         string indexed event_name, string event_payload);
@@ -21,7 +21,7 @@ contract Instrument {
      * @param issuance_id The id of the issuance
      * @param seller_address The address of the seller who creates this issuance
      * @param seller_data The custom parameters to the newly created issuance
-     * @returns state The updated issuance state
+     * @return state The updated issuance state
      */
     function createIssuance(uint256 issuance_id, address seller_address, string calldata seller_data) 
         external returns (string memory state);

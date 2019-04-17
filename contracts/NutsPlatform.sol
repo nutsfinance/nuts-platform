@@ -69,18 +69,34 @@ contract NutsPlatform {
         // Create a new property map for the issuance
         _properties.clear();
         _properties.setUintValue('issuance_id', issuance_id);
-        _properties.setAddressValue('seller', msg.sender);
-        _properties.setUintValue('created', Now());
+        _properties.setAddressValue('instrument_address', instrument_address);
+        _properties.setAddressValue('seller_address', msg.sender);
+        _properties.setUintValue('created', now);
         _properties.setStringValue('state', state);
-        _storage.save(StringUtil.uintToString(issuance_id), _properties.save());
+        // Persist the updated state
+        string memory issuance_state = string(_properties.save());
+        _storage.save(StringUtil.uintToString(issuance_id), issuance_state);
         _properties.clear();
 
         return issuance_id;
     }
 
+    /**
+     * @dev Invoked by buyer to engage an issuance
+     * @param issuance_id The id of the issuance
+     * @param buyer_state The custom parameters of the engagement
+     */
     function engageIssuance(uint256 issuance_id, string memory buyer_state) public {
+        string memory issuance_state = _storage.lookup(StringUtil.uintToString(issuance_id));
         _properties.clear();
-        
+        _properties.load(bytes(issuance_state));
+        Instrument instrument = Instrument(_properties.getAddressValue('instrument_address'));
+        string memory updated_state = instrument.engage(issuance_id, _properties.getStringValue('state'), 
+            msg.sender, buyer_state);
+        _properties.setStringValue('state', updated_state);
+        issuance_state = string(_properties.save());
+        _storage.save(StringUtil.uintToString(issuance_id), issuance_state);
+        _properties.clear();
     }
 
     function deposit(uint256 issuance_id, uint256 amount) public {

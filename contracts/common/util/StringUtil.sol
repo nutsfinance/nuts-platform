@@ -40,14 +40,13 @@ library StringUtil {
     /**
      * Convert a bytes data to address
      */
-    function bytesToAddress(bytes memory _address) pure internal returns (address) {
-        uint160 m = 0;
+    function bytesToAddress(bytes memory data) pure internal returns (address) {
+        address tempAddress;
 
-        for (uint8 i = 0; i < 20; i++) {
-            m *= 256;
-            m += _uint160(address[i]);
+        assembly {
+            tempAddress := div(mload(add(add(data, 0x20), 0)), 0x1000000000000000000000000)
         }
 
-        return address(m);
+        return tempAddress;
     }
 }
