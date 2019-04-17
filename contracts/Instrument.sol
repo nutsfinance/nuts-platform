@@ -41,7 +41,7 @@ contract Instrument {
      * Buyer/Seller has made a transfer of Ether to the issuance
      */ 
     function processTransfer(uint256 issuance_id, string calldata state,
-        address from, uint256 amount) external returns (string memory);
+        address from, uint256 amount) external returns (string memory updated_state, string memory action);
 
     /**
      * Buyer/Seller has made a transfer of ERC20 token to the issuance
