@@ -1,24 +1,204 @@
 {
   "contractName": "Loan",
-  "abi": [],
-  "bytecode": "0x6080604052348015600f57600080fd5b50603580601d6000396000f3fe6080604052600080fdfea165627a7a7230582022c728dab41f72d40092d558a113a7488a126645541a7d20ae3bf85b4d4403b70029",
-  "deployedBytecode": "0x6080604052600080fdfea165627a7a7230582022c728dab41f72d40092d558a113a7488a126645541a7d20ae3bf85b4d4403b70029",
-  "sourceMap": "25:22:8:-;;;;8:9:-1;5:2;;;30:1;27;20:12;5:2;25:22:8;;;;;;;",
-  "deployedSourceMap": "25:22:8:-;;;;;",
-  "source": "pragma solidity ^0.5.0;\n\ncontract Loan {\n    \n}",
-  "sourcePath": "/Users/shengdading/git/nuts-platform/contracts/instrument/Loan.sol",
+  "abi": [
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "issuance_id",
+          "type": "uint256"
+        },
+        {
+          "name": "state",
+          "type": "string"
+        },
+        {
+          "name": "from",
+          "type": "address"
+        },
+        {
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "processTokenTransfer",
+      "outputs": [
+        {
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "issuance_id",
+          "type": "uint256"
+        },
+        {
+          "name": "state",
+          "type": "string"
+        },
+        {
+          "name": "from",
+          "type": "address"
+        },
+        {
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "processTransfer",
+      "outputs": [
+        {
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "issuance_id",
+          "type": "uint256"
+        },
+        {
+          "name": "seller_data",
+          "type": "string"
+        }
+      ],
+      "name": "createIssuance",
+      "outputs": [
+        {
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "issuance_id",
+          "type": "uint256"
+        },
+        {
+          "name": "state",
+          "type": "string"
+        },
+        {
+          "name": "buyer_address",
+          "type": "address"
+        },
+        {
+          "name": "buyer_data",
+          "type": "string"
+        }
+      ],
+      "name": "engage",
+      "outputs": [
+        {
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "issuance_id",
+          "type": "uint256"
+        },
+        {
+          "name": "state",
+          "type": "string"
+        },
+        {
+          "name": "event_name",
+          "type": "string"
+        },
+        {
+          "name": "event_payload",
+          "type": "string"
+        }
+      ],
+      "name": "processEvent",
+      "outputs": [
+        {
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "name": "issuance_id",
+          "type": "string"
+        },
+        {
+          "indexed": true,
+          "name": "event_name",
+          "type": "string"
+        },
+        {
+          "indexed": false,
+          "name": "timestamp",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "event_payload",
+          "type": "string"
+        }
+      ],
+      "name": "EventScheduled",
+      "type": "event"
+    }
+  ],
+  "metadata": "",
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "sourceMap": "",
+  "deployedSourceMap": "",
+  "source": "pragma solidity ^0.5.0;\n\nimport \"../Instrument.sol\";\n\ncontract Loan is Instrument {\n    \n}",
+  "sourcePath": "/Users/daphnedalala/git/nuts-platform/contracts/instrument/Loan.sol",
   "ast": {
-    "absolutePath": "/Users/shengdading/git/nuts-platform/contracts/instrument/Loan.sol",
+    "absolutePath": "/Users/daphnedalala/git/nuts-platform/contracts/instrument/Loan.sol",
     "exportedSymbols": {
       "Loan": [
-        514
+        3625
       ]
     },
-    "id": 515,
+    "id": 3626,
     "nodeType": "SourceUnit",
     "nodes": [
       {
-        "id": 513,
+        "id": 3621,
         "literals": [
           "solidity",
           "^",
@@ -26,39 +206,72 @@
           ".0"
         ],
         "nodeType": "PragmaDirective",
-        "src": "0:23:8"
+        "src": "0:23:14"
       },
       {
-        "baseContracts": [],
-        "contractDependencies": [],
+        "absolutePath": "/Users/daphnedalala/git/nuts-platform/contracts/Instrument.sol",
+        "file": "../Instrument.sol",
+        "id": 3622,
+        "nodeType": "ImportDirective",
+        "scope": 3626,
+        "sourceUnit": 76,
+        "src": "25:27:14",
+        "symbolAliases": [],
+        "unitAlias": ""
+      },
+      {
+        "baseContracts": [
+          {
+            "arguments": null,
+            "baseName": {
+              "contractScope": null,
+              "id": 3623,
+              "name": "Instrument",
+              "nodeType": "UserDefinedTypeName",
+              "referencedDeclaration": 75,
+              "src": "71:10:14",
+              "typeDescriptions": {
+                "typeIdentifier": "t_contract$_Instrument_$75",
+                "typeString": "contract Instrument"
+              }
+            },
+            "id": 3624,
+            "nodeType": "InheritanceSpecifier",
+            "src": "71:10:14"
+          }
+        ],
+        "contractDependencies": [
+          75
+        ],
         "contractKind": "contract",
         "documentation": null,
-        "fullyImplemented": true,
-        "id": 514,
+        "fullyImplemented": false,
+        "id": 3625,
         "linearizedBaseContracts": [
-          514
+          3625,
+          75
         ],
         "name": "Loan",
         "nodeType": "ContractDefinition",
         "nodes": [],
-        "scope": 515,
-        "src": "25:22:8"
+        "scope": 3626,
+        "src": "54:36:14"
       }
     ],
-    "src": "0:47:8"
+    "src": "0:90:14"
   },
   "legacyAST": {
-    "absolutePath": "/Users/shengdading/git/nuts-platform/contracts/instrument/Loan.sol",
+    "absolutePath": "/Users/daphnedalala/git/nuts-platform/contracts/instrument/Loan.sol",
     "exportedSymbols": {
       "Loan": [
-        514
+        3625
       ]
     },
-    "id": 515,
+    "id": 3626,
     "nodeType": "SourceUnit",
     "nodes": [
       {
-        "id": 513,
+        "id": 3621,
         "literals": [
           "solidity",
           "^",
@@ -66,38 +279,87 @@
           ".0"
         ],
         "nodeType": "PragmaDirective",
-        "src": "0:23:8"
+        "src": "0:23:14"
       },
       {
-        "baseContracts": [],
-        "contractDependencies": [],
+        "absolutePath": "/Users/daphnedalala/git/nuts-platform/contracts/Instrument.sol",
+        "file": "../Instrument.sol",
+        "id": 3622,
+        "nodeType": "ImportDirective",
+        "scope": 3626,
+        "sourceUnit": 76,
+        "src": "25:27:14",
+        "symbolAliases": [],
+        "unitAlias": ""
+      },
+      {
+        "baseContracts": [
+          {
+            "arguments": null,
+            "baseName": {
+              "contractScope": null,
+              "id": 3623,
+              "name": "Instrument",
+              "nodeType": "UserDefinedTypeName",
+              "referencedDeclaration": 75,
+              "src": "71:10:14",
+              "typeDescriptions": {
+                "typeIdentifier": "t_contract$_Instrument_$75",
+                "typeString": "contract Instrument"
+              }
+            },
+            "id": 3624,
+            "nodeType": "InheritanceSpecifier",
+            "src": "71:10:14"
+          }
+        ],
+        "contractDependencies": [
+          75
+        ],
         "contractKind": "contract",
         "documentation": null,
-        "fullyImplemented": true,
-        "id": 514,
+        "fullyImplemented": false,
+        "id": 3625,
         "linearizedBaseContracts": [
-          514
+          3625,
+          75
         ],
         "name": "Loan",
         "nodeType": "ContractDefinition",
         "nodes": [],
-        "scope": 515,
-        "src": "25:22:8"
+        "scope": 3626,
+        "src": "54:36:14"
       }
     ],
-    "src": "0:47:8"
+    "src": "0:90:14"
   },
   "compiler": {
     "name": "solc",
     "version": "0.5.0+commit.1d4f565a.Emscripten.clang"
   },
   "networks": {},
-  "schemaVersion": "3.0.1",
-  "updatedAt": "2019-03-01T02:11:19.237Z",
+  "schemaVersion": "3.0.6",
+  "updatedAt": "2019-04-17T06:47:56.986Z",
   "devdoc": {
     "methods": {}
   },
   "userdoc": {
-    "methods": {}
+    "methods": {
+      "createIssuance(uint256,string)": {
+        "notice": "Create a new issuance of the financial instrument"
+      },
+      "engage(uint256,string,address,string)": {
+        "notice": "A buyer engages to the issuance"
+      },
+      "processEvent(uint256,string,string,string)": {
+        "notice": "Process customer event"
+      },
+      "processTokenTransfer(uint256,string,address,address,uint256)": {
+        "notice": "Buyer/Seller has made a transfer of ERC20 token to the issuance"
+      },
+      "processTransfer(uint256,string,address,uint256)": {
+        "notice": "Buyer/Seller has made a transfer of Ether to the issuance"
+      }
+    }
   }
 }
