@@ -64,7 +64,7 @@ contract NutsPlatform {
         lastIssuanceId = lastIssuanceId + 1;
         uint issuance_id = lastIssuanceId;
         Instrument instrument = Instrument(instrument_address);
-        string memory state = instrument.createIssuance(issuance_id, msg.sender, seller_data);
+        (string memory updated_state, string memory action) = instrument.createIssuance(issuance_id, msg.sender, seller_data);
 
         // Create a new property map for the issuance
         _properties.clear();
@@ -72,7 +72,7 @@ contract NutsPlatform {
         _properties.setAddressValue('instrument_address', instrument_address);
         _properties.setAddressValue('seller_address', msg.sender);
         _properties.setUintValue('created', now);
-        _properties.setStringValue('state', state);
+        _properties.setStringValue('state', updated_state);
         // Persist the updated state
         string memory issuance_state = string(_properties.save());
         _storage.save(StringUtil.uintToString(issuance_id), issuance_state);
@@ -91,7 +91,7 @@ contract NutsPlatform {
         _properties.clear();
         _properties.load(bytes(issuance_state));
         Instrument instrument = Instrument(_properties.getAddressValue('instrument_address'));
-        string memory updated_state = instrument.engage(issuance_id, _properties.getStringValue('state'), 
+        (string memory updated_state, string memory action) = instrument.engage(issuance_id, _properties.getStringValue('state'), 
             msg.sender, buyer_state);
         _properties.setStringValue('state', updated_state);
         issuance_state = string(_properties.save());
@@ -108,7 +108,16 @@ contract NutsPlatform {
     }
 
     function notify(uint256 issuance_id, string memory event_name, string memory event_payload) public {
-
+        string memory issuance_state = _storage.lookup(StringUtil.uintToString(issuance_id));
+        _properties.clear();
+        _properties.load(bytes(issuance_state));
+        Instrument instrument = Instrument(_properties.getAddressValue('instrument_address'));
+        (string memory updated_state, string memory action) = instrument.processEvent(issuance_id, _properties.getStringValue('state'), 
+            event_name, event_payload);
+        _properties.setStringValue('state', updated_state);
+        issuance_state = string(_properties.save());
+        _storage.save(StringUtil.uintToString(issuance_id), issuance_state);
+        _properties.clear();
     }
 
 }
