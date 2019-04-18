@@ -1,6 +1,6 @@
 # NUTS Platform
 
-The NUTS platform is designed to support the issuance of non-standardized financial contracts traded through an over-the-counter network. The detail design of the platform can be viewed [here](https://nutsdo.gitbook.io/nuts-design-doc/);
+The NUTS platform is designed to support the issuance of non-standardized financial contracts traded through an over-the-counter network. The detail design of the platform can be viewed [here](https://app.gitbook.com/@nutsfinance/s/nuts-design-doc/);
 
 ## How to Run
 
