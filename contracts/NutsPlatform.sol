@@ -57,7 +57,8 @@ contract NutsPlatform {
     /**
      * @dev Invoked by seller to create new issuance
      * @param instrument_address The address of the instrument of which the issuance is created
-     * @param seller_data The custom parameter 
+     * @param seller_data The custom parameter
+     * @return issuance_id The id of the newly created issuance
      */
     function createIssuance(address instrument_address, string memory seller_data) public returns (uint256) {
         require(_instrumentRegistry.validate(instrument_address), "Invalid instrument");
@@ -107,6 +108,12 @@ contract NutsPlatform {
 
     }
 
+    /**
+     * @dev Callback entry for scheduled custom event
+     * @param issuance_id The id of the issuance
+     * @param event_name Name of custom event, event_name of EventScheduled event
+     * @param event_payload Payload of custom event, event_payload of EventScheduled event
+     */
     function notify(uint256 issuance_id, string memory event_name, string memory event_payload) public {
         string memory issuance_state = _storage.lookup(StringUtil.uintToString(issuance_id));
         _properties.clear();

@@ -1,8 +1,8 @@
 pragma solidity ^0.5.0;
 
 /**
- * @title Financial instrument interface
- * All instrument contract must implement this interface.
+ * @title Base contract for financial instrument
+ * All instrument contract must extend this contract.
  */
 contract Instrument {
 
