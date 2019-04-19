@@ -27,14 +27,21 @@ library StringUtil {
     }
 
     /**
-     * Convert an address data to string
+     * Convert an address data to bytes
      */
-    function addressToString(address x) pure internal returns (string memory) {
+    function addressToBytes(address x) pure internal returns (bytes memory) {
         bytes memory b = new bytes(20);
         for (uint i = 0; i < 20; i++) {
             b[i] = byte(uint8(uint(x) / (2**(8*(19 - i)))));
         }
-        return string(b);
+        return b;
+    }
+
+    /**
+     * Convert an address data to string
+     */
+    function addressToString(address x) pure internal returns (string memory) {
+        return string(addressToBytes(x));
     }
 
     /**

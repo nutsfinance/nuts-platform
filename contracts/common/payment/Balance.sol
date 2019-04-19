@@ -33,7 +33,7 @@ library Balance {
         offset -= 32;
 
         for (uint i = 0; i < balances.entries.length; i++) {
-            TypesToBytes.stringToBytes(offset, bytes(StringUtil.addressToString(balances.entries[i].tokenAddress)), data);
+            TypesToBytes.stringToBytes(offset, StringUtil.addressToBytes(balances.entries[i].tokenAddress), data);
             offset -= 20;
 
             TypesToBytes.uintToBytes(offset, balances.entries[i].amount, data);
