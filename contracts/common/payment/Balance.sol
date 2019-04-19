@@ -33,7 +33,7 @@ library Balance {
         offset -= 32;
 
         for (uint i = 0; i < balances.entries.length; i++) {
-            TypesToBytes.stringToBytes(offset, bytes(StringUtil.addressToString(balances.entries[i].tokenAddress)), data);
+            TypesToBytes.stringToBytes(offset, StringUtil.addressToBytes(balances.entries[i].tokenAddress), data);
             offset -= 20;
 
             TypesToBytes.uintToBytes(offset, balances.entries[i].amount, data);
@@ -54,8 +54,8 @@ library Balance {
             bytes memory addressBuffer = new bytes(BytesToTypes.getStringSize(offset, data));
             BytesToTypes.bytesToString(offset, data, addressBuffer);
             offset -= BytesToTypes.getStringSize(offset, data);
-            address tokenAddress = StringUtil.stringToAddress(string(addressBuffer));
-            uint amount = BytesToTypes.bytesToUint(offset, data);
+            address tokenAddress = StringUtil.bytesToAddress(addressBuffer);
+            uint amount = BytesToTypes.bytesToUint256(offset, data);
             offset -= 32;
 
             balances.entries.push(BalanceEntry(tokenAddress == address(0x0), tokenAddress, amount));
