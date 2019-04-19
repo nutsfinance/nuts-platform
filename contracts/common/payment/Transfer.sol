@@ -74,10 +74,10 @@ library Transfer {
     }
 
     function addEtherTransfer(Transfers storage transfers, address receiverAddress, uint amount) internal {
-        transfers.actions.push(TransferAction(true, address(0x0), receiverAdress, amount));
+        transfers.actions.push(TransferAction(true, address(0x0), receiverAddress, amount));
     }
 
     function addTokenTransfer(Transfers storage transfers, address tokenAddress, address receiverAddress, uint amount) internal {
-        transfers.actions.push(TransferAction(false, tokenAddress, receiverAdress, amount));
+        transfers.actions.push(TransferAction(false, tokenAddress, receiverAddress, amount));
     }
 }

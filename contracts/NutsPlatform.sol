@@ -1,11 +1,14 @@
 pragma solidity ^0.5.0;
 
+// import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
+
 import "./UnifiedStorage.sol";
 import "./InstrumentRegistry.sol";
 import "./NutsToken.sol";
 import "./NutsEscrow.sol";
 import "./Instrument.sol";
 import "./common/property/Property.sol";
+import "./common/payment/Transfer.sol";
 import "./common/util/StringUtil.sol";
 
 /**
@@ -14,6 +17,7 @@ import "./common/util/StringUtil.sol";
  */
 contract NutsPlatform {
     using Property for Property.Properties;
+    using Transfer for Transfer.Transfers;
 
     // The sequence used to generate issuance id
     uint256 private lastIssuanceId = 0;
@@ -25,6 +29,7 @@ contract NutsPlatform {
 
     // TODO Can we use local variable instead?
     Property.Properties private _properties;
+    Transfer.Transfers private _transfers;
 
     constructor() public {
         _storage = new UnifiedStorage();
@@ -79,6 +84,9 @@ contract NutsPlatform {
         _storage.save(StringUtil.uintToString(issuance_id), issuance_state);
         _properties.clear();
 
+        // Post-actions
+        processAction(issuance_id, action);
+
         return issuance_id;
     }
 
@@ -88,24 +96,80 @@ contract NutsPlatform {
      * @param buyer_state The custom parameters of the engagement
      */
     function engageIssuance(uint256 issuance_id, string memory buyer_state) public {
+        // Retrieve issuance state
         string memory issuance_state = _storage.lookup(StringUtil.uintToString(issuance_id));
         _properties.clear();
         _properties.load(bytes(issuance_state));
         Instrument instrument = Instrument(_properties.getAddressValue('instrument_address'));
+
         (string memory updated_state, string memory action) = instrument.engage(issuance_id, _properties.getStringValue('state'), 
             msg.sender, buyer_state);
+
+        // Update issuance state
         _properties.setStringValue('state', updated_state);
         issuance_state = string(_properties.save());
         _storage.save(StringUtil.uintToString(issuance_id), issuance_state);
         _properties.clear();
+
+        // Post actions
+        processAction(issuance_id, action);
     }
 
+    /**
+     * @dev Inovked by seller/buyer to transfer Ether to the issuance. The Ether to be transferred
+     *      must be deposited in the escrow already, so the transfer is done in the escrow internally.
+     * @param issuance_id The id of the issuance to which the Ether is deposited
+     * @param amount The amount of Ether to transfer to the issuance
+     */
     function deposit(uint256 issuance_id, uint256 amount) public {
+        // Retrieve issuance state
+        string memory issuance_state = _storage.lookup(StringUtil.uintToString(issuance_id));
+        _properties.clear();
+        _properties.load(bytes(issuance_state));
+        Instrument instrument = Instrument(_properties.getAddressValue('instrument_address'));
 
+        // Complete Ether transfer
+        _escrow.transferToIssuance(msg.sender, issuance_id, amount);
+        (string memory updated_state, string memory action) = instrument.processTransfer(issuance_id, 
+            _properties.getStringValue('state'), msg.sender, amount);
+
+        // Update issuance state
+        _properties.setStringValue('state', updated_state);
+        issuance_state = string(_properties.save());
+        _storage.save(StringUtil.uintToString(issuance_id), issuance_state);
+        _properties.clear();
+
+        // Post-actions
+        processAction(issuance_id, action);
     }
 
-    function depositToken(uint256 issuance_id, address token, uint256 amount) public {
+     /**
+     * @dev Inovked by seller/buyer to transfer ERC20 token to the issuance. The token to be transferred
+     *      must be deposited in the escrow already, so the transfer is done in the escrow internally.
+     * @param issuance_id The id of the issuance to which the token is deposited
+     @ @param token_address The address of the token 
+     * @param amount The amount of token to transfer to the issuance
+     */
+    function depositToken(uint256 issuance_id, address token_address, uint256 amount) public {
+        // Retrieve issuance state
+        string memory issuance_state = _storage.lookup(StringUtil.uintToString(issuance_id));
+        _properties.clear();
+        _properties.load(bytes(issuance_state));
+        Instrument instrument = Instrument(_properties.getAddressValue('instrument_address'));
 
+        // Complete the token transfer
+        _escrow.transferTokenToIssuance(msg.sender, issuance_id, ERC20(token_address), amount);
+        (string memory updated_state, string memory action) = instrument.processTokenTransfer(issuance_id, 
+            _properties.getStringValue('state'), msg.sender, token_address, amount);
+
+        // Update issuance state
+        _properties.setStringValue('state', updated_state);
+        issuance_state = string(_properties.save());
+        _storage.save(StringUtil.uintToString(issuance_id), issuance_state);
+        _properties.clear();
+
+        // Post-actions
+        processAction(issuance_id, action);
     }
 
     /**
@@ -115,16 +179,37 @@ contract NutsPlatform {
      * @param event_payload Payload of custom event, event_payload of EventScheduled event
      */
     function notify(uint256 issuance_id, string memory event_name, string memory event_payload) public {
+        // Retrieve issuance state
         string memory issuance_state = _storage.lookup(StringUtil.uintToString(issuance_id));
         _properties.clear();
         _properties.load(bytes(issuance_state));
         Instrument instrument = Instrument(_properties.getAddressValue('instrument_address'));
+
         (string memory updated_state, string memory action) = instrument.processEvent(issuance_id, _properties.getStringValue('state'), 
             event_name, event_payload);
+
+        // Update issuance state
         _properties.setStringValue('state', updated_state);
         issuance_state = string(_properties.save());
         _storage.save(StringUtil.uintToString(issuance_id), issuance_state);
         _properties.clear();
+
+        // Post action
+        processAction(issuance_id, action);
     }
 
+    function processAction(uint issuance_id, string memory action) private {
+        if (bytes(action).length == 0)  return;
+        _transfers.load(bytes(action));
+
+        for (uint i = 0; i < _transfers.actions.length; i++) {
+            if (_transfers.actions[i].isEther) {
+                _escrow.transferFromIssuance(_transfers.actions[i].receiverAddress, issuance_id,
+                    _transfers.actions[i].amount);
+            } else {
+                _escrow.transferTokenFromIssuance(_transfers.actions[i].receiverAddress, issuance_id, 
+                    ERC20(_transfers.actions[i].tokenAddress), _transfers.actions[i].amount);
+            }
+        }
+    }
 }
