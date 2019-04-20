@@ -1,11 +1,13 @@
 pragma solidity ^0.5.0;
 
+import "./common/payment/Balance.sol";
 import "../node_modules/openzeppelin-solidity/contracts/ownership/Secondary.sol";
 import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "../node_modules/openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 
 contract NutsEscrow is Secondary {
     using SafeMath for uint256;
+    using Balance for Balance.Balances;
 
     event EtherDeposited(address indexed payee, uint256 amount);
     event EtherWithdrawn(address indexed payee, uint256 amount);
@@ -15,16 +17,22 @@ contract NutsEscrow is Secondary {
 
     mapping(address => uint256) private _etherBalance;                          // Balance of Ether deposited by user
     mapping(address => mapping(address => uint256)) private _tokenBalance;      // Balance of token deposited by user
-    mapping(uint256 => uint256) private _issuanceEther;                          // Balance of Ether withheld by issuance
-    mapping(uint256 => mapping(address => uint256)) private _issuanceTokens;     // Balance of token withheld by issuance
+    mapping(uint256 => Balance.Balances) private _issuanceBalances;             // Balance of issuance
+    /**
+     * API for users to deposit and withdraw Ether
+     */
 
     /**
-        API for users to deposit and withdraw Ether
+     * @dev Get the current balance in the escrow
+     * @return Current balance of the invoker
      */
     function balanceOf() public view returns (uint256) {
         return _etherBalance[msg.sender];
     }
 
+    /**
+     * @dev Deposits Ethers into the escrow
+     */
     function deposit() public payable {
         uint256 amount = msg.value;
         _etherBalance[msg.sender] = _etherBalance[msg.sender].add(amount);
@@ -32,6 +40,10 @@ contract NutsEscrow is Secondary {
         emit EtherDeposited(msg.sender, amount);
     }
 
+    /**
+     * @dev Withdraw Ethers from the escrow
+     * @param amount The amount of Ethers to withdraw
+     */
     function withdraw(uint256 amount) public {
         require(_etherBalance[msg.sender] >= amount, "Insufficial ether balance to withdraw");
         _etherBalance[msg.sender] = _etherBalance[msg.sender].sub(amount);
@@ -44,10 +56,21 @@ contract NutsEscrow is Secondary {
     /**
         API for users to deposit and withdraw ERC20 token
      */
+
+    /**
+     * @dev Get the balance of the requested ERC20 token in the escrow
+     * @param token The ERC20 token to check balance
+     * @return The balance
+     */
     function tokenBalanceOf(ERC20 token) public view returns (uint256) {
         return _tokenBalance[msg.sender][address(token)];
     }
 
+    /**
+     * @dev Deposit ERC20 token to the escrow
+     * @param token The ERC20 token to deposit
+     * @param amount The amount to deposit
+     */
     function depositToken(ERC20 token, uint256 amount) public {
         _tokenBalance[msg.sender][address(token)] = _tokenBalance[msg.sender][address(token)].add(amount);
         require(token.transferFrom(msg.sender, address(this), amount), "Insufficient balance to deposit");
@@ -55,6 +78,11 @@ contract NutsEscrow is Secondary {
         emit TokenDeposited(msg.sender, address(token), amount);
     }
 
+    /**
+     * @dev Withdraw ERC20 token from the escrow
+     * @param token The ERC20 token to withdraw
+     * @param amount The amount to withdraw
+     */
     function withdrawToken(ERC20 token, uint256 amount) public {
         _tokenBalance[msg.sender][address(token)] = _tokenBalance[msg.sender][address(token)].sub(amount);
         require(token.transfer(msg.sender, amount), "Insufficient balance to withdraw");
@@ -66,35 +94,89 @@ contract NutsEscrow is Secondary {
         API used by NUTS platform to hold tokens for issuance
      */
 
+    /**
+     * @dev Get the Ether balance of an issuance in the escrow
+     * @param issuance_id The id of the issuance
+     * @return The Ether balance of the issuance in the escrow
+     */
     function balanceOfIssuance(uint256 issuance_id) public view onlyPrimary returns (uint256) {
-        return _issuanceEther[issuance_id];
+        // return _issuanceEther[issuance_id];
+        return _issuanceBalances[issuance_id].getEtherBalance();
     }
 
+    /**
+     * @dev Transfer Ethers from a seller/buyer to the issuance
+     * @param payee The address of the seller/buyer
+     * @param issuance_id The id of the issuance
+     * @param amount The amount of Ether to transfer
+     */
     function transferToIssuance(address payee, uint256 issuance_id, uint256 amount) public onlyPrimary {
+        // Subtract from the seller/buyer balance
         require(_etherBalance[payee] >= amount, "Insufficient Ether balance");
         _etherBalance[payee] = _etherBalance[payee].sub(amount);
-        _issuanceEther[issuance_id] = _issuanceEther[issuance_id].add(amount);
+
+        // Increase to the issuance balance
+        uint balance = _issuanceBalances[issuance_id].getEtherBalance();
+        _issuanceBalances[issuance_id].setEtherBalance(balance.add(amount));
     }
 
+    /**
+     * @dev Transfer Ethers from an issuance to a seller/buyer
+     * @param payee The address of the seller/buyer
+     * @param issuance_id The id of the issuance
+     * @param amount The amount of Ether to transfer
+     */
     function transferFromIssuance(address payee, uint256 issuance_id, uint256 amount) public onlyPrimary {
-        require(_issuanceEther[issuance_id] >= amount, "Insufficient Ether balance");
-        _issuanceEther[issuance_id] = _issuanceEther[issuance_id].sub(amount);
+        // Subtract from the issuance balance
+        uint balance = _issuanceBalances[issuance_id].getEtherBalance();
+        require(balance >= amount, "Insufficient Ether balance");
+        _issuanceBalances[issuance_id].setEtherBalance(balance.sub(amount));
+
+        // Increase to the seller/buyer balance
         _etherBalance[payee] = _etherBalance[payee].add(amount);
     }
 
+    /**
+     * @dev Get the ERC20 token balance of an issuance in the escrow
+     * @param issuance_id The id of the issuance
+     * @param token The ERC20 token to check balance
+     * @return The ERC20 token balance of the issuance in the escrow
+     */
     function tokenBalanceOfIssuance(uint256 issuance_id, ERC20 token) public view onlyPrimary returns (uint256) {
-        return _issuanceTokens[issuance_id][address(token)];
+        return _issuanceBalances[issuance_id].getTokenBalance(address(token));
     }
 
+    /**
+     * @dev Transfer ERC20 token from a seller/buyer to the issuance
+     * @param payee The address of the seller/buyer
+     * @param issuance_id The id of the issuance
+     * @param token The ERC20 token to transfer
+     * @param amount The amount of ERC20 token to transfer
+     */
     function transferTokenToIssuance(address payee, uint256 issuance_id, ERC20 token, uint256 amount) public onlyPrimary {
+        // Subtract from the seller/buyer balance
         require(_tokenBalance[payee][address(token)] >= amount, "Inssufficient token balance");
         _tokenBalance[payee][address(token)] = _tokenBalance[payee][address(token)].sub(amount);
-        _issuanceTokens[issuance_id][address(token)] = _issuanceTokens[issuance_id][address(token)].add(amount);
+
+        // Increase to the issuance balance
+        uint balance = _issuanceBalances[issuance_id].getTokenBalance(address(token));
+        _issuanceBalances[issuance_id].setTokenBalance(address(token), balance.add(amount));
     }
 
+    /**
+     * @dev Transfer ERC20 token from the issuance to a seller/buyer
+     * @param payee The address of the seller/buyer
+     * @param issuance_id The id of the issuance
+     * @param token The ERC20 token to transfer
+     * @param amount The amount of ERC20 token to transfer
+     */
     function transferTokenFromIssuance(address payee, uint256 issuance_id, ERC20 token, uint256 amount) public onlyPrimary {
-        require(_issuanceTokens[issuance_id][address(token)] >= amount, "Insufficient token balance");
+        // Subtract from the issuance balance
+        uint balance = _issuanceBalances[issuance_id].getTokenBalance(address(token));
+        require(balance >= amount, "Insufficient token balance");
+        _issuanceBalances[issuance_id].setTokenBalance(address(token), balance.sub(amount));
+        
+        // Increase to the seller/buyer balance
         _tokenBalance[payee][address(token)] = _tokenBalance[payee][address(token)].add(amount);
-        _issuanceTokens[issuance_id][address(token)] = _issuanceTokens[issuance_id][address(token)].sub(amount);
     }
 }
