@@ -179,4 +179,13 @@ contract NutsEscrow is Secondary {
         // Increase to the seller/buyer balance
         _tokenBalance[payee][address(token)] = _tokenBalance[payee][address(token)].add(amount);
     }
+
+    /**
+     * @dev Return the serialized repreentation of the issuance balance
+     * @param issuance_id The issuance id
+     * @return The serialized balance
+     */
+    function getIssuanceBalance(uint256 issuance_id) public view onlyPrimary returns (string memory) {
+        return string(_issuanceBalances[issuance_id].save());
+    }
 }

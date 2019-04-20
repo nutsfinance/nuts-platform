@@ -96,14 +96,18 @@ contract NutsPlatform {
      * @param buyer_state The custom parameters of the engagement
      */
     function engageIssuance(uint256 issuance_id, string memory buyer_state) public {
-        // Retrieve issuance state
+        // Retrieve the issuance data
         string memory issuance_state = _storage.lookup(StringUtil.uintToString(issuance_id));
         _properties.clear();
         _properties.load(bytes(issuance_state));
         Instrument instrument = Instrument(_properties.getAddressValue('instrument_address'));
 
-        (string memory updated_state, string memory action) = instrument.engage(issuance_id, _properties.getStringValue('state'), 
-            msg.sender, buyer_state);
+        // Retrieve the issuance balance
+        string memory state = _properties.getStringValue('state');
+        string memory balance = _escrow.getIssuanceBalance(issuance_id);
+
+        (string memory updated_state, string memory action) = instrument.engage(issuance_id, 
+            state, balance, msg.sender, buyer_state);
 
         // Update issuance state
         _properties.setStringValue('state', updated_state);
@@ -122,16 +126,20 @@ contract NutsPlatform {
      * @param amount The amount of Ether to transfer to the issuance
      */
     function deposit(uint256 issuance_id, uint256 amount) public {
-        // Retrieve issuance state
+        // Retrieve issuance data
         string memory issuance_state = _storage.lookup(StringUtil.uintToString(issuance_id));
         _properties.clear();
         _properties.load(bytes(issuance_state));
         Instrument instrument = Instrument(_properties.getAddressValue('instrument_address'));
 
+        // Retrieve the issuance balance
+        string memory state = _properties.getStringValue('state');
+        string memory balance = _escrow.getIssuanceBalance(issuance_id);
+
         // Complete Ether transfer
         _escrow.transferToIssuance(msg.sender, issuance_id, amount);
         (string memory updated_state, string memory action) = instrument.processTransfer(issuance_id, 
-            _properties.getStringValue('state'), msg.sender, amount);
+            state, balance, msg.sender, amount);
 
         // Update issuance state
         _properties.setStringValue('state', updated_state);
@@ -151,16 +159,20 @@ contract NutsPlatform {
      * @param amount The amount of token to transfer to the issuance
      */
     function depositToken(uint256 issuance_id, address token_address, uint256 amount) public {
-        // Retrieve issuance state
+        // Retrieve issuance data
         string memory issuance_state = _storage.lookup(StringUtil.uintToString(issuance_id));
         _properties.clear();
         _properties.load(bytes(issuance_state));
         Instrument instrument = Instrument(_properties.getAddressValue('instrument_address'));
 
+        // Retrieve the issuance balance
+        string memory state = _properties.getStringValue('state');
+        string memory balance = _escrow.getIssuanceBalance(issuance_id);
+
         // Complete the token transfer
         _escrow.transferTokenToIssuance(msg.sender, issuance_id, ERC20(token_address), amount);
         (string memory updated_state, string memory action) = instrument.processTokenTransfer(issuance_id, 
-            _properties.getStringValue('state'), msg.sender, token_address, amount);
+           state, balance, msg.sender, token_address, amount);
 
         // Update issuance state
         _properties.setStringValue('state', updated_state);
@@ -179,14 +191,18 @@ contract NutsPlatform {
      * @param event_payload Payload of custom event, event_payload of EventScheduled event
      */
     function notify(uint256 issuance_id, string memory event_name, string memory event_payload) public {
-        // Retrieve issuance state
+        // Retrieve issuance data
         string memory issuance_state = _storage.lookup(StringUtil.uintToString(issuance_id));
         _properties.clear();
         _properties.load(bytes(issuance_state));
         Instrument instrument = Instrument(_properties.getAddressValue('instrument_address'));
 
-        (string memory updated_state, string memory action) = instrument.processEvent(issuance_id, _properties.getStringValue('state'), 
-            event_name, event_payload);
+        // Retrieve the issuance balance
+        string memory state = _properties.getStringValue('state');
+        string memory balance = _escrow.getIssuanceBalance(issuance_id);
+
+        (string memory updated_state, string memory action) = instrument.processEvent(issuance_id, 
+            state, balance, event_name, event_payload);
 
         // Update issuance state
         _properties.setStringValue('state', updated_state);
@@ -211,5 +227,6 @@ contract NutsPlatform {
                     ERC20(_transfers.actions[i].tokenAddress), _transfers.actions[i].amount);
             }
         }
+        _transfers.clear();
     }
 }
