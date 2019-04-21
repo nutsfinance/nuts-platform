@@ -46,6 +46,12 @@ library Property {
     }
 
     function clear(Properties storage properties) internal {
+        // Clears the mapping
+        for (uint i = 0; i < properties.data.length; i++) {
+            delete properties.indices[properties.data[i].key];
+        }
+
+        // Clears the data
         properties.data.length = 0;
     }
 
@@ -54,7 +60,7 @@ library Property {
      */
     function load(Properties storage properties, bytes memory data) internal {
         // Clears the data
-        properties.data.length = 0;
+        clear(properties);
 
         uint offset = data.length;
         uint index = 1;

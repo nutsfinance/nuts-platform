@@ -9,5 +9,5 @@ module.exports = function(deployer) {
   deployer.deploy(NutsEscrow);
   deployer.deploy(NutsToken);
   deployer.deploy(InstrumentRegistry);
-  deployer.deploy(NutsPlatform);
+  // deployer.deploy(NutsPlatform);
 };
