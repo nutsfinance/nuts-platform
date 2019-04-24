@@ -77,9 +77,31 @@ library StringUtil {
     function isUint(bytes memory b) pure internal returns (bool) {
         for (uint i = 0; i < b.length; i++) {
             uint8 c = uint8(b[i]);
-            if (c < 48 || c > 57)   return false;
+            if (c < 48 || c > 57)   {
+                return false;
+            }
         }
 
         return true;
+    }
+
+    /**
+     * Check whether two bytes arrays are the same
+     */
+    function equals(bytes memory a, bytes memory b) pure internal returns (bool) {
+        if (a.length != b.length) {
+            return false;
+        }
+        for (uint i = 0; i < a.length; i++) {
+            if (a[i] != b[i]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    function equals(string memory a, string memory b) pure internal returns (bool) {
+        return equals(bytes(a), bytes(b));
     }
 }

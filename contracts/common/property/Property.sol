@@ -372,4 +372,11 @@ library Property {
         return containsKey(properties, key) ? getIntValue(properties, key) : defaultValue;
     }
 
+    function getAddressOrDefault(Property.Properties storage properties, string memory key, address defaultValue) internal view returns (address) {
+        return containsKey(properties, key) ? getAddressValue(properties, key) : defaultValue;
+    }
+
+    function getBoolOrDefault(Property.Properties storage properties, string memory key, bool defaultValue) internal view returns (bool) {
+        return containsKey(properties, key) ? getBoolValue(properties, key) : defaultValue;
+    }
 }

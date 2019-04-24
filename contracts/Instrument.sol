@@ -26,8 +26,15 @@ contract Instrument {
      * @param event_name The name of the custom event
      * @param event_payload The payload the custom event
      */
-    event EventScheduled(string indexed issuance_id, uint256 timestamp, 
+    event EventScheduled(uint indexed issuance_id, uint256 timestamp, 
         string indexed event_name, string event_payload);
+
+    /**
+     * @dev An event reporting the issuance state change
+     * @param issuance_id The id of the issuance
+     * @param state The current issuance state
+     */
+    event StateUpdated(uint indexed issuance_id, string indexed state);
 
     /**
      * @dev Create a new issuance of the financial instrument
@@ -37,8 +44,8 @@ contract Instrument {
      * @return updated_state The updated issuance state
      * @return action The action to perform after the invocation
      */
-    function createIssuance(uint256 issuance_id, address seller_address, string calldata seller_data) 
-        external returns (string memory updated_state, string memory action);
+    function createIssuance(uint256 issuance_id, address seller_address, string memory seller_data) 
+        public returns (string memory updated_state, string memory action);
 
     /**
      * @dev A buyer engages to the issuance
@@ -50,8 +57,8 @@ contract Instrument {
      * @return updated_state The updated issuance state
      * @return action The action to perform after the invocation
      */    
-    function engage(uint256 issuance_id, string calldata state, string calldata balance, address buyer_address, 
-        string calldata buyer_data) external returns (string memory updated_state, string memory action);
+    function engage(uint256 issuance_id, string memory state, string memory balance, address buyer_address, 
+        string memory buyer_data) public returns (string memory updated_state, string memory action);
 
     /**
      * @dev Buyer/Seller has made an Ether transfer to the issuance
@@ -63,8 +70,8 @@ contract Instrument {
      * @return updated_state The updated issuance state
      * @return action The action to perform after the invocation
      */ 
-    function processTransfer(uint256 issuance_id, string calldata state, string calldata balance,
-        address from_address, uint256 amount) external returns (string memory updated_state, string memory action);
+    function processTransfer(uint256 issuance_id, string memory state, string memory balance,
+        address from_address, uint256 amount) public returns (string memory updated_state, string memory action);
 
     /**
      * @dev Buyer/Seller has made an ERC20 token transfer to the issuance
@@ -77,9 +84,9 @@ contract Instrument {
      * @return updated_state The updated issuance state
      * @return action The action to perform after the invocation
      */ 
-    function processTokenTransfer(uint256 issuance_id, string calldata state, string calldata balance,
+    function processTokenTransfer(uint256 issuance_id, string memory state, string memory balance,
         address from_address, address token_address, uint256 amount) 
-        external returns (string memory updated_address, string memory action);
+        public returns (string memory updated_state, string memory action);
 
     /**
      * @dev Process customer event
@@ -91,8 +98,8 @@ contract Instrument {
      * @return updated_state The updated issuance state
      * @return action The action to perform after the invocation
      */ 
-    function processEvent(uint256 issuance_id, string calldata state, string calldata balance, 
-        string calldata event_name, string calldata event_payload) external returns (string memory updated_state, string memory action);
+    function processEvent(uint256 issuance_id, string memory state, string memory balance, 
+        string memory event_name, string memory event_payload) public returns (string memory updated_state, string memory action);
 
     /**
      *
