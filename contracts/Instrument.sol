@@ -1,10 +1,23 @@
 pragma solidity ^0.5.0;
 
+import "./common/property/Property.sol";
+import "./common/payment/Balance.sol";
+import "./common/payment/Transfer.sol";
+
 /**
  * @title Base contract for financial instrument
  * All instrument contract must extend this contract.
  */
 contract Instrument {
+    using Property for Property.Properties;
+    using Balance for Balance.Balances;
+    using Transfer for Transfer.Transfers;
+
+    /**
+     *
+     *  Public APIs for Instruments
+     *
+     */
 
     /**
      * @dev An event used to schedule contract events in specific time.
@@ -80,4 +93,20 @@ contract Instrument {
      */ 
     function processEvent(uint256 issuance_id, string calldata state, string calldata balance, 
         string calldata event_name, string calldata event_payload) external returns (string memory updated_state, string memory action);
+
+    /**
+     *
+     *  Internal utility functions for instruments
+     *
+     */
+    // Current state of the issuance
+    Property.Properties internal _properties;
+    // Custom parameters
+    Property.Properties internal _parameters;
+    // Current balance of the issuance
+    Balance.Balances internal _balances;
+    // Transfer actions to take
+    Transfer.Transfers internal _transfers;
+
+    
 }

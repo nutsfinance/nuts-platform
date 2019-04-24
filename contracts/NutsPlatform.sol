@@ -185,7 +185,7 @@ contract NutsPlatform {
     }
 
     /**
-     * @dev Callback entry for scheduled custom event
+     * @dev Callback entry for scheduled custom event or entrance for custom operations
      * @param issuance_id The id of the issuance
      * @param event_name Name of custom event, event_name of EventScheduled event
      * @param event_payload Payload of custom event, event_payload of EventScheduled event

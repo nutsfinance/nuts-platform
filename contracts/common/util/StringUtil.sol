@@ -56,4 +56,30 @@ library StringUtil {
 
         return tempAddress;
     }
+
+    /**
+     * Convert a string to uint
+     */
+    function stringToUint(bytes memory b) pure internal returns (uint result) {
+        uint i;
+        result = 0;
+        for (i = 0; i < b.length; i++) {
+            uint c = uint(uint8(b[i]));
+            if (c >= 48 && c <= 57) {
+                result = result * 10 + (c - 48);
+            }
+        }
+    }
+
+    /**
+     * Check whether a string is unit
+     */
+    function isUint(bytes memory b) pure internal returns (bool) {
+        for (uint i = 0; i < b.length; i++) {
+            uint8 c = uint8(b[i]);
+            if (c < 48 || c > 57)   return false;
+        }
+
+        return true;
+    }
 }

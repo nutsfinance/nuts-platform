@@ -11,6 +11,7 @@ import "../util/StringUtil.sol";
  * and deserialize to properties while in use.
  */
 library Property {
+
     /**
      * An internal data structure to store the property key-val pair
      */
@@ -54,6 +55,58 @@ library Property {
         // Clears the data
         properties.data.length = 0;
     }
+
+    /**
+     * Important function to parse custom parameters
+     * Note: Currently only string and uint parameters are supported.
+     * Note: Parameters are of the format: aaa=bbb&ccc=ddd&ee=11
+     */
+    function parseParameters(Properties storage properties, string memory parameters) internal {
+        // Clears the data
+        clear(properties);
+
+        uint start = 0;
+        uint mid = 0;
+
+        bytes memory data = bytes(parameters);
+        for (uint i = 0; i < data.length; i++) {
+            if (data[i] == "=") {
+                mid = i;
+            } else if (data[i] == "&") {
+                ( bytes memory key, bytes memory value ) = getParameterPair(data, start, mid, i);
+
+                start = i + 1;
+                if (StringUtil.isUint(value)) {
+                    uint uintValue = StringUtil.stringToUint(value);
+                    setUintValue(properties, string(key), uintValue);
+                } else {
+                    setBytesValue(properties, string(key), value);
+                }
+            }
+        }
+
+        ( bytes memory key, bytes memory value ) = getParameterPair(data, start, mid, data.length);
+        if (StringUtil.isUint(value)) {
+            uint uintValue = StringUtil.stringToUint(value);
+            setUintValue(properties, string(key), uintValue);
+        } else {
+            setBytesValue(properties, string(key), value);
+        }
+    }
+
+    function getParameterPair(bytes memory data, uint start, uint mid, uint end) pure internal returns (bytes memory key, bytes memory value) {
+        key = new bytes(mid - start);
+        value = new bytes(end - mid - 1);
+
+        for (uint j = start; j < mid; j++) {
+            key[j - start] = data[j];
+        }
+
+        for (uint k = mid + 1; k < end; k++) {
+            value[k - mid - 1] = data[k];
+        }
+    }
+
 
     /**
      * Deserialize properties from bytes
@@ -153,6 +206,8 @@ library Property {
     function getUintValue(Properties storage properties, string memory key) internal view keyExist(properties, key) returns (uint value) {
         bytes memory data = getBytesValue(properties, key);
         value = BytesToTypes.bytesToUint256(data.length, data);
+        // Note: The bytes data might be smaller than 32 bytes!
+        // value = StringUtil.stringToUint(string(data));
     }
 
     function setUintValue(Properties storage properties, string memory key, uint value) internal {
@@ -300,4 +355,21 @@ library Property {
 
         setBytesValue(properties, key, data);
     }
+
+    /**
+     * Utility functions
+     */
+
+    function getStringOrDefault(Property.Properties storage properties, string memory key, string memory defaultValue) internal view returns (string memory) {
+        return containsKey(properties, key) ? getStringValue(properties, key) : defaultValue;
+    }
+
+    function getUintOrDefault(Property.Properties storage properties, string memory key, uint defaultValue) internal view returns (uint) {
+        return containsKey(properties, key) ? getUintValue(properties, key) : defaultValue;
+    }
+
+    function getIntOrDefault(Property.Properties storage properties, string memory key, int defaultValue) internal view returns (int) {
+        return containsKey(properties, key) ? getIntValue(properties, key) : defaultValue;
+    }
+
 }
