@@ -2,7 +2,7 @@ pragma solidity ^0.5.0;
 
 contract InstrumentRegistry {
     struct InstrumentStatus {
-        address instrument_address;
+        address instrumentAddress;
         address creator;
         bool active;
         uint256 creation;
@@ -10,26 +10,26 @@ contract InstrumentRegistry {
     }
 
     struct FSPStatus {
-        address fsp_address;
-        address[] instrument_addresses;
+        address fspAddress;
+        address[] instrumentAddresses;
     }
 
     mapping(address => InstrumentStatus) private _instruments;
     mapping(address => FSPStatus) private _fsps;
 
-    function create(address fsp_address, address instrument_address, uint256 expiration) public {
-        require(_instruments[instrument_address].instrument_address != address(0x0), "Instrument already exists");
-        _instruments[instrument_address] = InstrumentStatus(instrument_address, fsp_address, true, now, now + expiration);
-        _fsps[fsp_address].fsp_address = fsp_address;
-        _fsps[fsp_address].instrument_addresses.push(instrument_address);
+    function create(address fspAddress, address instrumentAddress, uint256 expiration) public {
+        require(_instruments[instrumentAddress].instrumentAddress != address(0x0), "Instrument already exists");
+        _instruments[instrumentAddress] = InstrumentStatus(instrumentAddress, fspAddress, true, now, now + expiration);
+        _fsps[fspAddress].fspAddress = fspAddress;
+        _fsps[fspAddress].instrumentAddresses.push(instrumentAddress);
     }
 
-    function deactivate(address instrument_address) public {
-        _instruments[instrument_address].active = false;
+    function deactivate(address instrumentAddress) public {
+        _instruments[instrumentAddress].active = false;
     }
 
-    function validate(address instrument_address) public view returns (bool) {
-        InstrumentStatus storage status = _instruments[instrument_address];
+    function validate(address instrumentAddress) public view returns (bool) {
+        InstrumentStatus storage status = _instruments[instrumentAddress];
         // Either no expiry(expiration = creation) or not expire yet
         return status.active && (status.expiration == status.creation || status.expiration < now);
     }

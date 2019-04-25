@@ -96,41 +96,41 @@ contract NutsEscrow is Secondary {
 
     /**
      * @dev Get the Ether balance of an issuance in the escrow
-     * @param issuance_id The id of the issuance
+     * @param issuanceId The id of the issuance
      * @return The Ether balance of the issuance in the escrow
      */
-    function balanceOfIssuance(uint256 issuance_id) public view onlyPrimary returns (uint256) {
-        // return _issuanceEther[issuance_id];
-        return _issuanceBalances[issuance_id].getEtherBalance();
+    function balanceOfIssuance(uint256 issuanceId) public view onlyPrimary returns (uint256) {
+        // return _issuanceEther[issuanceId];
+        return _issuanceBalances[issuanceId].getEtherBalance();
     }
 
     /**
      * @dev Transfer Ethers from a seller/buyer to the issuance
      * @param payee The address of the seller/buyer
-     * @param issuance_id The id of the issuance
+     * @param issuanceId The id of the issuance
      * @param amount The amount of Ether to transfer
      */
-    function transferToIssuance(address payee, uint256 issuance_id, uint256 amount) public onlyPrimary {
+    function transferToIssuance(address payee, uint256 issuanceId, uint256 amount) public onlyPrimary {
         // Subtract from the seller/buyer balance
         require(_etherBalance[payee] >= amount, "Insufficient Ether balance");
         _etherBalance[payee] = _etherBalance[payee].sub(amount);
 
         // Increase to the issuance balance
-        uint balance = _issuanceBalances[issuance_id].getEtherBalance();
-        _issuanceBalances[issuance_id].setEtherBalance(balance.add(amount));
+        uint balance = _issuanceBalances[issuanceId].getEtherBalance();
+        _issuanceBalances[issuanceId].setEtherBalance(balance.add(amount));
     }
 
     /**
      * @dev Transfer Ethers from an issuance to a seller/buyer
      * @param payee The address of the seller/buyer
-     * @param issuance_id The id of the issuance
+     * @param issuanceId The id of the issuance
      * @param amount The amount of Ether to transfer
      */
-    function transferFromIssuance(address payee, uint256 issuance_id, uint256 amount) public onlyPrimary {
+    function transferFromIssuance(address payee, uint256 issuanceId, uint256 amount) public onlyPrimary {
         // Subtract from the issuance balance
-        uint balance = _issuanceBalances[issuance_id].getEtherBalance();
+        uint balance = _issuanceBalances[issuanceId].getEtherBalance();
         require(balance >= amount, "Insufficient Ether balance");
-        _issuanceBalances[issuance_id].setEtherBalance(balance.sub(amount));
+        _issuanceBalances[issuanceId].setEtherBalance(balance.sub(amount));
 
         // Increase to the seller/buyer balance
         _etherBalance[payee] = _etherBalance[payee].add(amount);
@@ -138,43 +138,43 @@ contract NutsEscrow is Secondary {
 
     /**
      * @dev Get the ERC20 token balance of an issuance in the escrow
-     * @param issuance_id The id of the issuance
+     * @param issuanceId The id of the issuance
      * @param token The ERC20 token to check balance
      * @return The ERC20 token balance of the issuance in the escrow
      */
-    function tokenBalanceOfIssuance(uint256 issuance_id, ERC20 token) public view onlyPrimary returns (uint256) {
-        return _issuanceBalances[issuance_id].getTokenBalance(address(token));
+    function tokenBalanceOfIssuance(uint256 issuanceId, ERC20 token) public view onlyPrimary returns (uint256) {
+        return _issuanceBalances[issuanceId].getTokenBalance(address(token));
     }
 
     /**
      * @dev Transfer ERC20 token from a seller/buyer to the issuance
      * @param payee The address of the seller/buyer
-     * @param issuance_id The id of the issuance
+     * @param issuanceId The id of the issuance
      * @param token The ERC20 token to transfer
      * @param amount The amount of ERC20 token to transfer
      */
-    function transferTokenToIssuance(address payee, uint256 issuance_id, ERC20 token, uint256 amount) public onlyPrimary {
+    function transferTokenToIssuance(address payee, uint256 issuanceId, ERC20 token, uint256 amount) public onlyPrimary {
         // Subtract from the seller/buyer balance
         require(_tokenBalance[payee][address(token)] >= amount, "Inssufficient token balance");
         _tokenBalance[payee][address(token)] = _tokenBalance[payee][address(token)].sub(amount);
 
         // Increase to the issuance balance
-        uint balance = _issuanceBalances[issuance_id].getTokenBalance(address(token));
-        _issuanceBalances[issuance_id].setTokenBalance(address(token), balance.add(amount));
+        uint balance = _issuanceBalances[issuanceId].getTokenBalance(address(token));
+        _issuanceBalances[issuanceId].setTokenBalance(address(token), balance.add(amount));
     }
 
     /**
      * @dev Transfer ERC20 token from the issuance to a seller/buyer
      * @param payee The address of the seller/buyer
-     * @param issuance_id The id of the issuance
+     * @param issuanceId The id of the issuance
      * @param token The ERC20 token to transfer
      * @param amount The amount of ERC20 token to transfer
      */
-    function transferTokenFromIssuance(address payee, uint256 issuance_id, ERC20 token, uint256 amount) public onlyPrimary {
+    function transferTokenFromIssuance(address payee, uint256 issuanceId, ERC20 token, uint256 amount) public onlyPrimary {
         // Subtract from the issuance balance
-        uint balance = _issuanceBalances[issuance_id].getTokenBalance(address(token));
+        uint balance = _issuanceBalances[issuanceId].getTokenBalance(address(token));
         require(balance >= amount, "Insufficient token balance");
-        _issuanceBalances[issuance_id].setTokenBalance(address(token), balance.sub(amount));
+        _issuanceBalances[issuanceId].setTokenBalance(address(token), balance.sub(amount));
         
         // Increase to the seller/buyer balance
         _tokenBalance[payee][address(token)] = _tokenBalance[payee][address(token)].add(amount);
@@ -182,10 +182,10 @@ contract NutsEscrow is Secondary {
 
     /**
      * @dev Return the serialized repreentation of the issuance balance
-     * @param issuance_id The issuance id
+     * @param issuanceId The issuance id
      * @return The serialized balance
      */
-    function getIssuanceBalance(uint256 issuance_id) public view onlyPrimary returns (string memory) {
-        return string(_issuanceBalances[issuance_id].save());
+    function getIssuanceBalance(uint256 issuanceId) public view onlyPrimary returns (string memory) {
+        return string(_issuanceBalances[issuanceId].save());
     }
 }

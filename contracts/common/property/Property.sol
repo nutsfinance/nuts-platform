@@ -73,7 +73,7 @@ library Property {
             if (data[i] == "=") {
                 mid = i;
             } else if (data[i] == "&") {
-                ( bytes memory key, bytes memory value ) = getParameterPair(data, start, mid, i);
+                (bytes memory key, bytes memory value) = getParameterPair(data, start, mid, i);
 
                 start = i + 1;
                 if (StringUtil.isUint(value)) {
@@ -85,7 +85,7 @@ library Property {
             }
         }
 
-        ( bytes memory key, bytes memory value ) = getParameterPair(data, start, mid, data.length);
+        (bytes memory key, bytes memory value) = getParameterPair(data, start, mid, data.length);
         if (StringUtil.isUint(value)) {
             uint uintValue = StringUtil.stringToUint(value);
             setUintValue(properties, string(key), uintValue);
