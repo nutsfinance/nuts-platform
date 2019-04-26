@@ -39,7 +39,6 @@ contract Loan is Instrument {
         _properties.setUintValue("collateral_due_days", now + collateralDueDays);
         _properties.setUintValue("tenor_days", tenorDays);
         _properties.setUintValue("interest_rate", interestRate);
-        _properties.setStringValue("properties", "Initiated");
 
         // Set expiration for deposit
         emit EventScheduled(issuanceId, now + depositDueDays * 1 days, "deposit_expired", "");
@@ -47,8 +46,8 @@ contract Loan is Instrument {
         // Set expiration for issuance
         emit EventScheduled(issuanceId, now + tenorDays * 1 days, "issuance_expired", "");
 
-        // Emit properties updated event
-        emit StateUpdated(issuanceId, "Initiated");
+        // Change to Initiated state
+        updateIssuanceState(issuanceId, INITIATED_STATE);
 
         // Persist the propertiess
         updatedProperties = string(_properties.save());
@@ -74,18 +73,17 @@ contract Loan is Instrument {
         _properties.clear();
         _properties.load(bytes(properties));
 
-        require(StringUtil.equals(_properties.getStringValue("properties"), "Engagable"), "Issuance must be in the Engagable properties");
+        require(isIssuanceInState(ENGAGABLE_STATE), "Issuance must be in the Engagable properties");
 
         _properties.setAddressValue("buyer_address", buyerAddress);
         _properties.setUintValue("engage_date", now);
-        _properties.setStringValue("properties", "Active");
 
         // Set expiration for collateral
         uint collateralDueDays = _properties.getUintValue("collateral_due_days");
         emit EventScheduled(issuanceId, now + collateralDueDays * 1 days, "collateral_expired", "");
 
-        // Emit properties updated event
-        emit StateUpdated(issuanceId, "Active");
+        // Change to Active state
+        updateIssuanceState(issuanceId, ACTIVE_STATE);
 
         // Persist the propertiess
         updatedProperties = string(_properties.save());
@@ -118,26 +116,21 @@ contract Loan is Instrument {
         if (_properties.getAddressValue("seller_address") == fromAddress) {
             // The Ether transfer is from the seller, this should be the deposit
             // Check whether the Ether balance is larger than the borrow amount
-            if ( StringUtil.equals(_properties.getStringValue("properties"), "Initiated")
+            if ( isIssuanceInState(INITIATED_STATE)
                 && _balances.getEtherBalance() >= _properties.getUintValue("borrow_amount")) {
-                // Change to Enagagble properties
-                _properties.setStringValue("properties", "Engagable");
-
-                // Emit properties updated event
-                emit StateUpdated(issuanceId, "Engagable");
+                
+                // Change to Engagable state
+                updateIssuanceState(issuanceId, ENGAGABLE_STATE);
             }
         } else if (_properties.getAddressOrDefault("buyer_address", address(0x0)) == fromAddress) {
             // The Ether transfer is from the buyer, this should be the repay
-            // If it's in Active properties, repay is complete, and collateral is complete
-            if ( StringUtil.equals(_properties.getStringValue("properties"), "Active")
+            // If it's in Active state, repay is complete, and collateral is complete
+            if ( isIssuanceInState(ACTIVE_STATE)
                 && _balances.getEtherBalance() >= _properties.getUintValue("borrow_amount")
                 && _properties.getBoolOrDefault("collateral_complete", false)) {
                 
-                // Change to Completed Engaged properties
-                _properties.setStringValue("properties", "Completed Engaged");
-
-                // Emit properties updated event
-                emit StateUpdated(issuanceId, "Completed Engaged");
+                // Change to Complete Engaged state
+                updateIssuanceState(issuanceId, COMPLETE_ENGAGED_STATE);
 
                 // Also add transfers
                 _transfers.clear();
@@ -188,18 +181,15 @@ contract Loan is Instrument {
         // Check whether the transfer is from the buyer
         if (_properties.getAddressOrDefault("buyer_address", address(0x0)) == fromAddress) {
             // Collateral; check whether the colleteral is complete
-            if ( StringUtil.equals(_properties.getStringValue("properties"), "Initiated")
+            if ( isIssuanceInState(INITIATED_STATE)
                 && _properties.getAddressValue("collateral_token_address") == tokenAddress
                 && _balances.getEtherBalance() >= _properties.getUintValue("borrow_amount")
                 && !_properties.getBoolOrDefault("collateral_complete", false)) {
 
                 _properties.setBoolValue("collateral_complete", true);
 
-                // Change to Active properties
-                _properties.setStringValue("properties", "Active");
-
-                // Emit properties updated event
-                emit StateUpdated(issuanceId, "Active");
+                // Change to Active state
+                updateIssuanceState(issuanceId, ACTIVE_STATE);
 
                 // Transfer Ether to buyer
                 _transfers.clear();
@@ -237,31 +227,27 @@ contract Loan is Instrument {
 
         // Check for deposit_expired event
         if (StringUtil.equals(eventName, "deposit_expired")) {
-            // Check whether the issuance is still in Initiated properties
-            if (StringUtil.equals(_properties.getStringValue("properties"), "Initiated")) {
-                // Changed to unfunded properties
-                _properties.setStringValue("properties", "Unfunded");
-
-                // Emit properties updated event
-                emit StateUpdated(issuanceId, "Unfunded");
+            // Check whether the issuance is still in Initiated state
+            if (isIssuanceInState(INITIATED_STATE)) {
+                
+                // Change to Unfunded state
+                updateIssuanceState(issuanceId, UNFUNDED_STATE);
             }
         } else if (StringUtil.equals(eventName, "collateral_expired")) {
-            // Check whether the issuance is still in Active properties
+            // Check whether the issuance is still in Active state
             // and the collateral is not complete
-            if (StringUtil.equals(_properties.getStringValue("properties"), "Active")
+            if (isIssuanceInState(ACTIVE_STATE)
                 && !_properties.getBoolOrDefault("collateral_complete", false)) {
-                _properties.setStringValue("properties", "Delinquent");
-
-                // Emit properties updated event
-                emit StateUpdated(issuanceId, "Delinquent");
+                
+                // Change to Delinquent state
+                updateIssuanceState(issuanceId, DELINQUENT_STATE);
             }
         } else if (StringUtil.equals(eventName, "issuance_expired")) {
             // Check whether the issuance is still active
-            if (StringUtil.equals(_properties.getStringValue("properties"), "Active")) {
-                _properties.setStringValue("properties", "Delinquent");
+            if (isIssuanceInState(ACTIVE_STATE)) {
 
-                // Emit properties updated event
-                emit StateUpdated(issuanceId, "Delinquent");
+                // Change to Delinquent state
+                updateIssuanceState(issuanceId, DELINQUENT_STATE);
             }
         }
 
