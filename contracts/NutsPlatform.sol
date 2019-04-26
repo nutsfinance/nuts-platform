@@ -62,15 +62,15 @@ contract NutsPlatform {
     /**
      * @dev Invoked by seller to create new issuance
      * @param instrumentAddress The address of the instrument of which the issuance is created
-     * @param sellerData The custom parameter
+     * @param sellerParameters The custom parameter of seller
      * @return issuanceId The id of the newly created issuance
      */
-    function createIssuance(address instrumentAddress, string memory sellerData) public returns (uint256) {
+    function createIssuance(address instrumentAddress, string memory sellerParameters) public returns (uint256) {
         require(_instrumentRegistry.validate(instrumentAddress), "Invalid instrument");
         lastIssuanceId = lastIssuanceId + 1;
         uint issuanceId = lastIssuanceId;
         Instrument instrument = Instrument(instrumentAddress);
-        (string memory updatedState, string memory action) = instrument.createIssuance(issuanceId, msg.sender, sellerData);
+        (string memory updatedProperties, string memory transfers) = instrument.createIssuance(issuanceId, msg.sender, sellerParameters);
 
         // Create a new property map for the issuance
         _properties.clear();
@@ -78,14 +78,14 @@ contract NutsPlatform {
         _properties.setAddressValue('instrumentAddress', instrumentAddress);
         _properties.setAddressValue('sellerAddress', msg.sender);
         _properties.setUintValue('created', now);
-        _properties.setStringValue('state', updatedState);
-        // Persist the updated state
-        string memory issuanceState = string(_properties.save());
-        _storage.save(StringUtil.uintToString(issuanceId), issuanceState);
+        _properties.setStringValue('properties', updatedProperties);
+        // Persist the updated properties
+        string memory issuanceData = string(_properties.save());
+        _storage.save(StringUtil.uintToString(issuanceId), issuanceData);
         _properties.clear();
 
-        // Post-actions
-        processAction(issuanceId, action);
+        // Post-transferss
+        processTransfers(issuanceId, transfers);
 
         return issuanceId;
     }
@@ -93,30 +93,30 @@ contract NutsPlatform {
     /**
      * @dev Invoked by buyer to engage an issuance
      * @param issuanceId The id of the issuance
-     * @param buyer_state The custom parameters of the engagement
+     * @param buyerParameters The custom parameters of the engagement
      */
-    function engageIssuance(uint256 issuanceId, string memory buyer_state) public {
+    function engageIssuance(uint256 issuanceId, string memory buyerParameters) public {
         // Retrieve the issuance data
-        string memory issuanceState = _storage.lookup(StringUtil.uintToString(issuanceId));
+        string memory issuanceData = _storage.lookup(StringUtil.uintToString(issuanceId));
         _properties.clear();
-        _properties.load(bytes(issuanceState));
+        _properties.load(bytes(issuanceData));
         Instrument instrument = Instrument(_properties.getAddressValue('instrumentAddress'));
 
         // Retrieve the issuance balance
-        string memory state = _properties.getStringValue('state');
+        string memory properties = _properties.getStringValue('properties');
         string memory balance = _escrow.getIssuanceBalance(issuanceId);
 
-        (string memory updatedState, string memory action) = instrument.engage(issuanceId, 
-            state, balance, msg.sender, buyer_state);
+        (string memory updatedProperties, string memory transfers) = instrument.engage(issuanceId, 
+            properties, balance, msg.sender, buyerParameters);
 
-        // Update issuance state
-        _properties.setStringValue('state', updatedState);
-        issuanceState = string(_properties.save());
-        _storage.save(StringUtil.uintToString(issuanceId), issuanceState);
+        // Update issuance properties
+        _properties.setStringValue('properties', updatedProperties);
+        issuanceData = string(_properties.save());
+        _storage.save(StringUtil.uintToString(issuanceId), issuanceData);
         _properties.clear();
 
-        // Post actions
-        processAction(issuanceId, action);
+        // Post transferss
+        processTransfers(issuanceId, transfers);
     }
 
     /**
@@ -127,28 +127,28 @@ contract NutsPlatform {
      */
     function deposit(uint256 issuanceId, uint256 amount) public {
         // Retrieve issuance data
-        string memory issuanceState = _storage.lookup(StringUtil.uintToString(issuanceId));
+        string memory issuanceData = _storage.lookup(StringUtil.uintToString(issuanceId));
         _properties.clear();
-        _properties.load(bytes(issuanceState));
+        _properties.load(bytes(issuanceData));
         Instrument instrument = Instrument(_properties.getAddressValue('instrumentAddress'));
 
         // Retrieve the issuance balance
-        string memory state = _properties.getStringValue('state');
+        string memory properties = _properties.getStringValue('properties');
         string memory balance = _escrow.getIssuanceBalance(issuanceId);
 
         // Complete Ether transfer
         _escrow.transferToIssuance(msg.sender, issuanceId, amount);
-        (string memory updatedState, string memory action) = instrument.processTransfer(issuanceId, 
-            state, balance, msg.sender, amount);
+        (string memory updatedProperties, string memory transfers) = instrument.processTransfer(issuanceId, 
+            properties, balance, msg.sender, amount);
 
-        // Update issuance state
-        _properties.setStringValue('state', updatedState);
-        issuanceState = string(_properties.save());
-        _storage.save(StringUtil.uintToString(issuanceId), issuanceState);
+        // Update issuance properties
+        _properties.setStringValue('properties', updatedProperties);
+        issuanceData = string(_properties.save());
+        _storage.save(StringUtil.uintToString(issuanceId), issuanceData);
         _properties.clear();
 
-        // Post-actions
-        processAction(issuanceId, action);
+        // Post-transferss
+        processTransfers(issuanceId, transfers);
     }
 
      /**
@@ -160,28 +160,28 @@ contract NutsPlatform {
      */
     function depositToken(uint256 issuanceId, address token_address, uint256 amount) public {
         // Retrieve issuance data
-        string memory issuanceState = _storage.lookup(StringUtil.uintToString(issuanceId));
+        string memory issuanceData = _storage.lookup(StringUtil.uintToString(issuanceId));
         _properties.clear();
-        _properties.load(bytes(issuanceState));
+        _properties.load(bytes(issuanceData));
         Instrument instrument = Instrument(_properties.getAddressValue('instrumentAddress'));
 
         // Retrieve the issuance balance
-        string memory state = _properties.getStringValue('state');
+        string memory properties = _properties.getStringValue('properties');
         string memory balance = _escrow.getIssuanceBalance(issuanceId);
 
         // Complete the token transfer
         _escrow.transferTokenToIssuance(msg.sender, issuanceId, ERC20(token_address), amount);
-        (string memory updatedState, string memory action) = instrument.processTokenTransfer(issuanceId, 
-           state, balance, msg.sender, token_address, amount);
+        (string memory updatedProperties, string memory transfers) = instrument.processTokenTransfer(issuanceId, 
+           properties, balance, msg.sender, token_address, amount);
 
-        // Update issuance state
-        _properties.setStringValue('state', updatedState);
-        issuanceState = string(_properties.save());
-        _storage.save(StringUtil.uintToString(issuanceId), issuanceState);
+        // Update issuance properties
+        _properties.setStringValue('properties', updatedProperties);
+        issuanceData = string(_properties.save());
+        _storage.save(StringUtil.uintToString(issuanceId), issuanceData);
         _properties.clear();
 
-        // Post-actions
-        processAction(issuanceId, action);
+        // Post-transferss
+        processTransfers(issuanceId, transfers);
     }
 
     /**
@@ -192,31 +192,31 @@ contract NutsPlatform {
      */
     function notify(uint256 issuanceId, string memory event_name, string memory event_payload) public {
         // Retrieve issuance data
-        string memory issuanceState = _storage.lookup(StringUtil.uintToString(issuanceId));
+        string memory issuanceData = _storage.lookup(StringUtil.uintToString(issuanceId));
         _properties.clear();
-        _properties.load(bytes(issuanceState));
+        _properties.load(bytes(issuanceData));
         Instrument instrument = Instrument(_properties.getAddressValue('instrumentAddress'));
 
         // Retrieve the issuance balance
-        string memory state = _properties.getStringValue('state');
+        string memory properties = _properties.getStringValue('properties');
         string memory balance = _escrow.getIssuanceBalance(issuanceId);
 
-        (string memory updatedState, string memory action) = instrument.processEvent(issuanceId, 
-            state, balance, event_name, event_payload);
+        (string memory updatedProperties, string memory transfers) = instrument.processEvent(issuanceId, 
+            properties, balance, event_name, event_payload);
 
-        // Update issuance state
-        _properties.setStringValue('state', updatedState);
-        issuanceState = string(_properties.save());
-        _storage.save(StringUtil.uintToString(issuanceId), issuanceState);
+        // Update issuance properties
+        _properties.setStringValue('properties', updatedProperties);
+        issuanceData = string(_properties.save());
+        _storage.save(StringUtil.uintToString(issuanceId), issuanceData);
         _properties.clear();
 
-        // Post action
-        processAction(issuanceId, action);
+        // Post transfers
+        processTransfers(issuanceId, transfers);
     }
 
-    function processAction(uint issuanceId, string memory action) private {
-        if (bytes(action).length == 0)  return;
-        _transfers.load(bytes(action));
+    function processTransfers(uint issuanceId, string memory transfers) private {
+        if (bytes(transfers).length == 0)  return;
+        _transfers.load(bytes(transfers));
 
         for (uint i = 0; i < _transfers.actions.length; i++) {
             if (_transfers.actions[i].isEther) {
