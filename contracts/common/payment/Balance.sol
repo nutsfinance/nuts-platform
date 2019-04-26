@@ -24,28 +24,28 @@ library Balance {
     /**
      * Serialize the balances into bytes
      */
-    function save(Balances storage balances) internal view returns (bytes memory data) {
+    function save(Balances storage self) internal view returns (bytes memory data) {
         // Size of one balance = size of address(20) + size of uint(32) = 52
-        uint size = 32 + balances.entries.length * 52;
+        uint size = 32 + self.entries.length * 52;
         data = new bytes(size);
         uint offset = size;
-        TypesToBytes.uintToBytes(offset, balances.entries.length, data);
+        TypesToBytes.uintToBytes(offset, self.entries.length, data);
         offset -= 32;
 
-        for (uint i = 0; i < balances.entries.length; i++) {
-            TypesToBytes.addressToBytes(offset, balances.entries[i].tokenAddress, data);
+        for (uint i = 0; i < self.entries.length; i++) {
+            TypesToBytes.addressToBytes(offset, self.entries[i].tokenAddress, data);
             offset -= 20;
 
-            TypesToBytes.uintToBytes(offset, balances.entries[i].amount, data);
+            TypesToBytes.uintToBytes(offset, self.entries[i].amount, data);
             offset -= 32;
         }
     }
 
     /**
-     * Deserialize the balances from bytes
+     * Deserialize the self from bytes
      */
-    function load(Balances storage balances, bytes memory data) internal {
-        balances.entries.length = 0;
+    function load(Balances storage self, bytes memory data) internal {
+        self.entries.length = 0;
         uint offset = data.length;
         uint length = BytesToTypes.bytesToUint256(offset, data);
         offset -= 32;
@@ -56,21 +56,21 @@ library Balance {
             uint amount = BytesToTypes.bytesToUint256(offset, data);
             offset -= 32;
 
-            balances.entries.push(BalanceEntry(tokenAddress == address(0x0), tokenAddress, amount));
+            self.entries.push(BalanceEntry(tokenAddress == address(0x0), tokenAddress, amount));
         }
     }
 
-    function clear(Balances storage balances) internal {
-        balances.entries.length = 0;
+    function clear(Balances storage self) internal {
+        self.entries.length = 0;
     }
 
     /**
      * @dev Get the Ether balance
      */
-    function getEtherBalance(Balances storage balances) internal view returns (uint amount) {
-        for (uint i = 0; i < balances.entries.length; i++) {
-            if (balances.entries[i].isEther) {
-                amount = balances.entries[i].amount;
+    function getEtherBalance(Balances storage self) internal view returns (uint amount) {
+        for (uint i = 0; i < self.entries.length; i++) {
+            if (self.entries[i].isEther) {
+                amount = self.entries[i].amount;
                 break;
             }
         }
@@ -79,24 +79,24 @@ library Balance {
     /**
      * @dev Set the Ether balance
      */
-    function setEtherBalance(Balances storage balances, uint amount) internal {
-        for (uint i = 0; i < balances.entries.length; i++) {
-            if (balances.entries[i].isEther) {
-                balances.entries[i].amount = amount;
+    function setEtherBalance(Balances storage self, uint amount) internal {
+        for (uint i = 0; i < self.entries.length; i++) {
+            if (self.entries[i].isEther) {
+                self.entries[i].amount = amount;
                 return;
             }
         }
         // Ether not in balance
-        balances.entries.push(BalanceEntry(true, address(0x0), amount));
+        self.entries.push(BalanceEntry(true, address(0x0), amount));
     }
 
     /**
      * @dev Get the ERC20 token balance
      */
-    function getTokenBalance(Balances storage balances, address tokenAddress) internal view returns (uint amount) {
-        for (uint i = 0; i < balances.entries.length; i++) {
-            if (balances.entries[i].tokenAddress == tokenAddress) {
-                amount = balances.entries[i].amount;
+    function getTokenBalance(Balances storage self, address tokenAddress) internal view returns (uint amount) {
+        for (uint i = 0; i < self.entries.length; i++) {
+            if (self.entries[i].tokenAddress == tokenAddress) {
+                amount = self.entries[i].amount;
                 break;
             }
         }
@@ -105,14 +105,14 @@ library Balance {
     /**
      * @dev Set the ERC20 token balance
      */
-    function setTokenBalance(Balances storage balances, address tokenAddress, uint amount) internal {
-        for (uint i = 0; i < balances.entries.length; i++) {
-            if (balances.entries[i].tokenAddress == tokenAddress) {
-                balances.entries[i].amount = amount;
+    function setTokenBalance(Balances storage self, address tokenAddress, uint amount) internal {
+        for (uint i = 0; i < self.entries.length; i++) {
+            if (self.entries[i].tokenAddress == tokenAddress) {
+                self.entries[i].amount = amount;
                 return;
             }
         }
         // Token not in balance
-        balances.entries.push(BalanceEntry(false, tokenAddress, amount));
+        self.entries.push(BalanceEntry(false, tokenAddress, amount));
     }
 }
