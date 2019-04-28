@@ -7,6 +7,10 @@ import "../Instrument.sol";
  * depositing token as collaterals.
  */
 contract Loan is Instrument {
+    string constant DEPOSIT_EXPIRED_EVENT = "deposit_expired";
+    string constant ENGAGEMENT_EXPIRED_EVENT = "engagement_expired";
+    string constant COLLATERAL_EXPIRED_EVENT = "collateral_expired";
+    string constant LOAN_EXPIRED_EVENT = "loan_expired";
 
     /**
      * @dev Create a new issuance of the financial instrument
@@ -25,26 +29,21 @@ contract Loan is Instrument {
         uint collateralAmount = _parameters.getUintValue("collateral-amount");
         uint borrowAmount = _parameters.getUintValue("borrow-amount");
         uint depositDueDays = _parameters.getUintValue("deposit-due-days");
+        uint engagementDueDays = _parameters.getUintValue("engagement-due-days");
         uint collateralDueDays = _parameters.getUintValue("collateral-due-days");
-        uint tenorDays = _parameters.getUintValue("tenor-days");
-        uint interestRate = _parameters.getUintValue("interest-rate");
 
         // Set propertiess
         _properties.clear();
         _properties.setAddressValue("seller_address", sellerAddress);
+        _properties.setUintValue("start_date", now);
         _properties.setAddressValue("collateral_token_address", collateralTokenAddress);
         _properties.setUintValue("collateral_amount", collateralAmount);
         _properties.setUintValue("borrow_amount", borrowAmount);
-        _properties.setUintValue("start_date", now);
-        _properties.setUintValue("collateral_due_days", now + collateralDueDays);
-        _properties.setUintValue("tenor_days", tenorDays);
-        _properties.setUintValue("interest_rate", interestRate);
+        _properties.setUintValue("engagement_due_days", engagementDueDays);
+        _properties.setUintValue("collateral_due_days", collateralDueDays);
 
         // Set expiration for deposit
-        emit EventScheduled(issuanceId, now + depositDueDays * 1 days, "deposit_expired", "");
-
-        // Set expiration for issuance
-        emit EventScheduled(issuanceId, now + tenorDays * 1 days, "issuance_expired", "");
+        emit EventScheduled(issuanceId, now + depositDueDays * 1 days, DEPOSIT_EXPIRED_EVENT, "");
 
         // Change to Initiated state
         updateIssuanceState(issuanceId, INITIATED_STATE);
@@ -80,7 +79,7 @@ contract Loan is Instrument {
 
         // Set expiration for collateral
         uint collateralDueDays = _properties.getUintValue("collateral_due_days");
-        emit EventScheduled(issuanceId, now + collateralDueDays * 1 days, "collateral_expired", "");
+        emit EventScheduled(issuanceId, now + collateralDueDays * 1 days, COLLATERAL_EXPIRED_EVENT, "");
 
         // Change to Active state
         updateIssuanceState(issuanceId, ACTIVE_STATE);
@@ -121,6 +120,11 @@ contract Loan is Instrument {
                 
                 // Change to Engagable state
                 updateIssuanceState(issuanceId, ENGAGABLE_STATE);
+
+                // Schedule engagement expiration
+                uint engagementDueDays = _properties.getUintValue("engagement_due_days");
+                emit EventScheduled(issuanceId, now + engagementDueDays * 1 days, ENGAGEMENT_EXPIRED_EVENT, "");
+
             }
         } else if (_properties.getAddressOrDefault("buyer_address", address(0x0)) == fromAddress) {
             // The Ether transfer is from the buyer, this should be the repay
@@ -226,14 +230,19 @@ contract Loan is Instrument {
         _properties.load(bytes(properties));
 
         // Check for deposit_expired event
-        if (StringUtil.equals(eventName, "deposit_expired")) {
+        if (StringUtil.equals(eventName, DEPOSIT_EXPIRED_EVENT)) {
             // Check whether the issuance is still in Initiated state
             if (isIssuanceInState(INITIATED_STATE)) {
-                
                 // Change to Unfunded state
                 updateIssuanceState(issuanceId, UNFUNDED_STATE);
             }
-        } else if (StringUtil.equals(eventName, "collateral_expired")) {
+        } else if (StringUtil.equals(eventName, ENGAGEMENT_EXPIRED_EVENT)) {
+            // Check whether the issuance is still in Engagable state
+            if (isIssuanceInState(ENGAGABLE_STATE)) {
+                // Change to Unfunded state
+                updateIssuanceState(issuanceId, COMPLETE_NOT_ENGAGED_STATE);
+            }
+        } else if (StringUtil.equals(eventName, COLLATERAL_EXPIRED_EVENT)) {
             // Check whether the issuance is still in Active state
             // and the collateral is not complete
             if (isIssuanceInState(ACTIVE_STATE)
@@ -242,7 +251,7 @@ contract Loan is Instrument {
                 // Change to Delinquent state
                 updateIssuanceState(issuanceId, DELINQUENT_STATE);
             }
-        } else if (StringUtil.equals(eventName, "issuance_expired")) {
+        } else if (StringUtil.equals(eventName, LOAN_EXPIRED_EVENT)) {
             // Check whether the issuance is still active
             if (isIssuanceInState(ACTIVE_STATE)) {
 
