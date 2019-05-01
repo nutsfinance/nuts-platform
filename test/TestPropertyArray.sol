@@ -3,7 +3,7 @@ pragma solidity ^0.5.0;
 import "truffle/Assert.sol";
 import "../contracts/common/property/Property.sol";
 
-contract TestProperty {
+contract TestPropertyArray {
     using Property for Property.Properties;
 
     Property.Properties private _properties1;

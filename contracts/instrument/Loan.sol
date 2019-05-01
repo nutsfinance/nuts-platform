@@ -31,6 +31,17 @@ contract Loan is Instrument {
         uint depositDueDays = _parameters.getUintValue("deposit-due-days");
         uint engagementDueDays = _parameters.getUintValue("engagement-due-days");
         uint collateralDueDays = _parameters.getUintValue("collateral-due-days");
+        uint tenorDays = _parameters.getUintValue("tenor-days");
+
+        // Validate parameters
+        require(collateralTokenAddress != address(0x0), "Collateral token address must not be 0");
+        require(collateralAmount > 0, "Collateral amount must be greater than 0");
+        require(borrowAmount > 0, "Borrow amount must be greater than 0");
+        require(depositDueDays > 0, "Deposit due days must be greater than 0");
+        require(engagementDueDays > 0, "Engagement due days must be greater than 0");
+        require(collateralDueDays > 0, "Collateral due days must be greater than 0");
+        require(tenorDays > 0, "Tenor days must be greater than 0");
+        require(tenorDays > collateralDueDays, "Tenor days must be greater than collateral due days");
 
         // Set propertiess
         _properties.clear();
@@ -41,6 +52,7 @@ contract Loan is Instrument {
         _properties.setUintValue("borrow_amount", borrowAmount);
         _properties.setUintValue("engagement_due_days", engagementDueDays);
         _properties.setUintValue("collateral_due_days", collateralDueDays);
+        _properties.setUintValue("tenor_days", tenorDays);
 
         // Set expiration for deposit
         emit EventScheduled(issuanceId, now + depositDueDays * 1 days, DEPOSIT_EXPIRED_EVENT, "");
@@ -81,6 +93,10 @@ contract Loan is Instrument {
         uint collateralDueDays = _properties.getUintValue("collateral_due_days");
         emit EventScheduled(issuanceId, now + collateralDueDays * 1 days, COLLATERAL_EXPIRED_EVENT, "");
 
+        // Set expiration for loan
+        uint loanDueDays = _properties.getUintValue("tenor_days");
+        emit EventScheduled(issuanceId, now + loanDueDays * 1 days, LOAN_EXPIRED_EVENT, "");
+
         // Change to Active state
         updateIssuanceState(issuanceId, ACTIVE_STATE);
 
@@ -111,45 +127,20 @@ contract Loan is Instrument {
         _balances.clear();
         _balances.load(bytes(balance));
 
-        // Check it's from the seller or the buyer
-        if (_properties.getAddressValue("seller_address") == fromAddress) {
-            // The Ether transfer is from the seller, this should be the deposit
-            // Check whether the Ether balance is larger than the borrow amount
-            if ( isIssuanceInState(INITIATED_STATE)
-                && _balances.getEtherBalance() >= _properties.getUintValue("borrow_amount")) {
-                
-                // Change to Engagable state
-                updateIssuanceState(issuanceId, ENGAGABLE_STATE);
+        // Deposit check
+        // 1. The issuance is in initiated state
+        // 2. The Ether transfer is from seller
+        // 3. The ether balance is larger then or equal to the borrow amount
+        if ( isIssuanceInState(INITIATED_STATE)
+            && _properties.getAddressValue("seller_address") == fromAddress
+            && _balances.getEtherBalance() >= _properties.getUintValue("borrow_amount")) {
+            
+            // Change to Engagable state
+            updateIssuanceState(issuanceId, ENGAGABLE_STATE);
 
-                // Schedule engagement expiration
-                uint engagementDueDays = _properties.getUintValue("engagement_due_days");
-                emit EventScheduled(issuanceId, now + engagementDueDays * 1 days, ENGAGEMENT_EXPIRED_EVENT, "");
-
-            }
-        } else if (_properties.getAddressOrDefault("buyer_address", address(0x0)) == fromAddress) {
-            // The Ether transfer is from the buyer, this should be the repay
-            // If it's in Active state, repay is complete, and collateral is complete
-            if ( isIssuanceInState(ACTIVE_STATE)
-                && _balances.getEtherBalance() >= _properties.getUintValue("borrow_amount")
-                && _properties.getBoolOrDefault("collateral_complete", false)) {
-                
-                // Change to Complete Engaged state
-                updateIssuanceState(issuanceId, COMPLETE_ENGAGED_STATE);
-
-                // Also add transfers
-                _transfers.clear();
-                // Transfer Ethers back to seller
-                _transfers.addEtherTransfer(_properties.getAddressValue("seller_address"),
-                     _properties.getUintValue("borrow_amount"));
-                // Transfer collateral token back to buyer
-                _transfers.addTokenTransfer(_properties.getAddressValue("collateral_token_address"),
-                    _properties.getAddressValue("buyer_address"), 
-                    _properties.getUintValue("collateral_amount"));
-                // TODO If the Ether balance is more than the borrow amount, return to buyer?
-                // ToDO If the token balance is more than the collateral amount, return to seller?
-                transfers = string(_transfers.save());
-                _transfers.clear();
-            }
+            // Schedule engagement expiration
+            uint engagementDueDays = _properties.getUintValue("engagement_due_days");
+            emit EventScheduled(issuanceId, now + engagementDueDays * 1 days, ENGAGEMENT_EXPIRED_EVENT, "");
         }
 
         // Persist the propertiess
@@ -182,26 +173,28 @@ contract Loan is Instrument {
         _balances.clear();
         _balances.load(bytes(balance));
 
-        // Check whether the transfer is from the buyer
-        if (_properties.getAddressOrDefault("buyer_address", address(0x0)) == fromAddress) {
-            // Collateral; check whether the colleteral is complete
-            if ( isIssuanceInState(INITIATED_STATE)
-                && _properties.getAddressValue("collateral_token_address") == tokenAddress
-                && _balances.getEtherBalance() >= _properties.getUintValue("borrow_amount")
-                && !_properties.getBoolOrDefault("collateral_complete", false)) {
+        // Collateral check
+        // 1. The issuance is in active state
+        // 2. The token is from the buyer
+        // 3. The token is the collateral token
+        // 4. The balance collateral balance is equals to or larger than the collateral amount
+        // 5. The issuance is still collecting collateral(collateral_complete = false)
+        if ( isIssuanceInState(ACTIVE_STATE)
+            && _properties.getAddressOrDefault("buyer_address", address(0x0)) == fromAddress
+            && _properties.getAddressValue("collateral_token_address") == tokenAddress
+            && _balances.getTokenBalance(tokenAddress) >= _properties.getUintValue("collateral_amount")
+            && !_properties.getBoolOrDefault("collateral_complete", false)) {
 
-                _properties.setBoolValue("collateral_complete", true);
+            // Mark the collateral collection as complete
+            _properties.setBoolValue("collateral_complete", true);
 
-                // Change to Active state
-                updateIssuanceState(issuanceId, ACTIVE_STATE);
-
-                // Transfer Ether to buyer
-                _transfers.clear();
-                _transfers.addEtherTransfer(_properties.getAddressValue("buyer_address"),
-                     _properties.getUintValue("borrow_amount"));
-                transfers = string(_transfers.save());
-                _transfers.clear();
-            }
+            // Transfer Ether to buyer
+            // TODO If the deposit is larger than the borrow amount, should we return them now?
+            _transfers.clear();
+            _transfers.addEtherTransfer(_properties.getAddressValue("buyer_address"),
+                    _properties.getUintValue("borrow_amount"));
+            transfers = string(_transfers.save());
+            _transfers.clear();
         }
 
         // Persist the propertiess
@@ -253,10 +246,35 @@ contract Loan is Instrument {
             }
         } else if (StringUtil.equals(eventName, LOAN_EXPIRED_EVENT)) {
             // Check whether the issuance is still active
+            // If the issuance is Complete Engaged or Delinquent, no action
             if (isIssuanceInState(ACTIVE_STATE)) {
 
-                // Change to Delinquent state
-                updateIssuanceState(issuanceId, DELINQUENT_STATE);
+                // Check repay
+                // 1. The Ether balance is equal to or bigger than the borrow amount
+                // 2. The colleteral collection is complete
+                if ( _balances.getEtherBalance() >= _properties.getUintValue("borrow_amount")
+                    && _properties.getBoolOrDefault("collateral_complete", false)) {
+                    
+                    // Change to Complete Engaged state
+                    updateIssuanceState(issuanceId, COMPLETE_ENGAGED_STATE);
+
+                    // Also add transfers
+                    _transfers.clear();
+                    // Transfer Ethers back to seller
+                    _transfers.addEtherTransfer(_properties.getAddressValue("seller_address"),
+                        _properties.getUintValue("borrow_amount"));
+                    // Transfer collateral token back to buyer
+                    _transfers.addTokenTransfer(_properties.getAddressValue("collateral_token_address"),
+                        _properties.getAddressValue("buyer_address"), 
+                        _properties.getUintValue("collateral_amount"));
+                    // TODO If the Ether balance is more than the borrow amount, return to buyer?
+                    // ToDO If the token balance is more than the collateral amount, return to seller?
+                    transfers = string(_transfers.save());
+                    _transfers.clear();
+                } else {
+                    // Change to Delinquent state
+                    updateIssuanceState(issuanceId, DELINQUENT_STATE);
+                }
             }
         }
 
