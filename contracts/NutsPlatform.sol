@@ -10,12 +10,13 @@ import "./Instrument.sol";
 import "./common/property/Property.sol";
 import "./common/payment/Transfer.sol";
 import "./common/util/StringUtil.sol";
+import "./access/TimerOracleRole.sol";
 
 /**
  * Core contract: The portal of NUTS platform.
  * All external operations are done through the NUTS platform.
  */
-contract NutsPlatform {
+contract NutsPlatform is TimerOracleRole {
     using Property for Property.Properties;
     using Transfer for Transfer.Transfers;
 
@@ -206,16 +207,53 @@ contract NutsPlatform {
         processTransfers(issuanceId, transfers);
     }
 
-    // TODO Add another API for Timer Oracle
-    // TODO Validate time in NUTS Platform
+    /**
+     * @dev Callback entry for scheduled event
+     * @param issuanceId The id of the issuance
+     * @param timestamp The scheduled time for the event
+     * @param eventName Name of custom event, eventName of EventScheduled event
+     * @param eventPayload Payload of custom event, eventPayload of EventScheduled event
+     */
+    function processScheduledEvent(uint256 issuanceId, uint256 timestamp, string memory eventName,
+        string memory eventPayload) public onlyTimerOracle {
+        // Validation
+        require(issuanceId > 0, "Issuance id must be set.");
+        require(bytes(eventName).length > 0, "Event name must be set.");
+        require(timestamp <= now, "The scheduled event is not due now.");
+
+        // Retrieve issuance data
+        string memory issuanceData = _storage.lookup(StringUtil.uintToString(issuanceId));
+        // Validate whether the issuance exists
+        require(bytes(issuanceData).length > 0, "Issuance does not exist.");
+
+        _properties.clear();
+        _properties.load(bytes(issuanceData));
+        Instrument instrument = Instrument(_properties.getAddressValue('instrumentAddress'));
+
+        // Retrieve the issuance balance
+        string memory properties = _properties.getStringValue('properties');
+        string memory balance = _escrow.getIssuanceBalance(issuanceId);
+
+        (string memory updatedProperties, string memory transfers) = instrument.processScheduledEvent(issuanceId, 
+            properties, balance, eventName, eventPayload);
+
+        // Update issuance properties
+        _properties.setStringValue('properties', updatedProperties);
+        issuanceData = string(_properties.save());
+        _storage.save(StringUtil.uintToString(issuanceId), issuanceData);
+        _properties.clear();
+
+        // Post transfers
+        processTransfers(issuanceId, transfers);
+    }
 
     /**
-     * @dev Callback entry for scheduled custom event or entrance for custom operations
+     * @dev Entry to process custom operations
      * @param issuanceId The id of the issuance
      * @param eventName Name of custom event, eventName of EventScheduled event
      * @param eventPayload Payload of custom event, eventPayload of EventScheduled event
      */
-    function notify(uint256 issuanceId, string memory eventName, string memory eventPayload) public {
+    function processCustomEvent(uint256 issuanceId, string memory eventName, string memory eventPayload) public {
         // Validation
         require(issuanceId > 0, "Issuance id must be set.");
         require(bytes(eventName).length > 0, "Event name must be set.");
@@ -233,7 +271,7 @@ contract NutsPlatform {
         string memory properties = _properties.getStringValue('properties');
         string memory balance = _escrow.getIssuanceBalance(issuanceId);
 
-        (string memory updatedProperties, string memory transfers) = instrument.processEvent(issuanceId, 
+        (string memory updatedProperties, string memory transfers) = instrument.processCustomEvent(issuanceId, 
             properties, balance, eventName, eventPayload);
 
         // Update issuance properties

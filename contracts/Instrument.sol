@@ -89,6 +89,19 @@ contract Instrument {
         public returns (string memory updatedProperties, string memory transfers);
 
     /**
+     * @dev Process scheduled event
+     * @param issuanceId The id of the issuance
+     * @param properties The current properties of the issuance
+     * @param balance The current balance of the issuance
+     * @param eventName Name of the custom event, eventName of EventScheduled event
+     * @param eventPayload Payload of the custom event, eventPayload of EventScheduled event
+     * @return updatedProperties The updated issuance properties
+     * @return transfers The transfers to perform after the invocation
+     */ 
+    function processScheduledEvent(uint256 issuanceId, string memory properties, string memory balance, 
+        string memory eventName, string memory eventPayload) public returns (string memory updatedProperties, string memory transfers);
+
+    /**
      * @dev Process customer event
      * @param issuanceId The id of the issuance
      * @param properties The current properties of the issuance
@@ -98,7 +111,7 @@ contract Instrument {
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
      */ 
-    function processEvent(uint256 issuanceId, string memory properties, string memory balance, 
+    function processCustomEvent(uint256 issuanceId, string memory properties, string memory balance, 
         string memory eventName, string memory eventPayload) public returns (string memory updatedProperties, string memory transfers);
 
     /**

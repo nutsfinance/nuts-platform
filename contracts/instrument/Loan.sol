@@ -279,7 +279,7 @@ contract Loan is Instrument {
     }
 
     /**
-     * @dev Process customer event
+     * @dev Process scheduled event
      * @param issuanceId The id of the issuance
      * @param properties The current properties of the issuance
      * @param balance The current balance of the issuance
@@ -288,7 +288,7 @@ contract Loan is Instrument {
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
      */ 
-    function processEvent(uint256 issuanceId, string memory properties, string memory balance, 
+    function processScheduledEvent(uint256 issuanceId, string memory properties, string memory balance, 
         string memory eventName, string memory eventPayload) public returns (string memory updatedProperties, string memory transfers) {
         // Parameter validation
         require(issuanceId > 0, "Issuance id must be set.");
@@ -357,6 +357,8 @@ contract Loan is Instrument {
                 transfers = string(_transfers.save());
                 _transfers.clear();
             }
+        } else {
+            revert("Unknown event");
         }
 
         // Persist the propertiess
