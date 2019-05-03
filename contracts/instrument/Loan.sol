@@ -198,9 +198,9 @@ contract Loan is Instrument {
             require(etherBalance <= borrowAmount, "The Ether repay cannot exceed the borrow amount.");
 
             // Calculate interest
-            uint interest = _properties.getUintValue(interest);
+            uint interest = _properties.getUintValue("interest");
             interest.add(interestByAmountAndDays(amount, _properties.getUintValue("interest_rate"),
-                daysBetween(_properties.getUnitValue("engage_date"), now)));
+                daysBetween(_properties.getUintValue("engage_date"), now)));
             _properties.setUintValue("interest", interest);
 
         } else {
@@ -317,7 +317,7 @@ contract Loan is Instrument {
             // and the collateral is not complete
             if (isIssuanceInState(ACTIVE_STATE)
                 && !_properties.getBoolOrDefault("collateral_complete", false)) {
-                
+                _properties.setBoolValue("collateral_complete", false);
                 // Change to Delinquent state
                 updateIssuanceState(issuanceId, DELINQUENT_STATE);
             }
@@ -326,30 +326,37 @@ contract Loan is Instrument {
             // Loan due check
             // 1. The issuance is in Active state
             // 2. The Ether balance is equal to the borrow amount
-            // 3. The colleteral collection is complete
             if (isIssuanceInState(ACTIVE_STATE)
-                && _balances.getEtherBalance() == _properties.getUintValue("borrow_amount")
-                && _properties.getBoolOrDefault("collateral_complete", false)) {
-
+                && _balances.getEtherBalance() == _properties.getUintValue("borrow_amount")) {
                 // Change to Complete Engaged state
                 updateIssuanceState(issuanceId, COMPLETE_ENGAGED_STATE);
 
-                // TODO Add interest
                 // Also add transfers
                 _transfers.clear();
-                // Transfer Ethers back to seller
-                _transfers.addEtherTransfer(_properties.getAddressValue("seller_address"),
-                    _properties.getUintValue("borrow_amount"));
-                // Transfer collateral token back to buyer
-                _transfers.addTokenTransfer(_properties.getAddressValue("collateral_token_address"),
-                    _properties.getAddressValue("buyer_address"), 
-                    _properties.getUintValue("collateral_amount"));
-
+                release();
                 transfers = string(_transfers.save());
                 _transfers.clear();
             }
         } else if (StringUtil.equals(eventName, GRACE_PERIOD_EXPIRED_EVENT)) {
-            // TODO Add default
+            // If the issuance is already Delinquent or COMPLETE_ENGAGED_STATE, no action
+            if (isIssuanceInState(ACTIVE_STATE)) {
+                _transfers.clear();
+
+                // Default check
+                // 1. The Ether balance is smaller than the borrow amount
+                if (_balances.getEtherBalance() < _properties.getUintValue("borrow_amount")) {
+                    // Change to Delinquent state
+                    updateIssuanceState(issuanceId, DELINQUENT_STATE);
+                    defaultRelease();
+                } else {
+                    // Change to Complete Engaged state
+                    updateIssuanceState(issuanceId, COMPLETE_ENGAGED_STATE);
+                    release();
+                }
+
+                transfers = string(_transfers.save());
+                _transfers.clear();
+            }
         }
 
         // Persist the propertiess
@@ -382,5 +389,73 @@ contract Loan is Instrument {
         // consider the .div(10 ** rateDecimals) part in fixed point multiplying, we have better precision
         // with "amount * (rate * days)" than "amount * rate * days"
         return interestRate.mul(numDays).mul(amount).div(10 ** RATE_DECIMALS);
+    }
+
+    /**
+     * @dev Return Ether and collateral token
+     */
+    function release() private {
+        uint borrowAmount = _properties.getUintValue("borrow_amount");
+        uint collateralAmount = _properties.getUintValue("collateral_amount");
+        uint interest = _properties.getUintValue("interest");
+
+        // Transfer Ether back to seller
+        _transfers.addEtherTransfer(_properties.getAddressValue("seller_address"),
+            borrowAmount);
+
+        // TODO Is this calculation correct? 
+        // Interest in token = (Interest in Ether / Borrow amount in Ether) * Collateral amount in token
+        uint interestTokenAmount = interest * collateralAmount / borrowAmount;
+        uint tokenToSellerAmount = interestTokenAmount > collateralAmount ? collateralAmount : interestTokenAmount;
+        uint tokenToBuyerAmount = collateralAmount - tokenToSellerAmount;
+
+        // Transfer collateral token to seller as interest if it's greater than 0(interest rate could be 0)
+        if (tokenToSellerAmount > 0) {
+            _transfers.addTokenTransfer(_properties.getAddressValue("collateral_token_address"),
+            _properties.getAddressValue("seller_address"), 
+            tokenToSellerAmount);
+        }
+
+        // Transfer collateral token back to buyer if it's greater than 0
+        if (tokenToBuyerAmount > 0) {
+            _transfers.addTokenTransfer(_properties.getAddressValue("collateral_token_address"),
+            _properties.getAddressValue("buyer_address"), 
+            tokenToBuyerAmount);
+        }
+    }
+
+    function defaultRelease() private {
+        uint borrowAmount = _properties.getUintValue("borrow_amount");
+        uint collateralAmount = _properties.getUintValue("collateral_amount");
+        // Full interest on default
+        uint interest = interestByAmountAndDays(borrowAmount, _properties.getUintValue("interest_rate"),
+                daysBetween(_properties.getUintValue("engage_date"), now));
+
+        // Transfer whatever Ether the issuance has back to seller
+        uint etherBalance = _balances.getEtherBalance();
+        if (etherBalance > 0) {
+            _transfers.addEtherTransfer(_properties.getAddressValue("seller_address"),
+                etherBalance);
+        }
+
+        // TODO Is this calculation correct? 
+        // Interest in token = (Interest in Ether / Borrow amount in Ether) * Collateral amount in token
+        uint interestTokenAmount = interest * collateralAmount / borrowAmount;
+        uint tokenToSellerAmount = interestTokenAmount > collateralAmount ? collateralAmount : interestTokenAmount;
+        uint tokenToBuyerAmount = collateralAmount - tokenToSellerAmount;
+
+        // Transfer collateral token to seller as interest if it's greater than 0(interest rate could be 0)
+        if (tokenToSellerAmount > 0) {
+            _transfers.addTokenTransfer(_properties.getAddressValue("collateral_token_address"),
+            _properties.getAddressValue("seller_address"), 
+            tokenToSellerAmount);
+        }
+
+        // Transfer collateral token back to buyer if it's greater than 0
+        if (tokenToBuyerAmount > 0) {
+            _transfers.addTokenTransfer(_properties.getAddressValue("collateral_token_address"),
+            _properties.getAddressValue("buyer_address"), 
+            tokenToBuyerAmount);
+        }
     }
 }
