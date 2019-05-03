@@ -66,6 +66,7 @@ contract NutsPlatform {
      * @return issuanceId The id of the newly created issuance
      */
     function createIssuance(address instrumentAddress, string memory sellerParameters) public returns (uint256) {
+        require(instrumentAddress != address(0x0), "Instrument address must be set.");
         require(_instrumentRegistry.validate(instrumentAddress), "Invalid instrument");
         lastIssuanceId = lastIssuanceId + 1;
         uint issuanceId = lastIssuanceId;
@@ -96,8 +97,14 @@ contract NutsPlatform {
      * @param buyerParameters The custom parameters of the engagement
      */
     function engageIssuance(uint256 issuanceId, string memory buyerParameters) public {
+        // Validation
+        require(issuanceId > 0, "Issuance id must be set.");
+
         // Retrieve the issuance data
         string memory issuanceData = _storage.lookup(StringUtil.uintToString(issuanceId));
+        // Validate whether the issuance exists
+        require(bytes(issuanceData).length > 0, "Issuance does not exist.");
+
         _properties.clear();
         _properties.load(bytes(issuanceData));
         Instrument instrument = Instrument(_properties.getAddressValue('instrumentAddress'));
@@ -126,8 +133,15 @@ contract NutsPlatform {
      * @param amount The amount of Ether to transfer to the issuance
      */
     function deposit(uint256 issuanceId, uint256 amount) public {
+        // Validation
+        require(issuanceId > 0, "Issuance id must be set.");
+        require(amount > 0, "Deposit amount must be larger than 0.");
+
         // Retrieve issuance data
         string memory issuanceData = _storage.lookup(StringUtil.uintToString(issuanceId));
+        // Validate whether the issuance exists
+        require(bytes(issuanceData).length > 0, "Issuance does not exist.");
+
         _properties.clear();
         _properties.load(bytes(issuanceData));
         Instrument instrument = Instrument(_properties.getAddressValue('instrumentAddress'));
@@ -155,12 +169,20 @@ contract NutsPlatform {
      * @dev Inovked by seller/buyer to transfer ERC20 token to the issuance. The token to be transferred
      *      must be deposited in the escrow already, so the transfer is done in the escrow internally.
      * @param issuanceId The id of the issuance to which the token is deposited
-     @ @param token_address The address of the token 
+     @ @param tokenAddress The address of the token 
      * @param amount The amount of token to transfer to the issuance
      */
-    function depositToken(uint256 issuanceId, address token_address, uint256 amount) public {
+    function depositToken(uint256 issuanceId, address tokenAddress, uint256 amount) public {
+        // Validation
+        require(issuanceId > 0, "Issuance id must be set.");
+        require(tokenAddress != address(0x0), "Token address must be set.");
+        require(amount > 0, "Deposit amount must be larger than 0.");
+
         // Retrieve issuance data
         string memory issuanceData = _storage.lookup(StringUtil.uintToString(issuanceId));
+        // Validate whether the issuance exists
+        require(bytes(issuanceData).length > 0, "Issuance does not exist.");
+
         _properties.clear();
         _properties.load(bytes(issuanceData));
         Instrument instrument = Instrument(_properties.getAddressValue('instrumentAddress'));
@@ -170,9 +192,9 @@ contract NutsPlatform {
         string memory balance = _escrow.getIssuanceBalance(issuanceId);
 
         // Complete the token transfer
-        _escrow.transferTokenToIssuance(msg.sender, issuanceId, ERC20(token_address), amount);
+        _escrow.transferTokenToIssuance(msg.sender, issuanceId, ERC20(tokenAddress), amount);
         (string memory updatedProperties, string memory transfers) = instrument.processTokenTransfer(issuanceId, 
-           properties, balance, msg.sender, token_address, amount);
+           properties, balance, msg.sender, tokenAddress, amount);
 
         // Update issuance properties
         _properties.setStringValue('properties', updatedProperties);
@@ -187,12 +209,19 @@ contract NutsPlatform {
     /**
      * @dev Callback entry for scheduled custom event or entrance for custom operations
      * @param issuanceId The id of the issuance
-     * @param event_name Name of custom event, event_name of EventScheduled event
-     * @param event_payload Payload of custom event, event_payload of EventScheduled event
+     * @param eventName Name of custom event, eventName of EventScheduled event
+     * @param eventPayload Payload of custom event, eventPayload of EventScheduled event
      */
-    function notify(uint256 issuanceId, string memory event_name, string memory event_payload) public {
+    function notify(uint256 issuanceId, string memory eventName, string memory eventPayload) public {
+        // Validation
+        require(issuanceId > 0, "Issuance id must be set.");
+        require(bytes(eventName).length > 0, "Event name must be set.");
+
         // Retrieve issuance data
         string memory issuanceData = _storage.lookup(StringUtil.uintToString(issuanceId));
+        // Validate whether the issuance exists
+        require(bytes(issuanceData).length > 0, "Issuance does not exist.");
+
         _properties.clear();
         _properties.load(bytes(issuanceData));
         Instrument instrument = Instrument(_properties.getAddressValue('instrumentAddress'));
@@ -202,7 +231,7 @@ contract NutsPlatform {
         string memory balance = _escrow.getIssuanceBalance(issuanceId);
 
         (string memory updatedProperties, string memory transfers) = instrument.processEvent(issuanceId, 
-            properties, balance, event_name, event_payload);
+            properties, balance, eventName, eventPayload);
 
         // Update issuance properties
         _properties.setStringValue('properties', updatedProperties);

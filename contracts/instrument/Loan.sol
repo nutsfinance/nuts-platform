@@ -1,5 +1,7 @@
 pragma solidity ^0.5.0;
 
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+
 import "../Instrument.sol";
 
 /**
@@ -7,10 +9,15 @@ import "../Instrument.sol";
  * depositing token as collaterals.
  */
 contract Loan is Instrument {
+    using SafeMath for uint256;
+
     string constant DEPOSIT_EXPIRED_EVENT = "deposit_expired";
     string constant ENGAGEMENT_EXPIRED_EVENT = "engagement_expired";
     string constant COLLATERAL_EXPIRED_EVENT = "collateral_expired";
     string constant LOAN_EXPIRED_EVENT = "loan_expired";
+    string constant GRACE_PERIOD_EXPIRED_EVENT = "grace_period_expired";
+
+    uint constant RATE_DECIMALS = 8;
 
     /**
      * @dev Create a new issuance of the financial instrument
@@ -22,9 +29,14 @@ contract Loan is Instrument {
      */
     function createIssuance(uint256 issuanceId, address sellerAddress, string memory sellerParameters) 
         public returns (string memory updatedProperties, string memory transfers) {
+        // Parameter validation
+        require(issuanceId > 0, "Issuance id must be set.");
+        require(sellerAddress != address(0x0), "Seller address must be set.");
+
         // Parse parameters
         _parameters.clear();
         _parameters.parseParameters(sellerParameters);
+        // TODO Give non-required parameter sensible default
         address collateralTokenAddress = _parameters.getAddressValue("collateral-token-address");
         uint collateralAmount = _parameters.getUintValue("collateral-amount");
         uint borrowAmount = _parameters.getUintValue("borrow-amount");
@@ -32,6 +44,8 @@ contract Loan is Instrument {
         uint engagementDueDays = _parameters.getUintValue("engagement-due-days");
         uint collateralDueDays = _parameters.getUintValue("collateral-due-days");
         uint tenorDays = _parameters.getUintValue("tenor-days");
+        uint interestRate = _parameters.getUintValue("interest-rate");
+        uint gracePeriod = _parameters.getUintValue("grace-period");
 
         // Validate parameters
         require(collateralTokenAddress != address(0x0), "Collateral token address must not be 0");
@@ -40,8 +54,12 @@ contract Loan is Instrument {
         require(depositDueDays > 0, "Deposit due days must be greater than 0");
         require(engagementDueDays > 0, "Engagement due days must be greater than 0");
         require(collateralDueDays > 0, "Collateral due days must be greater than 0");
+        // TODO Min and max for tenor days?
         require(tenorDays > 0, "Tenor days must be greater than 0");
         require(tenorDays > collateralDueDays, "Tenor days must be greater than collateral due days");
+        // TODO Interest rate range?
+        // Grace period is set to > 0 so that loan_expired always happens before grace_period_expired
+        require(gracePeriod > 0, "Grace period must be greater than 0");
 
         // Set propertiess
         _properties.clear();
@@ -53,6 +71,9 @@ contract Loan is Instrument {
         _properties.setUintValue("engagement_due_days", engagementDueDays);
         _properties.setUintValue("collateral_due_days", collateralDueDays);
         _properties.setUintValue("tenor_days", tenorDays);
+        _properties.setUintValue("interest_rate", interestRate);
+        _properties.setUintValue("grace_period", gracePeriod);
+        _properties.setUintValue("interest", 0);                // Initialize the interest to pay
 
         // Set expiration for deposit
         emit EventScheduled(issuanceId, now + depositDueDays * 1 days, DEPOSIT_EXPIRED_EVENT, "");
@@ -80,6 +101,11 @@ contract Loan is Instrument {
      */    
     function engage(uint256 issuanceId, string memory properties, string memory balance, address buyerAddress, 
         string memory buyerParameters) public returns (string memory updatedProperties, string memory transfers) {
+        // Parameter validation
+        require(issuanceId > 0, "Issuance id must be set.");
+        require(bytes(properties).length > 0, "Properties must be set.");
+        require(buyerAddress != address(0x0), "Buyer address must be set.");
+        
         // Load properties
         _properties.clear();
         _properties.load(bytes(properties));
@@ -96,6 +122,10 @@ contract Loan is Instrument {
         // Set expiration for loan
         uint loanDueDays = _properties.getUintValue("tenor_days");
         emit EventScheduled(issuanceId, now + loanDueDays * 1 days, LOAN_EXPIRED_EVENT, "");
+
+        // Set expiration for grace period
+        uint gracePeriod = _properties.getUintValue("grace_period");
+        emit EventScheduled(issuanceId, now + (loanDueDays + gracePeriod) * 1 days, GRACE_PERIOD_EXPIRED_EVENT, "");
 
         // Change to Active state
         updateIssuanceState(issuanceId, ACTIVE_STATE);
@@ -119,6 +149,12 @@ contract Loan is Instrument {
      */ 
     function processTransfer(uint256 issuanceId, string memory properties, string memory balance,
         address fromAddress, uint256 amount) public returns (string memory updatedProperties, string memory transfers) {
+        // Parameter validation
+        require(issuanceId > 0, "Issuance id must be set.");
+        require(bytes(properties).length > 0, "Properties must be set.");
+        require(fromAddress != address(0x0), "Transferer address must be set.");
+        require(amount > 0, "Transfer amount must be greater than 0.");
+
         // Load properties
         _properties.clear();
         _properties.load(bytes(properties));
@@ -127,20 +163,48 @@ contract Loan is Instrument {
         _balances.clear();
         _balances.load(bytes(balance));
 
-        // Deposit check
-        // 1. The issuance is in initiated state
-        // 2. The Ether transfer is from seller
-        // 3. The ether balance is larger then or equal to the borrow amount
-        if ( isIssuanceInState(INITIATED_STATE)
-            && _properties.getAddressValue("seller_address") == fromAddress
-            && _balances.getEtherBalance() >= _properties.getUintValue("borrow_amount")) {
-            
-            // Change to Engagable state
-            updateIssuanceState(issuanceId, ENGAGABLE_STATE);
+        uint etherBalance = _balances.getEtherBalance();
+        uint borrowAmount = _properties.getUintValue("borrow_amount");
+        if (_properties.getAddressValue("seller_address") == fromAddress) {
+            // The Ether transfer is from seller
+            // This must be deposit
+            // Deposit check:
+            // 1. Issuance must in Initiated state
+            // 2. The Ether balance must not exceed the borrow amount
+            require(isIssuanceInState(INITIATED_STATE), "Ether deposit must happen in Initiated state.");
+            require(etherBalance <= borrowAmount, "The Ether deposit cannot exceed the borrow amount.");
 
-            // Schedule engagement expiration
-            uint engagementDueDays = _properties.getUintValue("engagement_due_days");
-            emit EventScheduled(issuanceId, now + engagementDueDays * 1 days, ENGAGEMENT_EXPIRED_EVENT, "");
+            // If the Ether balance is equal to the borrow amount, the issuance
+            // becomes Engagable
+            if (etherBalance == borrowAmount) {
+        
+                // Change to Engagable state
+                updateIssuanceState(issuanceId, ENGAGABLE_STATE);
+
+                // Schedule engagement expiration
+                uint engagementDueDays = _properties.getUintValue("engagement_due_days");
+                emit EventScheduled(issuanceId, now + engagementDueDays * 1 days, ENGAGEMENT_EXPIRED_EVENT, "");
+            }
+
+        } else if (_properties.getAddressValue("buyer_address") == fromAddress) {
+            // This Ether transfer is from buyer
+            // This must be repay
+            // Repay check:
+            // 1. Issuance must in Active state
+            // 2. Collateral deposit must be done
+            // 3. The Ether balance must not exceed the borrow amount
+            require(isIssuanceInState(ACTIVE_STATE), "Ether repay must happen in Active state.");
+            require(_properties.getBoolOrDefault("collateral_complete", false), "Ether repay must happen after collateral is deposited.");
+            require(etherBalance <= borrowAmount, "The Ether repay cannot exceed the borrow amount.");
+
+            // Calculate interest
+            uint interest = _properties.getUintValue(interest);
+            interest.add(interestByAmountAndDays(amount, _properties.getUintValue("interest_rate"),
+                daysBetween(_properties.getUnitValue("engage_date"), now)));
+            _properties.setUintValue("interest", interest);
+
+        } else {
+            revert("Unknown transferer. Only seller or buyer can send Ether to issuance.");
         }
 
         // Persist the propertiess
@@ -165,6 +229,28 @@ contract Loan is Instrument {
     function processTokenTransfer(uint256 issuanceId, string memory properties, string memory balance,
         address fromAddress, address tokenAddress, uint256 amount) 
         public returns (string memory updatedProperties, string memory transfers) {
+        // Parameter validation
+        require(issuanceId > 0, "Issuance id must be set.");
+        require(bytes(properties).length > 0, "Properties must be set.");
+        require(fromAddress != address(0x0), "Transferer address must be set.");
+        require(tokenAddress != address(0x0), "Transferred token address must be set.");
+        require(amount > 0, "Transfer amount must be greater than 0.");
+
+        // Note: Token transfer only occurs in colleteral deposit!
+        // Collateral check
+        // 1. The issuance is in active state
+        // 2. The token is from the buyer
+        // 3. The token is the collateral token
+        // 4. The balance collateral balance is equals to the collateral amount
+        // 5. The issuance is still collecting collateral(collateral_complete = false)
+        require(isIssuanceInState(ACTIVE_STATE), "Collateral deposit must occur in Active state.");
+        require(_properties.getAddressOrDefault("buyer_address", address(0x0)) == fromAddress, 
+            "Collateral deposit must come from the buyer.");
+        require(!_properties.getBoolOrDefault("collateral_complete", false), 
+            "Collateral deposit must occur during the collateral depoit phase.");
+        require(_balances.getTokenBalance(tokenAddress) >= _properties.getUintValue("collateral_amount"), 
+            "Collateral token balance must not exceed the collateral amount");
+
         // Load properties
         _properties.clear();
         _properties.load(bytes(properties));
@@ -173,29 +259,16 @@ contract Loan is Instrument {
         _balances.clear();
         _balances.load(bytes(balance));
 
-        // Collateral check
-        // 1. The issuance is in active state
-        // 2. The token is from the buyer
-        // 3. The token is the collateral token
-        // 4. The balance collateral balance is equals to or larger than the collateral amount
-        // 5. The issuance is still collecting collateral(collateral_complete = false)
-        if ( isIssuanceInState(ACTIVE_STATE)
-            && _properties.getAddressOrDefault("buyer_address", address(0x0)) == fromAddress
-            && _properties.getAddressValue("collateral_token_address") == tokenAddress
-            && _balances.getTokenBalance(tokenAddress) >= _properties.getUintValue("collateral_amount")
-            && !_properties.getBoolOrDefault("collateral_complete", false)) {
+        // Mark the collateral collection as complete
+        _properties.setBoolValue("collateral_complete", true);
 
-            // Mark the collateral collection as complete
-            _properties.setBoolValue("collateral_complete", true);
-
-            // Transfer Ether to buyer
-            // TODO If the deposit is larger than the borrow amount, should we return them now?
-            _transfers.clear();
-            _transfers.addEtherTransfer(_properties.getAddressValue("buyer_address"),
-                    _properties.getUintValue("borrow_amount"));
-            transfers = string(_transfers.save());
-            _transfers.clear();
-        }
+        // Transfer Ether to buyer
+        // TODO If the deposit is larger than the borrow amount, should we return them now?
+        _transfers.clear();
+        _transfers.addEtherTransfer(_properties.getAddressValue("buyer_address"),
+                _properties.getUintValue("borrow_amount"));
+        transfers = string(_transfers.save());
+        _transfers.clear();
 
         // Persist the propertiess
         updatedProperties = string(_properties.save());
@@ -217,7 +290,11 @@ contract Loan is Instrument {
      */ 
     function processEvent(uint256 issuanceId, string memory properties, string memory balance, 
         string memory eventName, string memory eventPayload) public returns (string memory updatedProperties, string memory transfers) {
-        
+        // Parameter validation
+        require(issuanceId > 0, "Issuance id must be set.");
+        require(bytes(properties).length > 0, "Properties must be set.");
+        require(bytes(eventName).length > 0, "Event name must be set.");
+
         // Load properties
         _properties.clear();
         _properties.load(bytes(properties));
@@ -245,37 +322,34 @@ contract Loan is Instrument {
                 updateIssuanceState(issuanceId, DELINQUENT_STATE);
             }
         } else if (StringUtil.equals(eventName, LOAN_EXPIRED_EVENT)) {
-            // Check whether the issuance is still active
-            // If the issuance is Complete Engaged or Delinquent, no action
-            if (isIssuanceInState(ACTIVE_STATE)) {
+            // If the issuance is already Delinquent(colleteral due), no action
+            // Loan due check
+            // 1. The issuance is in Active state
+            // 2. The Ether balance is equal to the borrow amount
+            // 3. The colleteral collection is complete
+            if (isIssuanceInState(ACTIVE_STATE)
+                && _balances.getEtherBalance() == _properties.getUintValue("borrow_amount")
+                && _properties.getBoolOrDefault("collateral_complete", false)) {
 
-                // Check repay
-                // 1. The Ether balance is equal to or bigger than the borrow amount
-                // 2. The colleteral collection is complete
-                if ( _balances.getEtherBalance() >= _properties.getUintValue("borrow_amount")
-                    && _properties.getBoolOrDefault("collateral_complete", false)) {
-                    
-                    // Change to Complete Engaged state
-                    updateIssuanceState(issuanceId, COMPLETE_ENGAGED_STATE);
+                // Change to Complete Engaged state
+                updateIssuanceState(issuanceId, COMPLETE_ENGAGED_STATE);
 
-                    // Also add transfers
-                    _transfers.clear();
-                    // Transfer Ethers back to seller
-                    _transfers.addEtherTransfer(_properties.getAddressValue("seller_address"),
-                        _properties.getUintValue("borrow_amount"));
-                    // Transfer collateral token back to buyer
-                    _transfers.addTokenTransfer(_properties.getAddressValue("collateral_token_address"),
-                        _properties.getAddressValue("buyer_address"), 
-                        _properties.getUintValue("collateral_amount"));
-                    // TODO If the Ether balance is more than the borrow amount, return to buyer?
-                    // ToDO If the token balance is more than the collateral amount, return to seller?
-                    transfers = string(_transfers.save());
-                    _transfers.clear();
-                } else {
-                    // Change to Delinquent state
-                    updateIssuanceState(issuanceId, DELINQUENT_STATE);
-                }
+                // TODO Add interest
+                // Also add transfers
+                _transfers.clear();
+                // Transfer Ethers back to seller
+                _transfers.addEtherTransfer(_properties.getAddressValue("seller_address"),
+                    _properties.getUintValue("borrow_amount"));
+                // Transfer collateral token back to buyer
+                _transfers.addTokenTransfer(_properties.getAddressValue("collateral_token_address"),
+                    _properties.getAddressValue("buyer_address"), 
+                    _properties.getUintValue("collateral_amount"));
+
+                transfers = string(_transfers.save());
+                _transfers.clear();
             }
+        } else if (StringUtil.equals(eventName, GRACE_PERIOD_EXPIRED_EVENT)) {
+            // TODO Add default
         }
 
         // Persist the propertiess
@@ -284,5 +358,29 @@ contract Loan is Instrument {
         // Clean up
         _properties.clear();
     }
+
+    /**
+     * @dev Returns the number of days between start and end.
+     * @param start Start time
+     * @param end End time
+     * @return The number of days between start and end
+     */
+    function daysBetween(uint start, uint end) private pure returns(uint){
+        require(start <= end, "start must not be greater than end");
+        return end.sub(start).div(1 days);
+    }
     
+    /**
+     * @dev Calculate the interest
+     * @param amount The amount to calculate interest
+     * @param interestRate The interest rate
+     * @param numDays The number of days to calculate interest
+     * @return The calculted interest
+     */
+    function interestByAmountAndDays(uint256 amount, uint256 interestRate, uint256 numDays)
+            private pure returns(uint256) {
+        // consider the .div(10 ** rateDecimals) part in fixed point multiplying, we have better precision
+        // with "amount * (rate * days)" than "amount * rate * days"
+        return interestRate.mul(numDays).mul(amount).div(10 ** RATE_DECIMALS);
+    }
 }
