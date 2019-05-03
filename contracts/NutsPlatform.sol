@@ -206,6 +206,9 @@ contract NutsPlatform {
         processTransfers(issuanceId, transfers);
     }
 
+    // TODO Add another API for Timer Oracle
+    // TODO Validate time in NUTS Platform
+
     /**
      * @dev Callback entry for scheduled custom event or entrance for custom operations
      * @param issuanceId The id of the issuance
@@ -247,6 +250,7 @@ contract NutsPlatform {
         if (bytes(transfers).length == 0)  return;
         _transfers.load(bytes(transfers));
 
+        // TODO Validate transfer against balance
         for (uint i = 0; i < _transfers.actions.length; i++) {
             if (_transfers.actions[i].isEther) {
                 _escrow.transferFromIssuance(_transfers.actions[i].receiverAddress, issuanceId,
