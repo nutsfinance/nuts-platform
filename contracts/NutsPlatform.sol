@@ -11,12 +11,13 @@ import "./common/property/Property.sol";
 import "./common/payment/Transfer.sol";
 import "./common/util/StringUtil.sol";
 import "./access/TimerOracleRole.sol";
+import "./access/FspRole.sol";
 
 /**
  * Core contract: The portal of NUTS platform.
  * All external operations are done through the NUTS platform.
  */
-contract NutsPlatform is TimerOracleRole {
+contract NutsPlatform is FspRole, TimerOracleRole {
     using Property for Property.Properties;
     using Transfer for Transfer.Transfers;
 
@@ -44,8 +45,7 @@ contract NutsPlatform is TimerOracleRole {
      * @param instrumentAddress The address of the instrument contract
      * @param expiration The lifetime of the issuance in days. 0 means never expires.
      */
-     // TODO Add role-based access control for FSP
-    function createInstrument(address instrumentAddress, uint256 expiration) external {
+    function createInstrument(address instrumentAddress, uint256 expiration) external onlyFsp {
         _token.transferFrom(msg.sender, address(this), TOKEN_AMOUNT);
         _instrumentRegistry.create(msg.sender, instrumentAddress, expiration);
     }
@@ -54,8 +54,7 @@ contract NutsPlatform is TimerOracleRole {
      * @dev Invoked by FSP to unregister an instrument
      * @param instrumentAddress The address of the instrument contract
      */
-    // TODO Add role-based access control for FSP
-    function deactivateInstrument(address instrumentAddress) public {
+    function deactivateInstrument(address instrumentAddress) public onlyFsp {
         _token.transfer(msg.sender, TOKEN_AMOUNT);
         _instrumentRegistry.deactivate(instrumentAddress);
     }
