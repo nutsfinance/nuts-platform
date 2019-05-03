@@ -283,11 +283,17 @@ contract NutsPlatform is FspRole, TimerOracleRole {
         processTransfers(issuanceId, transfers);
     }
 
+    /**
+     * @dev Complete the transfers actions
+     * @param issuanceId The id of the issuance which owns the Ether/token
+     * @param transfers The transfer actions
+     */
     function processTransfers(uint issuanceId, string memory transfers) private {
         if (bytes(transfers).length == 0)  return;
         _transfers.load(bytes(transfers));
 
-        // TODO Validate transfer against balance
+        // Note: The Escrow performs validation of transfer against the balance,
+        // so there is no need to do the validation here.
         for (uint i = 0; i < _transfers.actions.length; i++) {
             if (_transfers.actions[i].isEther) {
                 _escrow.transferFromIssuance(_transfers.actions[i].receiverAddress, issuanceId,
