@@ -1,4 +1,4 @@
-const UnifiedStorage = artifacts.require('./UnifiedStorage.sol');
+const UnifiedStorage = artifacts.require('../UnifiedStorage.sol');
 const assert = require('assert');
 
 let contractInstance;

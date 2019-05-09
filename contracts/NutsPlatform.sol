@@ -1,7 +1,5 @@
 pragma solidity ^0.5.0;
 
-// import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
-
 import "./UnifiedStorage.sol";
 import "./InstrumentRegistry.sol";
 import "./NutsToken.sol";
@@ -33,11 +31,12 @@ contract NutsPlatform is FspRole, TimerOracleRole {
     Property.Properties private _properties;
     Transfer.Transfers private _transfers;
 
-    constructor() public {
-        _storage = new UnifiedStorage();
-        _instrumentRegistry = new InstrumentRegistry();
-        _token = new NutsToken();
-        _escrow = new NutsEscrow();
+    constructor(address unifiedStorageAddress, address instrumentRegistry,
+        address nutsTokenAddress, address nutsEscrowAddress) public {
+        _storage = UnifiedStorage(unifiedStorageAddress);
+        _instrumentRegistry = InstrumentRegistry(instrumentRegistry);
+        _token = NutsToken(nutsTokenAddress);
+        _escrow = NutsEscrow(nutsEscrowAddress);
     }
 
     /**

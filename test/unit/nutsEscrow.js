@@ -1,5 +1,5 @@
-const NutsEscrow = artifacts.require('./NutsEscrow.sol');
-const NutsToken = artifacts.require('./NutsToken.sol');
+const NutsEscrow = artifacts.require('../NutsEscrow.sol');
+const NutsToken = artifacts.require('../NutsToken.sol');
 const assert = require('assert');
 
 let escrowInstance;

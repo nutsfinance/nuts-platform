@@ -1,6 +1,6 @@
 pragma solidity ^0.5.0;
 
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "../../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
 
 import "../Instrument.sol";
 
@@ -366,6 +366,14 @@ contract Loan is Instrument {
 
         // Clean up
         _properties.clear();
+    }
+
+    /**
+     * @dev Custom event is not supported in loan contract.
+     */
+    function processCustomEvent(uint256 issuanceId, string memory properties, string memory balance,
+        string memory eventName, string memory eventPayload) public returns (string memory updatedProperties, string memory transfers) {
+        revert("Custom evnet unsupported.");
     }
 
     /**

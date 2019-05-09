@@ -1,7 +1,7 @@
 pragma solidity ^0.5.0;
 
 import "truffle/Assert.sol";
-import "../contracts/common/payment/Transfer.sol";
+import "../../contracts/common/payment/Transfer.sol";
 
 contract TestTransfer {
     using Transfer for Transfer.Transfers;
