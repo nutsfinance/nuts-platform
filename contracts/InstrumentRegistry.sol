@@ -20,7 +20,7 @@ contract InstrumentRegistry is WhitelistAdminRole {
     mapping(address => FSPStatus) private _fsps;
 
     function create(address fspAddress, address instrumentAddress, uint256 expiration) public onlyWhitelistAdmin {
-        require(_instruments[instrumentAddress].instrumentAddress != address(0x0), "Instrument already exists");
+        require(_instruments[instrumentAddress].instrumentAddress == address(0x0), "Instrument already exists");
         _instruments[instrumentAddress] = InstrumentStatus(instrumentAddress, fspAddress, true, now, now + expiration);
         _fsps[fspAddress].fspAddress = fspAddress;
         _fsps[fspAddress].instrumentAddresses.push(instrumentAddress);
