@@ -9,3 +9,8 @@ To build the project and run the test cases, following the steps below:
 1. Install Truffle  `npm install -g truffle`
 1. Install Ganache-GUI and start it
 1. Run the Test Cases `truffle test --development`
+
+To get the contract size, run the following command:
+```
+grep \"bytecode\" build/contracts/* | awk '{print $1 " " length($3)/2}'
+```

@@ -1,11 +1,11 @@
 pragma solidity ^0.5.0;
 
 import "./common/payment/Balance.sol";
-import "../node_modules/openzeppelin-solidity/contracts/ownership/Secondary.sol";
+import "../node_modules/openzeppelin-solidity/contracts/access/roles/WhitelistAdminRole.sol";
 import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "../node_modules/openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 
-contract NutsEscrow is Secondary {
+contract NutsEscrow is WhitelistAdminRole {
     using SafeMath for uint256;
     using Balance for Balance.Balances;
 
@@ -99,7 +99,7 @@ contract NutsEscrow is Secondary {
      * @param issuanceId The id of the issuance
      * @return The Ether balance of the issuance in the escrow
      */
-    function balanceOfIssuance(uint256 issuanceId) public view onlyPrimary returns (uint256) {
+    function balanceOfIssuance(uint256 issuanceId) public view onlyWhitelistAdmin returns (uint256) {
         // return _issuanceEther[issuanceId];
         return _issuanceBalances[issuanceId].getEtherBalance();
     }
@@ -110,7 +110,7 @@ contract NutsEscrow is Secondary {
      * @param issuanceId The id of the issuance
      * @param amount The amount of Ether to transfer
      */
-    function transferToIssuance(address payee, uint256 issuanceId, uint256 amount) public onlyPrimary {
+    function transferToIssuance(address payee, uint256 issuanceId, uint256 amount) public onlyWhitelistAdmin {
         // Subtract from the seller/buyer balance
         require(_etherBalance[payee] >= amount, "Insufficient Ether balance");
         _etherBalance[payee] = _etherBalance[payee].sub(amount);
@@ -126,7 +126,7 @@ contract NutsEscrow is Secondary {
      * @param issuanceId The id of the issuance
      * @param amount The amount of Ether to transfer
      */
-    function transferFromIssuance(address payee, uint256 issuanceId, uint256 amount) public onlyPrimary {
+    function transferFromIssuance(address payee, uint256 issuanceId, uint256 amount) public onlyWhitelistAdmin {
         // Subtract from the issuance balance
         uint balance = _issuanceBalances[issuanceId].getEtherBalance();
         require(balance >= amount, "Insufficient Ether balance");
@@ -142,7 +142,7 @@ contract NutsEscrow is Secondary {
      * @param token The ERC20 token to check balance
      * @return The ERC20 token balance of the issuance in the escrow
      */
-    function tokenBalanceOfIssuance(uint256 issuanceId, ERC20 token) public view onlyPrimary returns (uint256) {
+    function tokenBalanceOfIssuance(uint256 issuanceId, ERC20 token) public view onlyWhitelistAdmin returns (uint256) {
         return _issuanceBalances[issuanceId].getTokenBalance(address(token));
     }
 
@@ -153,7 +153,7 @@ contract NutsEscrow is Secondary {
      * @param token The ERC20 token to transfer
      * @param amount The amount of ERC20 token to transfer
      */
-    function transferTokenToIssuance(address payee, uint256 issuanceId, ERC20 token, uint256 amount) public onlyPrimary {
+    function transferTokenToIssuance(address payee, uint256 issuanceId, ERC20 token, uint256 amount) public onlyWhitelistAdmin {
         // Subtract from the seller/buyer balance
         require(_tokenBalance[payee][address(token)] >= amount, "Inssufficient token balance");
         _tokenBalance[payee][address(token)] = _tokenBalance[payee][address(token)].sub(amount);
@@ -170,7 +170,7 @@ contract NutsEscrow is Secondary {
      * @param token The ERC20 token to transfer
      * @param amount The amount of ERC20 token to transfer
      */
-    function transferTokenFromIssuance(address payee, uint256 issuanceId, ERC20 token, uint256 amount) public onlyPrimary {
+    function transferTokenFromIssuance(address payee, uint256 issuanceId, ERC20 token, uint256 amount) public onlyWhitelistAdmin {
         // Subtract from the issuance balance
         uint balance = _issuanceBalances[issuanceId].getTokenBalance(address(token));
         require(balance >= amount, "Insufficient token balance");
@@ -185,7 +185,7 @@ contract NutsEscrow is Secondary {
      * @param issuanceId The issuance id
      * @return The serialized balance
      */
-    function getIssuanceBalance(uint256 issuanceId) public view onlyPrimary returns (string memory) {
+    function getIssuanceBalance(uint256 issuanceId) public view onlyWhitelistAdmin returns (string memory) {
         return string(_issuanceBalances[issuanceId].save());
     }
 }
