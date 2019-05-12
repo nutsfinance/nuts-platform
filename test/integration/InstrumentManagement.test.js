@@ -5,7 +5,7 @@ const NutsPlatform = artifacts.require("../../contracts/NutsPlatform.sol");
 const NutsToken = artifacts.require("../../contracts/NutsToken.sol");
 const InstrumentMock = artifacts.require("../../contracts/mock/InstrumentMock.sol");
 
-contract("NutsPlatform", ([owner, fsp, seller]) => {
+contract("NutsPlatform", ([owner, fsp, seller, buyer]) => {
     beforeEach("deploy new NUTS platform and loan contracts", async function() {
         this.platformInstance = await NutsPlatform.deployed();
         this.nutsToken = await NutsToken.deployed();
@@ -75,6 +75,16 @@ contract("NutsPlatform", ([owner, fsp, seller]) => {
             const issuanceId = event.args.issuanceId.toNumber();
             await this.platformInstance.deactivateInstrument(this.instrumentInstance.address, {from: fsp});
             await this.platformInstance.engageIssuance(issuanceId, "");
+        })
+    }),
+    context("Access control", async function() {
+        it("should not allow non-fsp to create instrument", async function() {
+            await shouldFail.reverting.withMessage(this.platformInstance.createInstrument(this.instrumentInstance.address, 0, {from: seller}),
+                "FspRole: caller does not have the Fsp role");
+        }),
+        it("should not allow non-fsp to add or remove fsp role", async function() {
+            await shouldFail.reverting.withMessage(this.platformInstance.addFsp(buyer, {from: seller}),
+                "FspRole: caller does not have the Fsp role");
         })
     })
 });
