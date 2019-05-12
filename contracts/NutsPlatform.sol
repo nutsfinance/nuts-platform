@@ -19,6 +19,12 @@ contract NutsPlatform is FspRole, TimerOracleRole {
     using Property for Property.Properties;
     using Transfer for Transfer.Transfers;
 
+    event IssuanceCreated(uint indexed issuanceId, address indexed instrumentAddress,
+        address indexed sellerAddress);
+
+    event IssuanceEngaged(uint indexed issuanceId, address indexed instrumentAddress,
+        address indexed buyerAddress);
+
     // The sequence used to generate issuance id
     uint256 private lastIssuanceId = 0;
     UnifiedStorage private _storage;
@@ -55,7 +61,7 @@ contract NutsPlatform is FspRole, TimerOracleRole {
      */
     function deactivateInstrument(address instrumentAddress) public onlyFsp {
         _token.transfer(msg.sender, TOKEN_AMOUNT);
-        _instrumentRegistry.deactivate(instrumentAddress);
+        _instrumentRegistry.deactivate(msg.sender, instrumentAddress);
     }
 
     /**
@@ -87,6 +93,7 @@ contract NutsPlatform is FspRole, TimerOracleRole {
         // Post-transferss
         processTransfers(issuanceId, transfers);
 
+        emit IssuanceCreated(issuanceId, instrumentAddress, msg.sender);
         return issuanceId;
     }
 
@@ -106,13 +113,14 @@ contract NutsPlatform is FspRole, TimerOracleRole {
 
         _properties.clear();
         _properties.load(bytes(issuanceData));
-        Instrument instrument = Instrument(_properties.getAddressValue('instrumentAddress'));
+        address instrumentAddress = _properties.getAddressValue('instrumentAddress');
+        Instrument instrument = Instrument(instrumentAddress);
 
         // Retrieve the issuance balance
         string memory properties = _properties.getStringValue('properties');
         string memory balance = _escrow.getIssuanceBalance(issuanceId);
 
-        (string memory updatedProperties, string memory transfers) = instrument.engage(issuanceId, 
+        (string memory updatedProperties, string memory transfers) = instrument.engage(issuanceId,
             properties, balance, msg.sender, buyerParameters);
 
         // Update issuance properties
@@ -123,6 +131,8 @@ contract NutsPlatform is FspRole, TimerOracleRole {
 
         // Post transferss
         processTransfers(issuanceId, transfers);
+
+        emit IssuanceEngaged(issuanceId, instrumentAddress, msg.sender);
     }
 
     /**

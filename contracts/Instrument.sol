@@ -26,7 +26,7 @@ contract Instrument {
      * @param eventName The name of the custom event
      * @param eventPayload The payload the custom event
      */
-    event EventScheduled(uint indexed issuanceId, uint256 timestamp, 
+    event EventScheduled(uint indexed issuanceId, uint256 timestamp,
         string indexed eventName, string eventPayload);
 
     /**
@@ -44,7 +44,7 @@ contract Instrument {
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
      */
-    function createIssuance(uint256 issuanceId, address sellerAddress, string memory sellerParameters) 
+    function createIssuance(uint256 issuanceId, address sellerAddress, string memory sellerParameters)
         public returns (string memory updatedProperties, string memory transfers);
 
     /**
@@ -56,8 +56,8 @@ contract Instrument {
      * @param buyerParameters The custom parameters to the new engagement
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
-     */    
-    function engage(uint256 issuanceId, string memory properties, string memory balance, address buyerAddress, 
+     */
+    function engage(uint256 issuanceId, string memory properties, string memory balance, address buyerAddress,
         string memory buyerParameters) public returns (string memory updatedProperties, string memory transfers);
 
     /**
@@ -69,7 +69,7 @@ contract Instrument {
      * @param amount The amount of Ether transfered
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
-     */ 
+     */
     function processTransfer(uint256 issuanceId, string memory properties, string memory balance,
         address fromAddress, uint256 amount) public returns (string memory updatedProperties, string memory transfers);
 
@@ -83,9 +83,9 @@ contract Instrument {
      * @param amount The amount of ERC20 token transfered
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
-     */ 
+     */
     function processTokenTransfer(uint256 issuanceId, string memory properties, string memory balance,
-        address fromAddress, address tokenAddress, uint256 amount) 
+        address fromAddress, address tokenAddress, uint256 amount)
         public returns (string memory updatedProperties, string memory transfers);
 
     /**
@@ -97,8 +97,8 @@ contract Instrument {
      * @param eventPayload Payload of the custom event, eventPayload of EventScheduled event
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
-     */ 
-    function processScheduledEvent(uint256 issuanceId, string memory properties, string memory balance, 
+     */
+    function processScheduledEvent(uint256 issuanceId, string memory properties, string memory balance,
         string memory eventName, string memory eventPayload) public returns (string memory updatedProperties, string memory transfers);
 
     /**
@@ -110,8 +110,8 @@ contract Instrument {
      * @param eventPayload Payload of the custom event, eventPayload of EventScheduled event
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
-     */ 
-    function processCustomEvent(uint256 issuanceId, string memory properties, string memory balance, 
+     */
+    function processCustomEvent(uint256 issuanceId, string memory properties, string memory balance,
         string memory eventName, string memory eventPayload) public returns (string memory updatedProperties, string memory transfers);
 
     /**
