@@ -37,15 +37,15 @@ contract Loan is Instrument {
         _parameters.clear();
         _parameters.parseParameters(sellerParameters);
         // TODO Give non-required parameter sensible default
-        address collateralTokenAddress = _parameters.getAddressValue("collateral-token-address");
-        uint collateralAmount = _parameters.getUintValue("collateral-amount");
-        uint borrowAmount = _parameters.getUintValue("borrow-amount");
-        uint depositDueDays = _parameters.getUintValue("deposit-due-days");
-        uint engagementDueDays = _parameters.getUintValue("engagement-due-days");
-        uint collateralDueDays = _parameters.getUintValue("collateral-due-days");
-        uint tenorDays = _parameters.getUintValue("tenor-days");
-        uint interestRate = _parameters.getUintValue("interest-rate");
-        uint gracePeriod = _parameters.getUintValue("grace-period");
+        address collateralTokenAddress = _parameters.getAddressOrDefault("collateral-token-address", address(0x0));
+        uint collateralAmount = _parameters.getUintOrDefault("collateral-amount", 0);
+        uint borrowAmount = _parameters.getUintOrDefault("borrow-amount", 0);
+        uint depositDueDays = _parameters.getUintOrDefault("deposit-due-days", 0);
+        uint engagementDueDays = _parameters.getUintOrDefault("engagement-due-days", 0);
+        uint collateralDueDays = _parameters.getUintOrDefault("collateral-due-days", 0);
+        uint tenorDays = _parameters.getUintOrDefault("tenor-days", 0);
+        uint interestRate = _parameters.getUintOrDefault("interest-rate", 0);
+        uint gracePeriod = _parameters.getUintOrDefault("grace-period", 0);
 
         // Validate parameters
         require(collateralTokenAddress != address(0x0), "Collateral token address must not be 0");
