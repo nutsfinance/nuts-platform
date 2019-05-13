@@ -166,7 +166,7 @@ contract Loan is Instrument {
 
         uint etherBalance = _balances.getEtherBalance();
         uint borrowAmount = _properties.getUintValue("borrow_amount");
-        emit SomthingHappen(etherBalance, borrowAmount, balance, '', fromAddress, _properties.getAddressValue("seller_address"));
+        // emit SomthingHappen(etherBalance, borrowAmount, balance, '', fromAddress, _properties.getAddressValue("seller_address"));
         if (_properties.getAddressValue("seller_address") == fromAddress) {
             // The Ether transfer is from seller
             // This must be deposit
