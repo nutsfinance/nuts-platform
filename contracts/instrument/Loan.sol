@@ -9,6 +9,7 @@ import "../Instrument.sol";
  * depositing token as collaterals.
  */
 contract Loan is Instrument {
+    event SomthingHappen(uint num1, uint num2, string str1, string str2, address addr1, address addr2);
     using SafeMath for uint256;
 
     string constant DEPOSIT_EXPIRED_EVENT = "deposit_expired";
@@ -27,7 +28,7 @@ contract Loan is Instrument {
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
      */
-    function createIssuance(uint256 issuanceId, address sellerAddress, string memory sellerParameters) 
+    function createIssuance(uint256 issuanceId, address sellerAddress, string memory sellerParameters)
         public returns (string memory updatedProperties, string memory transfers) {
         // Parameter validation
         require(issuanceId > 0, "Issuance id must be set.");
@@ -98,14 +99,14 @@ contract Loan is Instrument {
      * @param buyerParameters The custom parameters to the new engagement
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
-     */    
-    function engage(uint256 issuanceId, string memory properties, string memory balance, address buyerAddress, 
+     */
+    function engage(uint256 issuanceId, string memory properties, string memory balance, address buyerAddress,
         string memory buyerParameters) public returns (string memory updatedProperties, string memory transfers) {
         // Parameter validation
         require(issuanceId > 0, "Issuance id must be set.");
         require(bytes(properties).length > 0, "Properties must be set.");
         require(buyerAddress != address(0x0), "Buyer address must be set.");
-        
+    
         // Load properties
         _properties.clear();
         _properties.load(bytes(properties));
@@ -146,7 +147,7 @@ contract Loan is Instrument {
      * @param amount The amount of Ether transfered
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
-     */ 
+     */
     function processTransfer(uint256 issuanceId, string memory properties, string memory balance,
         address fromAddress, uint256 amount) public returns (string memory updatedProperties, string memory transfers) {
         // Parameter validation
@@ -165,6 +166,7 @@ contract Loan is Instrument {
 
         uint etherBalance = _balances.getEtherBalance();
         uint borrowAmount = _properties.getUintValue("borrow_amount");
+        emit SomthingHappen(etherBalance, borrowAmount, balance, '', fromAddress, _properties.getAddressValue("seller_address"));
         if (_properties.getAddressValue("seller_address") == fromAddress) {
             // The Ether transfer is from seller
             // This must be deposit
@@ -225,9 +227,9 @@ contract Loan is Instrument {
      * @param amount The amount of ERC20 token transfered
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
-     */ 
+     */
     function processTokenTransfer(uint256 issuanceId, string memory properties, string memory balance,
-        address fromAddress, address tokenAddress, uint256 amount) 
+        address fromAddress, address tokenAddress, uint256 amount)
         public returns (string memory updatedProperties, string memory transfers) {
         // Parameter validation
         require(issuanceId > 0, "Issuance id must be set.");
@@ -244,11 +246,11 @@ contract Loan is Instrument {
         // 4. The balance collateral balance is equals to the collateral amount
         // 5. The issuance is still collecting collateral(collateral_complete = false)
         require(isIssuanceInState(ACTIVE_STATE), "Collateral deposit must occur in Active state.");
-        require(_properties.getAddressOrDefault("buyer_address", address(0x0)) == fromAddress, 
+        require(_properties.getAddressOrDefault("buyer_address", address(0x0)) == fromAddress,
             "Collateral deposit must come from the buyer.");
-        require(!_properties.getBoolOrDefault("collateral_complete", false), 
+        require(!_properties.getBoolOrDefault("collateral_complete", false),
             "Collateral deposit must occur during the collateral depoit phase.");
-        require(_balances.getTokenBalance(tokenAddress) >= _properties.getUintValue("collateral_amount"), 
+        require(_balances.getTokenBalance(tokenAddress) >= _properties.getUintValue("collateral_amount"),
             "Collateral token balance must not exceed the collateral amount");
 
         // Load properties
@@ -287,8 +289,8 @@ contract Loan is Instrument {
      * @param eventPayload Payload of the custom event, eventPayload of EventScheduled event
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
-     */ 
-    function processScheduledEvent(uint256 issuanceId, string memory properties, string memory balance, 
+     */
+    function processScheduledEvent(uint256 issuanceId, string memory properties, string memory balance,
         string memory eventName, string memory eventPayload) public returns (string memory updatedProperties, string memory transfers) {
         // Parameter validation
         require(issuanceId > 0, "Issuance id must be set.");

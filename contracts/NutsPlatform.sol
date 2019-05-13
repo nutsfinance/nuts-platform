@@ -155,13 +155,13 @@ contract NutsPlatform is FspRole, TimerOracleRole {
         _properties.load(bytes(issuanceData));
         Instrument instrument = Instrument(_properties.getAddressValue('instrumentAddress'));
 
-        // Retrieve the issuance balance
-        string memory properties = _properties.getStringValue('properties');
-        string memory balance = _escrow.getIssuanceBalance(issuanceId);
-
         // Complete Ether transfer
         _escrow.transferToIssuance(msg.sender, issuanceId, amount);
-        (string memory updatedProperties, string memory transfers) = instrument.processTransfer(issuanceId, 
+
+        // Process the transfer event
+        string memory properties = _properties.getStringValue('properties');
+        string memory balance = _escrow.getIssuanceBalance(issuanceId);
+        (string memory updatedProperties, string memory transfers) = instrument.processTransfer(issuanceId,
             properties, balance, msg.sender, amount);
 
         // Update issuance properties
@@ -178,7 +178,7 @@ contract NutsPlatform is FspRole, TimerOracleRole {
      * @dev Inovked by seller/buyer to transfer ERC20 token to the issuance. The token to be transferred
      *      must be deposited in the escrow already, so the transfer is done in the escrow internally.
      * @param issuanceId The id of the issuance to which the token is deposited
-     @ @param tokenAddress The address of the token 
+     @ @param tokenAddress The address of the token
      * @param amount The amount of token to transfer to the issuance
      */
     function depositToken(uint256 issuanceId, address tokenAddress, uint256 amount) public {
@@ -196,13 +196,13 @@ contract NutsPlatform is FspRole, TimerOracleRole {
         _properties.load(bytes(issuanceData));
         Instrument instrument = Instrument(_properties.getAddressValue('instrumentAddress'));
 
-        // Retrieve the issuance balance
-        string memory properties = _properties.getStringValue('properties');
-        string memory balance = _escrow.getIssuanceBalance(issuanceId);
-
         // Complete the token transfer
         _escrow.transferTokenToIssuance(msg.sender, issuanceId, ERC20(tokenAddress), amount);
-        (string memory updatedProperties, string memory transfers) = instrument.processTokenTransfer(issuanceId, 
+
+        // Process the transfer event
+        string memory properties = _properties.getStringValue('properties');
+        string memory balance = _escrow.getIssuanceBalance(issuanceId);
+        (string memory updatedProperties, string memory transfers) = instrument.processTokenTransfer(issuanceId,
            properties, balance, msg.sender, tokenAddress, amount);
 
         // Update issuance properties
@@ -242,7 +242,7 @@ contract NutsPlatform is FspRole, TimerOracleRole {
         string memory properties = _properties.getStringValue('properties');
         string memory balance = _escrow.getIssuanceBalance(issuanceId);
 
-        (string memory updatedProperties, string memory transfers) = instrument.processScheduledEvent(issuanceId, 
+        (string memory updatedProperties, string memory transfers) = instrument.processScheduledEvent(issuanceId,
             properties, balance, eventName, eventPayload);
 
         // Update issuance properties
@@ -279,7 +279,7 @@ contract NutsPlatform is FspRole, TimerOracleRole {
         string memory properties = _properties.getStringValue('properties');
         string memory balance = _escrow.getIssuanceBalance(issuanceId);
 
-        (string memory updatedProperties, string memory transfers) = instrument.processCustomEvent(issuanceId, 
+        (string memory updatedProperties, string memory transfers) = instrument.processCustomEvent(issuanceId,
             properties, balance, eventName, eventPayload);
 
         // Update issuance properties
@@ -308,7 +308,7 @@ contract NutsPlatform is FspRole, TimerOracleRole {
                 _escrow.transferFromIssuance(_transfers.actions[i].receiverAddress, issuanceId,
                     _transfers.actions[i].amount);
             } else {
-                _escrow.transferTokenFromIssuance(_transfers.actions[i].receiverAddress, issuanceId, 
+                _escrow.transferTokenFromIssuance(_transfers.actions[i].receiverAddress, issuanceId,
                     ERC20(_transfers.actions[i].tokenAddress), _transfers.actions[i].amount);
             }
         }

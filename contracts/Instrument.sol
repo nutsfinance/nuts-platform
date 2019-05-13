@@ -26,15 +26,14 @@ contract Instrument {
      * @param eventName The name of the custom event
      * @param eventPayload The payload the custom event
      */
-    event EventScheduled(uint indexed issuanceId, uint256 timestamp,
-        string indexed eventName, string eventPayload);
+    event EventScheduled(uint256 indexed issuanceId, uint256 timestamp, string eventName, string eventPayload);
 
     /**
      * @dev The event reporting the issuance properties change
      * @param issuanceId The id of the issuance
-     * @param properties The current issuance properties
+     * @param state The current issuance state
      */
-    event StateUpdated(uint indexed issuanceId, string indexed properties);
+    event IssuanceStateUpdated(uint256 indexed issuanceId, string state);
 
     /**
      * @dev Create a new issuance of the financial instrument
@@ -130,7 +129,7 @@ contract Instrument {
 
     // Issuance state constants
     string constant INITIATED_STATE = "Initiated";
-    string constant ENGAGABLE_STATE = "Engagable";
+    string constant ENGAGABLE_STATE = "Engageable";
     string constant ACTIVE_STATE = "Active";
     string constant UNFUNDED_STATE = "Unfunded";
     string constant COMPLETE_NOT_ENGAGED_STATE = "Complete Not Engaged";
@@ -153,6 +152,6 @@ contract Instrument {
      */
     function updateIssuanceState(uint issuanceId, string memory state) internal {
         _properties.setStringValue("state", state);
-        emit StateUpdated(issuanceId, state);
+        emit IssuanceStateUpdated(issuanceId, state);
     }
 }
