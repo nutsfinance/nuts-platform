@@ -1,5 +1,6 @@
 const { BN, constants, expectEvent, shouldFail, time, send, ether } = require('openzeppelin-test-helpers');
 const { ZERO_ADDRESS } = constants;
+const { expect } = require('chai');
 const NutsPlatform = artifacts.require("../../contracts/NutsPlatform.sol");
 const NutsEscrow = artifacts.require("../../contracts/NutsEscrow.sol");
 const NutsToken = artifacts.require("../../contracts/NutsToken.sol");
@@ -54,7 +55,7 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, tokenOwner]) => {
                 issuanceId: new BN(issuanceId),
                 state: "Engageable"
             });
-            (await this.nutsEscrow.balanceOfIssuance(issuanceId)).should.be.bignumber.equal('5');
+            expect(await this.nutsEscrow.balanceOfIssuance(issuanceId)).be.bignumber.equal('5');
         })
         // it("should fail to create issuance with invalid parameters", async function() {
         //     // Send a zero collateral token address
