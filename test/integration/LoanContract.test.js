@@ -187,8 +187,6 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, tokenOwner]) => {
             // console.log(timestamp);
             // console.log((await time.latest()).toNumber());
 
-            // Seller deposit insufficient Ether: borrow amount = 5
-            tx = await this.nutsPlatform.deposit(issuanceId, 2, {from: seller});
             await shouldFail.reverting.withMessage(this.nutsPlatform.processScheduledEvent(issuanceId, timestamp, "deposit_expired", "")
                 , "The scheduled event is not due now.");
 
@@ -200,6 +198,125 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, tokenOwner]) => {
                 issuanceId: new BN(issuanceId),
                 state: "Unfunded"
             });
+        }),
+        it("should become unfunded and return deposit if deposit is overdue", async function() {
+            // Create issuance
+            let tx = await this.nutsPlatform.createIssuance(this.loan.address,
+                `collateral-token-address=${this.collateralToken.address}&collateral-amount=30&` + 
+                `borrow-amount=5&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
+                `tenor-days=30&interest-rate=10000&grace-period=5`, {from: seller});
+            const issuanceId = tx.logs.find(e => e.event == "IssuanceCreated").args.issuanceId.toNumber();
+            await expectEvent.inTransaction(tx.receipt.transactionHash, Loan, "IssuanceStateUpdated", {
+                issuanceId: new BN(issuanceId),
+                state: "Initiated"
+            });
+            const timestamp = await getEventTimestamp(tx.receipt.transactionHash, Loan, "deposit_expired");
+            // console.log(timestamp);
+            // console.log((await time.latest()).toNumber());
+
+            // Seller deposit insufficient Ether: borrow amount = 5
+            const prevBalance = new BN(await this.nutsEscrow.balanceOf({from: seller}));
+            tx = await this.nutsPlatform.deposit(issuanceId, 2, {from: seller});
+            const currentBalance = new BN(await this.nutsEscrow.balanceOf({from: seller}));
+            await shouldFail.reverting.withMessage(this.nutsPlatform.processScheduledEvent(issuanceId, timestamp, "deposit_expired", "")
+                , "The scheduled event is not due now.");
+            // console.log(prevBalance);
+            // console.log(currentBalance);
+            expect(prevBalance.sub(currentBalance)).be.bignumber.equal('2');
+
+            // Move the timestamp
+            await time.increase(5 * 24 * 3600 + 100);
+            // Scheduled event: deposit_expired
+            tx = await this.nutsPlatform.processScheduledEvent(issuanceId, timestamp, "deposit_expired", "");
+            const nextBalance = new BN(await this.nutsEscrow.balanceOf({from: seller}));
+            await expectEvent.inTransaction(tx.receipt.transactionHash, Loan, "IssuanceStateUpdated", {
+                issuanceId: new BN(issuanceId),
+                state: "Unfunded"
+            });
+            // console.log(nextBalance);
+            expect(prevBalance).be.bignumber.equal(nextBalance);
+            expect(nextBalance.sub(currentBalance)).be.bignumber.equal('2');
+        }),
+        it("should fail to deposit more Ether than borrow amount", async function() {
+            // Create issuance
+            let tx = await this.nutsPlatform.createIssuance(this.loan.address,
+                `collateral-token-address=${this.collateralToken.address}&collateral-amount=30&` + 
+                `borrow-amount=5&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
+                `tenor-days=30&interest-rate=10000&grace-period=5`, {from: seller});
+            const issuanceId = tx.logs.find(e => e.event == "IssuanceCreated").args.issuanceId.toNumber();
+            await expectEvent.inTransaction(tx.receipt.transactionHash, Loan, "IssuanceStateUpdated", {
+                issuanceId: new BN(issuanceId),
+                state: "Initiated"
+            });
+
+            await shouldFail.reverting.withMessage(this.nutsPlatform.deposit(issuanceId, 8, {from: seller})
+                , "The Ether deposit cannot exceed the borrow amount.");
+            await this.nutsPlatform.deposit(issuanceId, 3, {from: seller});
+            await shouldFail.reverting.withMessage(this.nutsPlatform.deposit(issuanceId, 3, {from: seller})
+                , "The Ether deposit cannot exceed the borrow amount.");
+            tx = await this.nutsPlatform.deposit(issuanceId, 2, {from: seller});
+            await expectEvent.inTransaction(tx.receipt.transactionHash, Loan, "IssuanceStateUpdated", {
+                issuanceId: new BN(issuanceId),
+                state: "Engageable"
+            });
+        }),
+        it("should fail to accept Ether deposit other than seller", async function() {
+            // Create issuance
+            let tx = await this.nutsPlatform.createIssuance(this.loan.address,
+                `collateral-token-address=${this.collateralToken.address}&collateral-amount=30&` + 
+                `borrow-amount=5&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
+                `tenor-days=30&interest-rate=10000&grace-period=5`, {from: seller});
+            const issuanceId = tx.logs.find(e => e.event == "IssuanceCreated").args.issuanceId.toNumber();
+            await expectEvent.inTransaction(tx.receipt.transactionHash, Loan, "IssuanceStateUpdated", {
+                issuanceId: new BN(issuanceId),
+                state: "Initiated"
+            });
+
+            await this.nutsEscrow.deposit({from: owner, value: ether("20")});
+            await shouldFail.reverting.withMessage(this.nutsPlatform.deposit(issuanceId, 2, {from: owner})
+                , "Unknown transferer. Only seller or buyer can send Ether to issuance.");
+            await shouldFail.reverting.withMessage(this.nutsPlatform.deposit(issuanceId, 5, {from: owner})
+                , "Unknown transferer. Only seller or buyer can send Ether to issuance.");
+            await this.nutsEscrow.deposit({from: fsp, value: ether("20")});
+            await shouldFail.reverting.withMessage(this.nutsPlatform.deposit(issuanceId, 2, {from: fsp})
+                , "Unknown transferer. Only seller or buyer can send Ether to issuance.");
+            await shouldFail.reverting.withMessage(this.nutsPlatform.deposit(issuanceId, 5, {from: fsp})
+                , "Unknown transferer. Only seller or buyer can send Ether to issuance.");
+        }),
+        it("should fail to deposit any token", async function() {
+            // Create issuance
+            let tx = await this.nutsPlatform.createIssuance(this.loan.address,
+                `collateral-token-address=${this.collateralToken.address}&collateral-amount=30&` + 
+                `borrow-amount=5&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
+                `tenor-days=30&interest-rate=10000&grace-period=5`, {from: seller});
+            const issuanceId = tx.logs.find(e => e.event == "IssuanceCreated").args.issuanceId.toNumber();
+            await expectEvent.inTransaction(tx.receipt.transactionHash, Loan, "IssuanceStateUpdated", {
+                issuanceId: new BN(issuanceId),
+                state: "Initiated"
+            });
+
+            await this.collateralToken.mint(seller, 50, {from: tokenOwner});
+            await this.collateralToken.approve(this.nutsEscrow.address, 50, {from: seller});
+            await this.nutsEscrow.depositToken(this.collateralToken.address, 50, {from: seller});
+            await shouldFail.reverting.withMessage(this.nutsPlatform.depositToken(issuanceId, this.collateralToken.address, 20, {from: seller})
+                , "Collateral deposit must occur in Active state.");
+            await this.collateralToken.mint(fsp, 50, {from: tokenOwner});
+            await this.collateralToken.approve(this.nutsEscrow.address, 50, {from: fsp});
+            await this.nutsEscrow.depositToken(this.collateralToken.address, 50, {from: fsp});
+            await shouldFail.reverting.withMessage(this.nutsPlatform.depositToken(issuanceId, this.collateralToken.address, 20, {from: fsp})
+                , "Collateral deposit must occur in Active state.");
+
+            // Seller deposit Ether: borrow amount = 5
+            tx = await this.nutsPlatform.deposit(issuanceId, 5, {from: seller});
+            await expectEvent.inTransaction(tx.receipt.transactionHash, Loan, "IssuanceStateUpdated", {
+                issuanceId: new BN(issuanceId),
+                state: "Engageable"
+            });
+
+            await shouldFail.reverting.withMessage(this.nutsPlatform.depositToken(issuanceId, this.collateralToken.address, 20, {from: seller})
+                , "Collateral deposit must occur in Active state.");
+            await shouldFail.reverting.withMessage(this.nutsPlatform.depositToken(issuanceId, this.collateralToken.address, 20, {from: fsp})
+                , "Collateral deposit must occur in Active state.");
         })
     })
 });
