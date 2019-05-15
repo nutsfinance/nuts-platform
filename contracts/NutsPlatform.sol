@@ -139,7 +139,7 @@ contract NutsPlatform is FspRole, TimerOracleRole {
      * @dev Inovked by seller/buyer to transfer Ether to the issuance. The Ether to be transferred
      *      must be deposited in the escrow already, so the transfer is done in the escrow internally.
      * @param issuanceId The id of the issuance to which the Ether is deposited
-     * @param amount The amount of Ether to transfer to the issuance
+     * @param amount The amount of Ether, in wei, to transfer to the issuance
      */
     function deposit(uint256 issuanceId, uint256 amount) public {
         // Validation

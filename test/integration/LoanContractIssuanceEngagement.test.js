@@ -32,26 +32,26 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, buyer2, tokenOwner]) => {
         await this.nutsPlatform.createInstrument(this.loan.address, 0, {from: fsp});
 
         // Seller deposits Ether to Escrow
-        await this.nutsEscrow.deposit({from: seller, value: ether("20")});
-        await this.nutsEscrow.deposit({from: buyer, value: ether("20")});
-        await this.nutsEscrow.deposit({from: buyer2, value: ether("20")});
+        await this.nutsEscrow.deposit({from: seller, value: ether("200")});
+        await this.nutsEscrow.deposit({from: buyer, value: ether("200")});
+        await this.nutsEscrow.deposit({from: buyer2, value: ether("200")});
     }),
     beforeEach("deploy new collateral token", async function() {
         // Deploy new collateral token
         this.collateralToken = await ERC20Mintable.new({from : tokenOwner});
         
         // // Buyer deposits Collateral token to escrow
-        await this.collateralToken.mint(buyer, 50, {from: tokenOwner});
-        await this.collateralToken.approve(this.nutsEscrow.address, 50, {from: buyer});
-        await this.nutsEscrow.depositToken(this.collateralToken.address, 40, {from: buyer});
-        await this.collateralToken.mint(seller, 50, {from: tokenOwner});
-        await this.collateralToken.approve(this.nutsEscrow.address, 50, {from: seller});
-        await this.nutsEscrow.depositToken(this.collateralToken.address, 40, {from: seller});
+        await this.collateralToken.mint(buyer, 500000, {from: tokenOwner});
+        await this.collateralToken.approve(this.nutsEscrow.address, 500000, {from: buyer});
+        await this.nutsEscrow.depositToken(this.collateralToken.address, 400000, {from: buyer});
+        await this.collateralToken.mint(seller, 500000, {from: tokenOwner});
+        await this.collateralToken.approve(this.nutsEscrow.address, 500000, {from: seller});
+        await this.nutsEscrow.depositToken(this.collateralToken.address, 400000, {from: seller});
 
         // Seller create new issuance
         let tx = await this.nutsPlatform.createIssuance(this.loan.address,
-            `collateral-token-address=${this.collateralToken.address}&collateral-amount=30&` + 
-            `borrow-amount=5&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
+            `collateral-token-address=${this.collateralToken.address}&collateral-amount=300000&` + 
+            `borrow-amount=${ether('5')}&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
             `tenor-days=30&interest-rate=10000&grace-period=5`, {from: seller});
         this.issuanceId = tx.logs.find(e => e.event == "IssuanceCreated").args.issuanceId.toNumber();
         await expectEvent.inTransaction(tx.receipt.transactionHash, Loan, "IssuanceStateUpdated", {
@@ -59,14 +59,14 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, buyer2, tokenOwner]) => {
             state: "Initiated"
         });
 
-        // Seller deposit Ether: borrow amount = 5
-        tx = await this.nutsPlatform.deposit(this.issuanceId, 5, {from: seller});
+        // Seller deposit Ether: borrow amount = 5 Ethers
+        tx = await this.nutsPlatform.deposit(this.issuanceId, ether('5'), {from: seller});
         this.engagementExpiredTimestamp = await getEventTimestamp(tx.receipt.transactionHash, Loan, "engagement_expired");
         await expectEvent.inTransaction(tx.receipt.transactionHash, Loan, "IssuanceStateUpdated", {
             issuanceId: new BN(this.issuanceId),
             state: "Engageable"
         });
-        expect(await this.nutsEscrow.balanceOfIssuance(this.issuanceId)).be.bignumber.equal('5');
+        expect(await this.nutsEscrow.balanceOfIssuance(this.issuanceId)).be.bignumber.equal(ether('5'));
     }),
     context("Issuance engagement", async function() {
         it("should engage the issuance and deposit collateral", async function() {
@@ -99,7 +99,7 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, buyer2, tokenOwner]) => {
             expect(curBuyerToken).be.bignumber.equal(prevBuyerToken);
 
             // Buyer deposit the collateral
-            await this.nutsPlatform.depositToken(this.issuanceId, this.collateralToken.address, 30, {from: buyer});
+            await this.nutsPlatform.depositToken(this.issuanceId, this.collateralToken.address, 300000, {from: buyer});
             const nextIssuanceEther = await this.nutsEscrow.balanceOfIssuance(this.issuanceId);
             const nextIssuanceToken = await this.nutsEscrow.tokenBalanceOfIssuance(this.issuanceId, this.collateralToken.address);
             const nextSellerEther = await this.nutsEscrow.balanceOf({from: seller});
@@ -108,12 +108,12 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, buyer2, tokenOwner]) => {
             const nextBuyerToken = await this.nutsEscrow.tokenBalanceOf(this.collateralToken.address, {from: buyer});
 
             // Expect 5 Ether(borrow amount) has transferred from issuance to buyer
-            expect(curIssuanceEther.sub(nextIssuanceEther)).be.bignumber.equal('5');
-            expect(nextBuyerEther.sub(curBuyerEther)).be.bignumber.equal('5');
+            expect(curIssuanceEther.sub(nextIssuanceEther)).be.bignumber.equal(ether('5'));
+            expect(nextBuyerEther.sub(curBuyerEther)).be.bignumber.equal(ether('5'));
             expect(nextSellerEther).be.bignumber.equal(curSellerEther);
             // Expect 30 token(collateral) has transferred from buyer to issuance
-            expect(nextIssuanceToken.sub(curIssuanceToken)).be.bignumber.equal('30');
-            expect(curBuyerToken.sub(nextBuyerToken)).be.bignumber.equal('30');
+            expect(nextIssuanceToken.sub(curIssuanceToken)).be.bignumber.equal('300000');
+            expect(curBuyerToken.sub(nextBuyerToken)).be.bignumber.equal('300000');
             expect(curSellerToken).be.bignumber.equal(nextSellerToken);
         }),
         it("should engage the issuance and deposit collateral in multiple rounds", async function() {
@@ -146,9 +146,9 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, buyer2, tokenOwner]) => {
             expect(curBuyerToken).be.bignumber.equal(prevBuyerToken);
 
             // Buyer deposit the collateral
-            await this.nutsPlatform.depositToken(this.issuanceId, this.collateralToken.address, 5, {from: buyer});
-            await this.nutsPlatform.depositToken(this.issuanceId, this.collateralToken.address, 10, {from: buyer});
-            await this.nutsPlatform.depositToken(this.issuanceId, this.collateralToken.address, 15, {from: buyer});
+            await this.nutsPlatform.depositToken(this.issuanceId, this.collateralToken.address, 50000, {from: buyer});
+            await this.nutsPlatform.depositToken(this.issuanceId, this.collateralToken.address, 100000, {from: buyer});
+            await this.nutsPlatform.depositToken(this.issuanceId, this.collateralToken.address, 150000, {from: buyer});
             const nextIssuanceEther = await this.nutsEscrow.balanceOfIssuance(this.issuanceId);
             const nextIssuanceToken = await this.nutsEscrow.tokenBalanceOfIssuance(this.issuanceId, this.collateralToken.address);
             const nextSellerEther = await this.nutsEscrow.balanceOf({from: seller});
@@ -157,12 +157,12 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, buyer2, tokenOwner]) => {
             const nextBuyerToken = await this.nutsEscrow.tokenBalanceOf(this.collateralToken.address, {from: buyer});
 
             // Expect 5 Ether(borrow amount) has transferred from issuance to buyer
-            expect(curIssuanceEther.sub(nextIssuanceEther)).be.bignumber.equal('5');
-            expect(nextBuyerEther.sub(curBuyerEther)).be.bignumber.equal('5');
+            expect(curIssuanceEther.sub(nextIssuanceEther)).be.bignumber.equal(ether('5'));
+            expect(nextBuyerEther.sub(curBuyerEther)).be.bignumber.equal(ether('5'));
             expect(nextSellerEther).be.bignumber.equal(curSellerEther);
             // Expect 30 token(collateral) has transferred from buyer to issuance
-            expect(nextIssuanceToken.sub(curIssuanceToken)).be.bignumber.equal('30');
-            expect(curBuyerToken.sub(nextBuyerToken)).be.bignumber.equal('30');
+            expect(nextIssuanceToken.sub(curIssuanceToken)).be.bignumber.equal('300000');
+            expect(curBuyerToken.sub(nextBuyerToken)).be.bignumber.equal('300000');
             expect(curSellerToken).be.bignumber.equal(nextSellerToken);
         }),
         it("should fail to engage one issuance multiple times", async function() {
@@ -199,9 +199,9 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, buyer2, tokenOwner]) => {
             const curSellerToken = await this.nutsEscrow.tokenBalanceOf(this.collateralToken.address, {from: seller});
 
             // The Ether deposit should have been returned to seller
-            expect(prevIssuanceEther.sub(curIssuanceEther)).be.bignumber.equal('5');
+            expect(prevIssuanceEther.sub(curIssuanceEther)).be.bignumber.equal(ether('5'));
             expect(curIssuanceToken).be.bignumber.equal(prevIssuanceToken);
-            expect(curSellerEther.sub(prevSellerEther)).be.bignumber.equal('5');
+            expect(curSellerEther.sub(prevSellerEther)).be.bignumber.equal(ether('5'));
             expect(curSellerToken).be.bignumber.equal(prevSellerToken);
         }),
         it("should go to Delinquent state if no collateral is deposit", async function() {
@@ -238,9 +238,9 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, buyer2, tokenOwner]) => {
             const curBuyerEther = await this.nutsEscrow.balanceOf({from: buyer});
             const curBuyerToken = await this.nutsEscrow.tokenBalanceOf(this.collateralToken.address, {from: buyer});
             // The Ether deposit should have been returned to seller
-            expect(prevIssuanceEther.sub(curIssuanceEther)).be.bignumber.equal('5');
+            expect(prevIssuanceEther.sub(curIssuanceEther)).be.bignumber.equal(ether('5'));
             expect(curIssuanceToken).be.bignumber.equal(prevIssuanceToken);
-            expect(curSellerEther.sub(prevSellerEther)).be.bignumber.equal('5');
+            expect(curSellerEther.sub(prevSellerEther)).be.bignumber.equal(ether('5'));
             expect(curSellerToken).be.bignumber.equal(prevSellerToken);
             expect(curBuyerEther).be.bignumber.equal(prevBuyerEther);
             expect(curBuyerToken).be.bignumber.equal(prevBuyerToken);
@@ -264,7 +264,7 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, buyer2, tokenOwner]) => {
             const prevBuyerToken = await this.nutsEscrow.tokenBalanceOf(this.collateralToken.address, {from: buyer});
     
             // Complete a partial deposit
-            await this.nutsPlatform.depositToken(this.issuanceId, this.collateralToken.address, 10, {from: buyer});
+            await this.nutsPlatform.depositToken(this.issuanceId, this.collateralToken.address, 100000, {from: buyer});
 
             // Move the timestamp
             await time.increase(5 * 24 * 3600 + 100);
@@ -288,9 +288,9 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, buyer2, tokenOwner]) => {
             // console.log(prevSellerToken, curSellerToken);
             // console.log(prevBuyerEther, curBuyerEther);
             // console.log(prevBuyerToken, curBuyerToken);
-            expect(prevIssuanceEther.sub(curIssuanceEther)).be.bignumber.equal('5');
+            expect(prevIssuanceEther.sub(curIssuanceEther)).be.bignumber.equal(ether('5'));
             expect(curIssuanceToken).be.bignumber.equal(prevIssuanceToken);
-            expect(curSellerEther.sub(prevSellerEther)).be.bignumber.equal('5');
+            expect(curSellerEther.sub(prevSellerEther)).be.bignumber.equal(ether('5'));
             expect(curSellerToken).be.bignumber.equal(prevSellerToken);
             expect(curBuyerEther).be.bignumber.equal(prevBuyerEther);
             expect(curBuyerToken).be.bignumber.equal(prevBuyerToken);
@@ -303,9 +303,9 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, buyer2, tokenOwner]) => {
                 state: "Active"
             });
 
-            await shouldFail.reverting.withMessage(this.nutsPlatform.deposit(this.issuanceId, 2, {from: seller}), "Ether deposit must happen in Initiated state.");
-            await shouldFail.reverting.withMessage(this.nutsPlatform.deposit(this.issuanceId, 2, {from: buyer}), "Ether repay must happen after collateral is deposited.");
-            await shouldFail.reverting.withMessage(this.nutsPlatform.deposit(this.issuanceId, 2, {from: buyer2}), "Unknown transferer. Only seller or buyer can send Ether to issuance.");
+            await shouldFail.reverting.withMessage(this.nutsPlatform.deposit(this.issuanceId, ether('2'), {from: seller}), "Ether deposit must happen in Initiated state.");
+            await shouldFail.reverting.withMessage(this.nutsPlatform.deposit(this.issuanceId, ether('2'), {from: buyer}), "Ether repay must happen after collateral is deposited.");
+            await shouldFail.reverting.withMessage(this.nutsPlatform.deposit(this.issuanceId, ether('2'), {from: buyer2}), "Unknown transferer. Only seller or buyer can send Ether to issuance.");
         }),
         it("should fail to deposit token during collateral deposit except buyer", async function() {
             // Engage the issuance
@@ -315,7 +315,7 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, buyer2, tokenOwner]) => {
                 state: "Active"
             });
 
-            await shouldFail.reverting.withMessage(this.nutsPlatform.depositToken(this.issuanceId, this.collateralToken.address, 10, {from: seller}), 
+            await shouldFail.reverting.withMessage(this.nutsPlatform.depositToken(this.issuanceId, this.collateralToken.address, 100000, {from: seller}), 
                 "Collateral deposit must come from the buyer.");
         }),
         it("should fail to deposit token more than collateral amount", async function() {
@@ -326,10 +326,10 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, buyer2, tokenOwner]) => {
                 state: "Active"
             });
 
-            await this.nutsPlatform.depositToken(this.issuanceId, this.collateralToken.address, 20, {from: buyer});
+            await this.nutsPlatform.depositToken(this.issuanceId, this.collateralToken.address, 200000, {from: buyer});
 
             await shouldFail.reverting.withMessage(
-                this.nutsPlatform.depositToken(this.issuanceId, this.collateralToken.address, 20, {from: buyer}), 
+                this.nutsPlatform.depositToken(this.issuanceId, this.collateralToken.address, 200000, {from: buyer}), 
                 "Collateral token balance must not exceed the collateral amount");
         })
     })

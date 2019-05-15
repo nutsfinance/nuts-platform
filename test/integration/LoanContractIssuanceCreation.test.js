@@ -19,6 +19,7 @@ const getEventTimestamp = async function(txHash, emitter, eventName) {
 
 contract("NutsPlatform", ([owner, fsp, seller, buyer, tokenOwner]) => {
     before("deploy new NUTS platform and loan contracts", async function() {
+        // Retrieve the deployed contracts
         this.nutsPlatform = await NutsPlatform.deployed();
         this.nutsToken = await NutsToken.deployed();
         this.nutsEscrow = await NutsEscrow.deployed();
@@ -42,16 +43,16 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, tokenOwner]) => {
         this.collateralToken = await ERC20Mintable.new({from : tokenOwner});
         
         // // Buyer deposits Collateral token to escrow
-        await this.collateralToken.mint(buyer, 50, {from: tokenOwner});
-        await this.collateralToken.approve(this.nutsEscrow.address, 50, {from: buyer});
-        await this.nutsEscrow.depositToken(this.collateralToken.address, 40, {from: buyer});
+        await this.collateralToken.mint(buyer, 500000, {from: tokenOwner});
+        await this.collateralToken.approve(this.nutsEscrow.address, 500000, {from: buyer});
+        await this.nutsEscrow.depositToken(this.collateralToken.address, 400000, {from: buyer});
     }),
     context("Issuance creation", async function() {
         it("should be able to create issuance and deposit Ether", async function() {
             // Create issuance
             let tx = await this.nutsPlatform.createIssuance(this.loan.address,
-                `collateral-token-address=${this.collateralToken.address}&collateral-amount=30&` + 
-                `borrow-amount=5&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
+                `collateral-token-address=${this.collateralToken.address}&collateral-amount=300000&` + 
+                `borrow-amount=${ether('5')}&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
                 `tenor-days=30&interest-rate=10000&grace-period=5`, {from: seller});
             const issuanceId = tx.logs.find(e => e.event == "IssuanceCreated").args.issuanceId.toNumber();
             await expectEvent.inTransaction(tx.receipt.transactionHash, Loan, "IssuanceStateUpdated", {
@@ -59,123 +60,123 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, tokenOwner]) => {
                 state: "Initiated"
             });
 
-            // Seller deposit Ether: borrow amount = 5
-            tx = await this.nutsPlatform.deposit(issuanceId, 5, {from: seller});
+            // Seller deposit Ether: borrow amount = 5 Ether
+            tx = await this.nutsPlatform.deposit(issuanceId, ether('5'), {from: seller});
             await expectEvent.inTransaction(tx.receipt.transactionHash, Loan, "IssuanceStateUpdated", {
                 issuanceId: new BN(issuanceId),
                 state: "Engageable"
             });
-            expect(await this.nutsEscrow.balanceOfIssuance(issuanceId)).be.bignumber.equal('5');
+            expect(await this.nutsEscrow.balanceOfIssuance(issuanceId)).be.bignumber.equal(ether('5'));
         }),
         it("should fail to create issuance with invalid parameters", async function() {
             // Send a zero collateral token address
             await shouldFail.reverting.withMessage(this.nutsPlatform.createIssuance(this.loan.address,
-                `collateral-token-address=0&collateral-amount=30&` + 
-                `borrow-amount=5&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
+                `collateral-token-address=0&collateral-amount=300000&` + 
+                `borrow-amount=${ether('5')}&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
                 `tenor-days=30&interest-rate=10000&grace-period=5`), "Collateral token address must not be 0");
             
             // Don't send collateral token address
             await shouldFail.reverting.withMessage(this.nutsPlatform.createIssuance(this.loan.address,
-                `collateral-amount=30&` + 
-                `borrow-amount=5&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
+                `collateral-amount=300000&` + 
+                `borrow-amount=${ether('5')}&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
                 `tenor-days=30&interest-rate=10000&grace-period=5`), "Collateral token address must not be 0");
 
             // Send a zero collateral amount
             await shouldFail.reverting.withMessage(this.nutsPlatform.createIssuance(this.loan.address,
                 `collateral-token-address=${this.collateralToken.address}&collateral-amount=0&` + 
-                `borrow-amount=5&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
+                `borrow-amount=${ether('5')}&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
                 `tenor-days=30&interest-rate=10000&grace-period=5`), "Collateral amount must be greater than 0");
 
             // Don't send collateral amount
             await shouldFail.reverting.withMessage(this.nutsPlatform.createIssuance(this.loan.address,
                 `collateral-token-address=${this.collateralToken.address}&` + 
-                `borrow-amount=5&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
+                `borrow-amount=${ether('5')}&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
                 `tenor-days=30&interest-rate=10000&grace-period=5`), "Collateral amount must be greater than 0");
 
             // Send a zero borrow amount
             await shouldFail.reverting.withMessage(this.nutsPlatform.createIssuance(this.loan.address,
-                `collateral-token-address=${this.collateralToken.address}&collateral-amount=30&` + 
+                `collateral-token-address=${this.collateralToken.address}&collateral-amount=300000&` + 
                 `borrow-amount=0&deposit-due-days=0&engagement-due-days=20&collateral-due-days=5&` +
                 `tenor-days=30&interest-rate=10000&grace-period=5`), "Borrow amount must be greater than 0");
             
             // Don't send borrow amount
             await shouldFail.reverting.withMessage(this.nutsPlatform.createIssuance(this.loan.address,
-                `collateral-token-address=${this.collateralToken.address}&collateral-amount=30&` + 
+                `collateral-token-address=${this.collateralToken.address}&collateral-amount=300000&` + 
                 `deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
                 `tenor-days=30&interest-rate=10000&grace-period=5`), "Borrow amount must be greater than 0");
 
             // Send a zero deposit due days
             await shouldFail.reverting.withMessage(this.nutsPlatform.createIssuance(this.loan.address,
-                `collateral-token-address=${this.collateralToken.address}&collateral-amount=30&` + 
-                `borrow-amount=5&deposit-due-days=0&engagement-due-days=20&collateral-due-days=5&` +
+                `collateral-token-address=${this.collateralToken.address}&collateral-amount=300000&` + 
+                `borrow-amount=${ether('5')}&deposit-due-days=0&engagement-due-days=20&collateral-due-days=5&` +
                 `tenor-days=30&interest-rate=10000&grace-period=5`), "Deposit due days must be greater than 0");
 
             // Don't send deposit due days
             await shouldFail.reverting.withMessage(this.nutsPlatform.createIssuance(this.loan.address,
-                `collateral-token-address=${this.collateralToken.address}&collateral-amount=30&` + 
-                `borrow-amount=5&engagement-due-days=20&collateral-due-days=5&` +
+                `collateral-token-address=${this.collateralToken.address}&collateral-amount=300000&` + 
+                `borrow-amount=${ether('5')}&engagement-due-days=20&collateral-due-days=5&` +
                 `tenor-days=30&interest-rate=10000&grace-period=5`), "Deposit due days must be greater than 0");
 
             // Send a zero engagement due days
             await shouldFail.reverting.withMessage(this.nutsPlatform.createIssuance(this.loan.address,
-                `collateral-token-address=${this.collateralToken.address}&collateral-amount=30&` + 
-                `borrow-amount=5&deposit-due-days=3&engagement-due-days=0&collateral-due-days=5&` +
+                `collateral-token-address=${this.collateralToken.address}&collateral-amount=300000&` + 
+                `borrow-amount=${ether('5')}&deposit-due-days=3&engagement-due-days=0&collateral-due-days=5&` +
                 `tenor-days=30&interest-rate=10000&grace-period=5`), "Engagement due days must be greater than 0");
 
             // Don't send engagement due days
             await shouldFail.reverting.withMessage(this.nutsPlatform.createIssuance(this.loan.address,
-                `collateral-token-address=${this.collateralToken.address}&collateral-amount=30&` + 
-                `borrow-amount=5&deposit-due-days=3&collateral-due-days=5&` +
+                `collateral-token-address=${this.collateralToken.address}&collateral-amount=300000&` + 
+                `borrow-amount=${ether('5')}&deposit-due-days=3&collateral-due-days=5&` +
                 `tenor-days=30&interest-rate=10000&grace-period=5`), "Engagement due days must be greater than 0");
 
             // Send a zero collateral due days
             await shouldFail.reverting.withMessage(this.nutsPlatform.createIssuance(this.loan.address,
-                `collateral-token-address=${this.collateralToken.address}&collateral-amount=30&` + 
-                `borrow-amount=5&deposit-due-days=3&engagement-due-days=20&collateral-due-days=0&` +
+                `collateral-token-address=${this.collateralToken.address}&collateral-amount=300000&` + 
+                `borrow-amount=${ether('5')}&deposit-due-days=3&engagement-due-days=20&collateral-due-days=0&` +
                 `tenor-days=30&interest-rate=10000&grace-period=5`), "Collateral due days must be greater than 0");
 
             // Don't send collateral due days
             await shouldFail.reverting.withMessage(this.nutsPlatform.createIssuance(this.loan.address,
-                `collateral-token-address=${this.collateralToken.address}&collateral-amount=30&` + 
-                `borrow-amount=5&deposit-due-days=3&engagement-due-days=20&` +
+                `collateral-token-address=${this.collateralToken.address}&collateral-amount=300000&` + 
+                `borrow-amount=${ether('5')}&deposit-due-days=3&engagement-due-days=20&` +
                 `tenor-days=30&interest-rate=10000&grace-period=5`), "Collateral due days must be greater than 0");
 
             // Send a zero tenor days
             await shouldFail.reverting.withMessage(this.nutsPlatform.createIssuance(this.loan.address,
-                `collateral-token-address=${this.collateralToken.address}&collateral-amount=30&` + 
-                `borrow-amount=5&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
+                `collateral-token-address=${this.collateralToken.address}&collateral-amount=300000&` + 
+                `borrow-amount=${ether('5')}&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
                 `tenor-days=0&interest-rate=10000&grace-period=5`), "Tenor days must be greater than 0");
 
             // Don't send tenor days
             await shouldFail.reverting.withMessage(this.nutsPlatform.createIssuance(this.loan.address,
-                `collateral-token-address=${this.collateralToken.address}&collateral-amount=30&` + 
-                `borrow-amount=5&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
+                `collateral-token-address=${this.collateralToken.address}&collateral-amount=300000&` + 
+                `borrow-amount=${ether('5')}&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
                 `interest-rate=10000&grace-period=5`), "Tenor days must be greater than 0");
 
             // Send a tenor days smaller than or equal to collateral days
             await shouldFail.reverting.withMessage(this.nutsPlatform.createIssuance(this.loan.address,
-                `collateral-token-address=${this.collateralToken.address}&collateral-amount=30&` + 
-                `borrow-amount=5&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
+                `collateral-token-address=${this.collateralToken.address}&collateral-amount=300000&` + 
+                `borrow-amount=${ether('5')}&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
                 `tenor-days=5&interest-rate=10000&grace-period=5`), "Tenor days must be greater than collateral due days");
 
             // Send a zero grace period
             await shouldFail.reverting.withMessage(this.nutsPlatform.createIssuance(this.loan.address,
-                `collateral-token-address=${this.collateralToken.address}&collateral-amount=30&` + 
-                `borrow-amount=5&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
+                `collateral-token-address=${this.collateralToken.address}&collateral-amount=300000&` + 
+                `borrow-amount=${ether('5')}&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
                 `tenor-days=30&interest-rate=10000&grace-period=0`), "Grace period must be greater than 0");
 
             // Don't send grace period
             await shouldFail.reverting.withMessage(this.nutsPlatform.createIssuance(this.loan.address,
-                `collateral-token-address=${this.collateralToken.address}&collateral-amount=30&` + 
-                `borrow-amount=5&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
+                `collateral-token-address=${this.collateralToken.address}&collateral-amount=300000&` + 
+                `borrow-amount=${ether('5')}&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
                 `tenor-days=30&interest-rate=10000`), "Grace period must be greater than 0");
 
         }),
         it("should become unfunded if deposit is overdue", async function() {
             // Create issuance
             let tx = await this.nutsPlatform.createIssuance(this.loan.address,
-                `collateral-token-address=${this.collateralToken.address}&collateral-amount=30&` + 
-                `borrow-amount=5&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
+                `collateral-token-address=${this.collateralToken.address}&collateral-amount=300000&` + 
+                `borrow-amount=${ether('5')}&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
                 `tenor-days=30&interest-rate=10000&grace-period=5`, {from: seller});
             const issuanceId = tx.logs.find(e => e.event == "IssuanceCreated").args.issuanceId.toNumber();
             await expectEvent.inTransaction(tx.receipt.transactionHash, Loan, "IssuanceStateUpdated", {
@@ -201,8 +202,8 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, tokenOwner]) => {
         it("should become unfunded and return deposit if deposit is overdue", async function() {
             // Create issuance
             let tx = await this.nutsPlatform.createIssuance(this.loan.address,
-                `collateral-token-address=${this.collateralToken.address}&collateral-amount=30&` + 
-                `borrow-amount=5&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
+                `collateral-token-address=${this.collateralToken.address}&collateral-amount=300000&` + 
+                `borrow-amount=${ether('5')}&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
                 `tenor-days=30&interest-rate=10000&grace-period=5`, {from: seller});
             const issuanceId = tx.logs.find(e => e.event == "IssuanceCreated").args.issuanceId.toNumber();
             await expectEvent.inTransaction(tx.receipt.transactionHash, Loan, "IssuanceStateUpdated", {
@@ -215,13 +216,13 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, tokenOwner]) => {
 
             // Seller deposit insufficient Ether: borrow amount = 5
             const prevBalance = new BN(await this.nutsEscrow.balanceOf({from: seller}));
-            tx = await this.nutsPlatform.deposit(issuanceId, 2, {from: seller});
+            tx = await this.nutsPlatform.deposit(issuanceId, ether('2'), {from: seller});
             const currentBalance = new BN(await this.nutsEscrow.balanceOf({from: seller}));
             await shouldFail.reverting.withMessage(this.nutsPlatform.processScheduledEvent(issuanceId, timestamp, "deposit_expired", "")
                 , "The scheduled event is not due now.");
             // console.log(prevBalance);
             // console.log(currentBalance);
-            expect(prevBalance.sub(currentBalance)).be.bignumber.equal('2');
+            expect(prevBalance.sub(currentBalance)).be.bignumber.equal(ether('2'));
 
             // Move the timestamp
             await time.increase(5 * 24 * 3600 + 100);
@@ -234,13 +235,13 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, tokenOwner]) => {
             });
             // console.log(nextBalance);
             expect(prevBalance).be.bignumber.equal(nextBalance);
-            expect(nextBalance.sub(currentBalance)).be.bignumber.equal('2');
+            expect(nextBalance.sub(currentBalance)).be.bignumber.equal(ether('2'));
         }),
         it("should fail to deposit more Ether than borrow amount", async function() {
             // Create issuance
             let tx = await this.nutsPlatform.createIssuance(this.loan.address,
-                `collateral-token-address=${this.collateralToken.address}&collateral-amount=30&` + 
-                `borrow-amount=5&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
+                `collateral-token-address=${this.collateralToken.address}&collateral-amount=300000&` + 
+                `borrow-amount=${ether('5')}&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
                 `tenor-days=30&interest-rate=10000&grace-period=5`, {from: seller});
             const issuanceId = tx.logs.find(e => e.event == "IssuanceCreated").args.issuanceId.toNumber();
             await expectEvent.inTransaction(tx.receipt.transactionHash, Loan, "IssuanceStateUpdated", {
@@ -248,12 +249,12 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, tokenOwner]) => {
                 state: "Initiated"
             });
 
-            await shouldFail.reverting.withMessage(this.nutsPlatform.deposit(issuanceId, 8, {from: seller})
+            await shouldFail.reverting.withMessage(this.nutsPlatform.deposit(issuanceId, ether('8'), {from: seller})
                 , "The Ether deposit cannot exceed the borrow amount.");
-            await this.nutsPlatform.deposit(issuanceId, 3, {from: seller});
-            await shouldFail.reverting.withMessage(this.nutsPlatform.deposit(issuanceId, 3, {from: seller})
+            await this.nutsPlatform.deposit(issuanceId, ether('3'), {from: seller});
+            await shouldFail.reverting.withMessage(this.nutsPlatform.deposit(issuanceId, ether('3'), {from: seller})
                 , "The Ether deposit cannot exceed the borrow amount.");
-            tx = await this.nutsPlatform.deposit(issuanceId, 2, {from: seller});
+            tx = await this.nutsPlatform.deposit(issuanceId, ether('2'), {from: seller});
             await expectEvent.inTransaction(tx.receipt.transactionHash, Loan, "IssuanceStateUpdated", {
                 issuanceId: new BN(issuanceId),
                 state: "Engageable"
@@ -262,8 +263,8 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, tokenOwner]) => {
         it("should fail to accept Ether deposit other than seller", async function() {
             // Create issuance
             let tx = await this.nutsPlatform.createIssuance(this.loan.address,
-                `collateral-token-address=${this.collateralToken.address}&collateral-amount=30&` + 
-                `borrow-amount=5&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
+                `collateral-token-address=${this.collateralToken.address}&collateral-amount=300000&` + 
+                `borrow-amount=${ether('5')}&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
                 `tenor-days=30&interest-rate=10000&grace-period=5`, {from: seller});
             const issuanceId = tx.logs.find(e => e.event == "IssuanceCreated").args.issuanceId.toNumber();
             await expectEvent.inTransaction(tx.receipt.transactionHash, Loan, "IssuanceStateUpdated", {
@@ -272,21 +273,21 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, tokenOwner]) => {
             });
 
             await this.nutsEscrow.deposit({from: owner, value: ether("20")});
-            await shouldFail.reverting.withMessage(this.nutsPlatform.deposit(issuanceId, 2, {from: owner})
+            await shouldFail.reverting.withMessage(this.nutsPlatform.deposit(issuanceId, ether('2'), {from: owner})
                 , "Unknown transferer. Only seller or buyer can send Ether to issuance.");
-            await shouldFail.reverting.withMessage(this.nutsPlatform.deposit(issuanceId, 5, {from: owner})
+            await shouldFail.reverting.withMessage(this.nutsPlatform.deposit(issuanceId, ether('5'), {from: owner})
                 , "Unknown transferer. Only seller or buyer can send Ether to issuance.");
             await this.nutsEscrow.deposit({from: fsp, value: ether("20")});
-            await shouldFail.reverting.withMessage(this.nutsPlatform.deposit(issuanceId, 2, {from: fsp})
+            await shouldFail.reverting.withMessage(this.nutsPlatform.deposit(issuanceId, ether('2'), {from: fsp})
                 , "Unknown transferer. Only seller or buyer can send Ether to issuance.");
-            await shouldFail.reverting.withMessage(this.nutsPlatform.deposit(issuanceId, 5, {from: fsp})
+            await shouldFail.reverting.withMessage(this.nutsPlatform.deposit(issuanceId, ether('5'), {from: fsp})
                 , "Unknown transferer. Only seller or buyer can send Ether to issuance.");
         }),
         it("should fail to deposit any token", async function() {
             // Create issuance
             let tx = await this.nutsPlatform.createIssuance(this.loan.address,
-                `collateral-token-address=${this.collateralToken.address}&collateral-amount=30&` + 
-                `borrow-amount=5&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
+                `collateral-token-address=${this.collateralToken.address}&collateral-amount=300000&` + 
+                `borrow-amount=${ether('5')}&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
                 `tenor-days=30&interest-rate=10000&grace-period=5`, {from: seller});
             const issuanceId = tx.logs.find(e => e.event == "IssuanceCreated").args.issuanceId.toNumber();
             await expectEvent.inTransaction(tx.receipt.transactionHash, Loan, "IssuanceStateUpdated", {
@@ -294,27 +295,27 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, tokenOwner]) => {
                 state: "Initiated"
             });
 
-            await this.collateralToken.mint(seller, 50, {from: tokenOwner});
-            await this.collateralToken.approve(this.nutsEscrow.address, 50, {from: seller});
-            await this.nutsEscrow.depositToken(this.collateralToken.address, 50, {from: seller});
-            await shouldFail.reverting.withMessage(this.nutsPlatform.depositToken(issuanceId, this.collateralToken.address, 20, {from: seller})
+            await this.collateralToken.mint(seller, 500000, {from: tokenOwner});
+            await this.collateralToken.approve(this.nutsEscrow.address, 500000, {from: seller});
+            await this.nutsEscrow.depositToken(this.collateralToken.address, 500000, {from: seller});
+            await shouldFail.reverting.withMessage(this.nutsPlatform.depositToken(issuanceId, this.collateralToken.address, 200000, {from: seller})
                 , "Collateral deposit must occur in Active state.");
-            await this.collateralToken.mint(fsp, 50, {from: tokenOwner});
-            await this.collateralToken.approve(this.nutsEscrow.address, 50, {from: fsp});
-            await this.nutsEscrow.depositToken(this.collateralToken.address, 50, {from: fsp});
-            await shouldFail.reverting.withMessage(this.nutsPlatform.depositToken(issuanceId, this.collateralToken.address, 20, {from: fsp})
+            await this.collateralToken.mint(fsp, 500000, {from: tokenOwner});
+            await this.collateralToken.approve(this.nutsEscrow.address, 500000, {from: fsp});
+            await this.nutsEscrow.depositToken(this.collateralToken.address, 500000, {from: fsp});
+            await shouldFail.reverting.withMessage(this.nutsPlatform.depositToken(issuanceId, this.collateralToken.address, 200000, {from: fsp})
                 , "Collateral deposit must occur in Active state.");
 
-            // Seller deposit Ether: borrow amount = 5
-            tx = await this.nutsPlatform.deposit(issuanceId, 5, {from: seller});
+            // Seller deposit Ether: borrow amount = 5 Ether
+            tx = await this.nutsPlatform.deposit(issuanceId, ether('5'), {from: seller});
             await expectEvent.inTransaction(tx.receipt.transactionHash, Loan, "IssuanceStateUpdated", {
                 issuanceId: new BN(issuanceId),
                 state: "Engageable"
             });
 
-            await shouldFail.reverting.withMessage(this.nutsPlatform.depositToken(issuanceId, this.collateralToken.address, 20, {from: seller})
+            await shouldFail.reverting.withMessage(this.nutsPlatform.depositToken(issuanceId, this.collateralToken.address, 200000, {from: seller})
                 , "Collateral deposit must occur in Active state.");
-            await shouldFail.reverting.withMessage(this.nutsPlatform.depositToken(issuanceId, this.collateralToken.address, 20, {from: fsp})
+            await shouldFail.reverting.withMessage(this.nutsPlatform.depositToken(issuanceId, this.collateralToken.address, 200000, {from: fsp})
                 , "Collateral deposit must occur in Active state.");
         })
     })
