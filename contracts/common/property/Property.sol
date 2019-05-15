@@ -79,6 +79,9 @@ library Property {
                 if (StringUtil.isUint(value)) {
                     uint uintValue = StringUtil.stringToUint(value);
                     setUintValue(self, string(key), uintValue);
+                } else if (StringUtil.isAddress(string(value))) {
+                    address addressValue = StringUtil.stringToAddress(string(value));
+                    setAddressValue(self, string(key), addressValue);
                 } else {
                     setBytesValue(self, string(key), value);
                 }

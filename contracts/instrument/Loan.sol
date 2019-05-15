@@ -9,7 +9,7 @@ import "../Instrument.sol";
  * depositing token as collaterals.
  */
 contract Loan is Instrument {
-    event SomthingHappen(uint num1, uint num2, string str1, string str2, address addr1, address addr2);
+    event SomethingHappen(uint num1, uint num2, string str1, string str2, address addr1, address addr2);
     using SafeMath for uint256;
 
     string constant DEPOSIT_EXPIRED_EVENT = "deposit_expired";
@@ -111,7 +111,7 @@ contract Loan is Instrument {
         _properties.clear();
         _properties.load(bytes(properties));
 
-        require(isIssuanceInState(ENGAGABLE_STATE), "Issuance must be in the Engagable properties");
+        require(isIssuanceInState(ENGAGABLE_STATE), "Issuance must be in the Engagable state");
 
         _properties.setAddressValue("buyer_address", buyerAddress);
         _properties.setUintValue("engage_date", now);
@@ -229,8 +229,7 @@ contract Loan is Instrument {
      * @return transfers The transfers to perform after the invocation
      */
     function processTokenTransfer(uint256 issuanceId, string memory properties, string memory balance,
-        address fromAddress, address tokenAddress, uint256 amount)
-        public returns (string memory updatedProperties, string memory transfers) {
+        address fromAddress, address tokenAddress, uint256 amount) public returns (string memory updatedProperties, string memory transfers) {
         // Parameter validation
         require(issuanceId > 0, "Issuance id must be set.");
         require(bytes(properties).length > 0, "Properties must be set.");
@@ -258,19 +257,20 @@ contract Loan is Instrument {
             "Collateral deposit must come from the buyer.");
         require(!_properties.getBoolOrDefault("collateral_complete", false),
             "Collateral deposit must occur during the collateral depoit phase.");
-        require(_balances.getTokenBalance(tokenAddress) >= _properties.getUintValue("collateral_amount"),
-            "Collateral token balance must not exceed the collateral amount");
+        uint tokenBalance = _balances.getTokenBalance(tokenAddress);
+        uint collateralAmount = _properties.getUintValue("collateral_amount");
+        require(tokenBalance <= collateralAmount, "Collateral token balance must not exceed the collateral amount");
 
-        // Mark the collateral collection as complete
-        _properties.setBoolValue("collateral_complete", true);
-
-        // Transfer Ether to buyer
-        // TODO If the deposit is larger than the borrow amount, should we return them now?
-        _transfers.clear();
-        _transfers.addEtherTransfer(_properties.getAddressValue("buyer_address"),
+        if (tokenBalance == collateralAmount) {
+            // Mark the collateral collection as complete
+            _properties.setBoolValue("collateral_complete", true);
+            // Transfer Ether to buyer
+            _transfers.clear();
+            _transfers.addEtherTransfer(_properties.getAddressValue("buyer_address"),
                 _properties.getUintValue("borrow_amount"));
-        transfers = string(_transfers.save());
-        _transfers.clear();
+            transfers = string(_transfers.save());
+            _transfers.clear();
+        }
 
         // Persist the propertiess
         updatedProperties = string(_properties.save());
@@ -328,7 +328,7 @@ contract Loan is Instrument {
             // Check whether the issuance is still in Active state
             // and the collateral is not complete
             if (isIssuanceInState(ACTIVE_STATE)
-                && !_properties.getBoolOrDefault("collateral_complete", false)) {
+                    && !_properties.getBoolOrDefault("collateral_complete", false)) {
                 _properties.setBoolValue("collateral_complete", false);
                 // Change to Delinquent state
                 updateIssuanceState(issuanceId, DELINQUENT_STATE);
@@ -471,7 +471,7 @@ contract Loan is Instrument {
                 etherBalance);
         }
 
-        // TODO Is this calculation correct? 
+        // TODO Is this calculation correct?
         // Interest in token = (Interest in Ether / Borrow amount in Ether) * Collateral amount in token
         uint interestTokenAmount = interest * collateralAmount / borrowAmount;
         uint tokenToSellerAmount = interestTokenAmount > collateralAmount ? collateralAmount : interestTokenAmount;
@@ -480,15 +480,13 @@ contract Loan is Instrument {
         // Transfer collateral token to seller as interest if it's greater than 0(interest rate could be 0)
         if (tokenToSellerAmount > 0) {
             _transfers.addTokenTransfer(_properties.getAddressValue("collateral_token_address"),
-            _properties.getAddressValue("seller_address"), 
-            tokenToSellerAmount);
+                _properties.getAddressValue("seller_address"), tokenToSellerAmount);
         }
 
         // Transfer collateral token back to buyer if it's greater than 0
         if (tokenToBuyerAmount > 0) {
             _transfers.addTokenTransfer(_properties.getAddressValue("collateral_token_address"),
-            _properties.getAddressValue("buyer_address"), 
-            tokenToBuyerAmount);
+                _properties.getAddressValue("buyer_address"), tokenToBuyerAmount);
         }
     }
 }
