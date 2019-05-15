@@ -44,7 +44,9 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, buyer2, tokenOwner]) => {
         await this.collateralToken.mint(buyer, 50, {from: tokenOwner});
         await this.collateralToken.approve(this.nutsEscrow.address, 50, {from: buyer});
         await this.nutsEscrow.depositToken(this.collateralToken.address, 40, {from: buyer});
-        
+        await this.collateralToken.mint(seller, 50, {from: tokenOwner});
+        await this.collateralToken.approve(this.nutsEscrow.address, 50, {from: seller});
+        await this.nutsEscrow.depositToken(this.collateralToken.address, 40, {from: seller});
 
         // Seller create new issuance
         let tx = await this.nutsPlatform.createIssuance(this.loan.address,
@@ -293,7 +295,7 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, buyer2, tokenOwner]) => {
             expect(curBuyerEther).be.bignumber.equal(prevBuyerEther);
             expect(curBuyerToken).be.bignumber.equal(prevBuyerToken);
         }),
-        it("should go to Delinquent state if not enough collateral is deposit", async function() {
+        it("should fail to deposit Ether during collateral deposit", async function() {
             // Engage the issuance
             let tx = await this.nutsPlatform.engageIssuance(this.issuanceId, "", {from: buyer});
             await expectEvent.inTransaction(tx.receipt.transactionHash, Loan, "IssuanceStateUpdated", {
@@ -304,6 +306,31 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, buyer2, tokenOwner]) => {
             await shouldFail.reverting.withMessage(this.nutsPlatform.deposit(this.issuanceId, 2, {from: seller}), "Ether deposit must happen in Initiated state.");
             await shouldFail.reverting.withMessage(this.nutsPlatform.deposit(this.issuanceId, 2, {from: buyer}), "Ether repay must happen after collateral is deposited.");
             await shouldFail.reverting.withMessage(this.nutsPlatform.deposit(this.issuanceId, 2, {from: buyer2}), "Unknown transferer. Only seller or buyer can send Ether to issuance.");
+        }),
+        it("should fail to deposit token during collateral deposit except buyer", async function() {
+            // Engage the issuance
+            let tx = await this.nutsPlatform.engageIssuance(this.issuanceId, "", {from: buyer});
+            await expectEvent.inTransaction(tx.receipt.transactionHash, Loan, "IssuanceStateUpdated", {
+                issuanceId: new BN(this.issuanceId),
+                state: "Active"
+            });
+
+            await shouldFail.reverting.withMessage(this.nutsPlatform.depositToken(this.issuanceId, this.collateralToken.address, 10, {from: seller}), 
+                "Collateral deposit must come from the buyer.");
+        }),
+        it("should fail to deposit token more than collateral amount", async function() {
+            // Engage the issuance
+            let tx = await this.nutsPlatform.engageIssuance(this.issuanceId, "", {from: buyer});
+            await expectEvent.inTransaction(tx.receipt.transactionHash, Loan, "IssuanceStateUpdated", {
+                issuanceId: new BN(this.issuanceId),
+                state: "Active"
+            });
+
+            await this.nutsPlatform.depositToken(this.issuanceId, this.collateralToken.address, 20, {from: buyer});
+
+            await shouldFail.reverting.withMessage(
+                this.nutsPlatform.depositToken(this.issuanceId, this.collateralToken.address, 20, {from: buyer}), 
+                "Collateral token balance must not exceed the collateral amount");
         })
     })
 });
