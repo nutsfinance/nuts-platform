@@ -33,10 +33,10 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, buyer2, tokenOwner]) => {
         // console.log("Create instrument: Gas used = " + tx.receipt.gasUsed);
 
         // Seller deposits Ether to Escrow
-        tx = await this.nutsEscrow.deposit({from: seller, value: ether("20")});
+        tx = await this.nutsEscrow.deposit({from: seller, value: ether("200")});
         // console.log("Deposit Ether to Escrow: Gas used = " + tx.receipt.gasUsed);
-        await this.nutsEscrow.deposit({from: buyer, value: ether("20")});
-        await this.nutsEscrow.deposit({from: buyer2, value: ether("20")});
+        await this.nutsEscrow.deposit({from: buyer, value: ether("200")});
+        await this.nutsEscrow.deposit({from: buyer2, value: ether("200")});
     }),
     beforeEach("deploy new collateral token", async function() {
         // Deploy new collateral token
@@ -296,6 +296,33 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, buyer2, tokenOwner]) => {
             // Interest
             expect(curSellerToken.sub(prevSellerToken)).be.bignumber.equal('1050');;
             expect(curBuyerToken.sub(prevBuyerToken)).be.bignumber.equal('298950');
+        }),
+        it("should fail to deposit more Ether than borrow amount", async function() {
+            // Tenor days = 30, grace period = 5
+            await time.increase(10 * 24 * 3600);
+            await this.nutsPlatform.deposit(this.issuanceId, ether('4'), {from: buyer});
+            await time.increase(12 * 24 * 3600);
+            await shouldFail.reverting.withMessage(
+                this.nutsPlatform.deposit(this.issuanceId, ether('8'), {from: buyer}),
+                "The Ether repay cannot exceed the borrow amount.");
+        }),
+        it("should fail to receive any token", async function() {
+            await shouldFail.reverting.withMessage(
+                this.nutsPlatform.depositToken(this.issuanceId, this.collateralToken.address, 100000, {from: seller}),
+                "Collateral deposit must come from the buyer."
+            );
+            await shouldFail.reverting.withMessage(
+                this.nutsPlatform.depositToken(this.issuanceId, this.collateralToken.address, 100000, {from: buyer}),
+                "Collateral deposit must occur during the collateral depoit phase."
+            );
+        }),
+        it("should fail to accept Ether except buyer", async function() {
+            await shouldFail.reverting.withMessage(
+                this.nutsPlatform.deposit(this.issuanceId, ether('8'), {from: seller}),
+                "Ether deposit must happen in Initiated state.");
+            await shouldFail.reverting.withMessage(
+                this.nutsPlatform.deposit(this.issuanceId, ether('8'), {from: buyer2}),
+                "Unknown transferer. Only seller or buyer can send Ether to issuance.");
         })
     })
 });
