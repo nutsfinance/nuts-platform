@@ -29,10 +29,12 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, buyer2, tokenOwner]) => {
         await this.nutsPlatform.addFsp(fsp, {from: owner});
 
         // Create instrument 
-        await this.nutsPlatform.createInstrument(this.loan.address, 0, {from: fsp});
+        let tx = await this.nutsPlatform.createInstrument(this.loan.address, 0, {from: fsp});
+        // console.log("Create instrument: Gas used = " + tx.receipt.gasUsed);
 
         // Seller deposits Ether to Escrow
-        await this.nutsEscrow.deposit({from: seller, value: ether("20")});
+        tx = await this.nutsEscrow.deposit({from: seller, value: ether("20")});
+        // console.log("Deposit Ether to Escrow: Gas used = " + tx.receipt.gasUsed);
         await this.nutsEscrow.deposit({from: buyer, value: ether("20")});
         await this.nutsEscrow.deposit({from: buyer2, value: ether("20")});
     }),
@@ -41,36 +43,259 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, buyer2, tokenOwner]) => {
         this.collateralToken = await ERC20Mintable.new({from : tokenOwner});
         
         // // Buyer deposits Collateral token to escrow
-        await this.collateralToken.mint(buyer, 50, {from: tokenOwner});
-        await this.collateralToken.approve(this.nutsEscrow.address, 50, {from: buyer});
-        await this.nutsEscrow.depositToken(this.collateralToken.address, 40, {from: buyer});
-        await this.collateralToken.mint(seller, 50, {from: tokenOwner});
-        await this.collateralToken.approve(this.nutsEscrow.address, 50, {from: seller});
-        await this.nutsEscrow.depositToken(this.collateralToken.address, 40, {from: seller});
+        await this.collateralToken.mint(buyer, 500000, {from: tokenOwner});
+        await this.collateralToken.approve(this.nutsEscrow.address, 500000, {from: buyer});
+        let tx = await this.nutsEscrow.depositToken(this.collateralToken.address, 400000, {from: buyer});
+        // console.log("Deposit token to Escrow: Gas used = " + tx.receipt.gasUsed);
+        await this.collateralToken.mint(seller, 500000, {from: tokenOwner});
+        await this.collateralToken.approve(this.nutsEscrow.address, 500000, {from: seller});
+        await this.nutsEscrow.depositToken(this.collateralToken.address, 400000, {from: seller});
 
         // Seller create new issuance
-        let tx = await this.nutsPlatform.createIssuance(this.loan.address,
-            `collateral-token-address=${this.collateralToken.address}&collateral-amount=30&` + 
-            `borrow-amount=5&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
+        tx = await this.nutsPlatform.createIssuance(this.loan.address,
+            `collateral-token-address=${this.collateralToken.address}&collateral-amount=300000&` + 
+            `borrow-amount=${ether('5')}&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
             `tenor-days=30&interest-rate=10000&grace-period=5`, {from: seller});
+        // console.log("Create issuance: Gas used = " + tx.receipt.gasUsed);
         this.issuanceId = tx.logs.find(e => e.event == "IssuanceCreated").args.issuanceId.toNumber();
         await expectEvent.inTransaction(tx.receipt.transactionHash, Loan, "IssuanceStateUpdated", {
             issuanceId: new BN(this.issuanceId),
             state: "Initiated"
         });
 
-        // Seller deposit Ether: borrow amount = 5
-        tx = await this.nutsPlatform.deposit(this.issuanceId, 5, {from: seller});
+        // Seller deposit Ether: borrow amount = 5 Ethers
+        tx = await this.nutsPlatform.deposit(this.issuanceId, ether('5'), {from: seller});
+        // console.log("Deposit Ether to issuance: Gas used = " + tx.receipt.gasUsed);
         this.engagementExpiredTimestamp = await getEventTimestamp(tx.receipt.transactionHash, Loan, "engagement_expired");
         await expectEvent.inTransaction(tx.receipt.transactionHash, Loan, "IssuanceStateUpdated", {
             issuanceId: new BN(this.issuanceId),
             state: "Engageable"
         });
-        expect(await this.nutsEscrow.balanceOfIssuance(this.issuanceId)).be.bignumber.equal('5');
+        expect(await this.nutsEscrow.balanceOfIssuance(this.issuanceId)).be.bignumber.equal(ether('5'));
+
+        // Buyer engages the issuance
+        tx = await this.nutsPlatform.engageIssuance(this.issuanceId, "", {from: buyer});
+        this.loanExpiredTimestamp = await getEventTimestamp(tx.receipt.transactionHash, Loan, "loan_expired");
+        this.gracePeriodExpiredTimestamp = await getEventTimestamp(tx.receipt.transactionHash, Loan, "grace_period_expired");
+        // console.log("Engage issuance: Gas used = " + tx.receipt.gasUsed);
+        await expectEvent.inTransaction(tx.receipt.transactionHash, Loan, "IssuanceStateUpdated", {
+            issuanceId: new BN(this.issuanceId),
+            state: "Active"
+        });
+
+        // Buyer deposits collateral
+        // Buyer deposit the collateral
+        tx = await this.nutsPlatform.depositToken(this.issuanceId, this.collateralToken.address, 300000, {from: buyer});
+        // console.log("Deposit token to issuance: Gas used = " + tx.receipt.gasUsed);
     }),
     context("Issuance Repay", async function() {
-        it("should repay and complete the issuance", async function() {
+        it("should repay and complete the issuance before loan due", async function() {
+            const prevIssuanceEther = await this.nutsEscrow.balanceOfIssuance(this.issuanceId);
+            const prevIssuanceToken = await this.nutsEscrow.tokenBalanceOfIssuance(this.issuanceId, this.collateralToken.address);
+            const prevSellerEther = await this.nutsEscrow.balanceOf({from: seller});
+            const prevSellerToken = await this.nutsEscrow.tokenBalanceOf(this.collateralToken.address, {from: seller});
+            const prevBuyerEther = await this.nutsEscrow.balanceOf({from: buyer});
+            const prevBuyerToken = await this.nutsEscrow.tokenBalanceOf(this.collateralToken.address, {from: buyer});
+            expect(prevIssuanceEther).be.bignumber.equal('0');
+            expect(prevIssuanceToken).be.bignumber.equal('300000');
 
+            // Tenor days = 30, grace period = 5
+            await time.increase(20 * 24 * 3600);
+            // Pay in full in 20 days
+            await this.nutsPlatform.deposit(this.issuanceId, ether('5'), {from: buyer});
+            await time.increase(10 * 24 * 3600 + 100);
+            // Scheduled event: loan_expired
+            tx = await this.nutsPlatform.processScheduledEvent(this.issuanceId, this.loanExpiredTimestamp, "loan_expired", "");
+            await expectEvent.inTransaction(tx.receipt.transactionHash, Loan, "IssuanceStateUpdated", {
+                issuanceId: new BN(this.issuanceId),
+                state: "Complete Engaged"
+            });
+
+            const curIssuanceEther = await this.nutsEscrow.balanceOfIssuance(this.issuanceId);
+            const curIssuanceToken = await this.nutsEscrow.tokenBalanceOfIssuance(this.issuanceId, this.collateralToken.address);
+            const curSellerEther = await this.nutsEscrow.balanceOf({from: seller});
+            const curSellerToken = await this.nutsEscrow.tokenBalanceOf(this.collateralToken.address, {from: seller});
+            const curBuyerEther = await this.nutsEscrow.balanceOf({from: buyer});
+            const curBuyerToken = await this.nutsEscrow.tokenBalanceOf(this.collateralToken.address, {from: buyer});
+
+            // The issuance balance should be zero
+            expect(curIssuanceEther).be.bignumber.equal('0');
+            expect(curIssuanceToken).be.bignumber.equal('0');
+            // The Ether is returned to seller
+            expect(curSellerEther.sub(prevSellerEther)).be.bignumber.equal(ether('5'));
+            expect(prevBuyerEther.sub(curBuyerEther)).be.bignumber.equal(ether('5'));
+            // Interest
+            expect(curSellerToken.sub(prevSellerToken)).be.bignumber.equal('600');;
+            expect(curBuyerToken.sub(prevBuyerToken)).be.bignumber.equal('299400');
+        }),
+        it("should repay and complete the issuance in grace period", async function() {
+            const prevIssuanceEther = await this.nutsEscrow.balanceOfIssuance(this.issuanceId);
+            const prevIssuanceToken = await this.nutsEscrow.tokenBalanceOfIssuance(this.issuanceId, this.collateralToken.address);
+            const prevSellerEther = await this.nutsEscrow.balanceOf({from: seller});
+            const prevSellerToken = await this.nutsEscrow.tokenBalanceOf(this.collateralToken.address, {from: seller});
+            const prevBuyerEther = await this.nutsEscrow.balanceOf({from: buyer});
+            const prevBuyerToken = await this.nutsEscrow.tokenBalanceOf(this.collateralToken.address, {from: buyer});
+            expect(prevIssuanceEther).be.bignumber.equal('0');
+            expect(prevIssuanceToken).be.bignumber.equal('300000');
+
+            // Tenor days = 30, grace period = 5
+            await time.increase(30 * 24 * 3600);
+            // Scheduled event: loan_expired
+            tx = await this.nutsPlatform.processScheduledEvent(this.issuanceId, this.loanExpiredTimestamp, "loan_expired", "");
+            // Pay in full in 32 days
+            await time.increase(2 * 24 * 3600);
+            await this.nutsPlatform.deposit(this.issuanceId, ether('5'), {from: buyer});
+            await time.increase(3 * 24 * 3600 + 100);
+            // Scheduled event: grace_period_expired
+            tx = await this.nutsPlatform.processScheduledEvent(this.issuanceId, this.gracePeriodExpiredTimestamp, "grace_period_expired", "");
+            await expectEvent.inTransaction(tx.receipt.transactionHash, Loan, "IssuanceStateUpdated", {
+                issuanceId: new BN(this.issuanceId),
+                state: "Complete Engaged"
+            });
+
+            const curIssuanceEther = await this.nutsEscrow.balanceOfIssuance(this.issuanceId);
+            const curIssuanceToken = await this.nutsEscrow.tokenBalanceOfIssuance(this.issuanceId, this.collateralToken.address);
+            const curSellerEther = await this.nutsEscrow.balanceOf({from: seller});
+            const curSellerToken = await this.nutsEscrow.tokenBalanceOf(this.collateralToken.address, {from: seller});
+            const curBuyerEther = await this.nutsEscrow.balanceOf({from: buyer});
+            const curBuyerToken = await this.nutsEscrow.tokenBalanceOf(this.collateralToken.address, {from: buyer});
+
+            // The issuance balance should be zero
+            expect(curIssuanceEther).be.bignumber.equal('0');
+            expect(curIssuanceToken).be.bignumber.equal('0');
+            // The Ether is returned to seller
+            expect(curSellerEther.sub(prevSellerEther)).be.bignumber.equal(ether('5'));
+            expect(prevBuyerEther.sub(curBuyerEther)).be.bignumber.equal(ether('5'));
+            // Interest
+            expect(curSellerToken.sub(prevSellerToken)).be.bignumber.equal('960');;
+            expect(curBuyerToken.sub(prevBuyerToken)).be.bignumber.equal('299040');
+        }),
+        it("should repay multiple times and complete the issuance in grace period", async function() {
+            const prevIssuanceEther = await this.nutsEscrow.balanceOfIssuance(this.issuanceId);
+            const prevIssuanceToken = await this.nutsEscrow.tokenBalanceOfIssuance(this.issuanceId, this.collateralToken.address);
+            const prevSellerEther = await this.nutsEscrow.balanceOf({from: seller});
+            const prevSellerToken = await this.nutsEscrow.tokenBalanceOf(this.collateralToken.address, {from: seller});
+            const prevBuyerEther = await this.nutsEscrow.balanceOf({from: buyer});
+            const prevBuyerToken = await this.nutsEscrow.tokenBalanceOf(this.collateralToken.address, {from: buyer});
+            expect(prevIssuanceEther).be.bignumber.equal('0');
+            expect(prevIssuanceToken).be.bignumber.equal('300000');
+
+            // Tenor days = 30, grace period = 5
+            await time.increase(5 * 24 * 3600);
+            await this.nutsPlatform.deposit(this.issuanceId, ether('2'), {from: buyer});
+            await time.increase(15 * 24 * 3600);
+            await this.nutsPlatform.deposit(this.issuanceId, ether('1'), {from: buyer});
+            await time.increase(10 * 24 * 3600);
+            // Scheduled event: loan_expired
+            tx = await this.nutsPlatform.processScheduledEvent(this.issuanceId, this.loanExpiredTimestamp, "loan_expired", "");
+            // Pay in full in 32 days
+            await time.increase(2 * 24 * 3600);
+            await this.nutsPlatform.deposit(this.issuanceId, ether('2'), {from: buyer});
+            await time.increase(3 * 24 * 3600 + 100);
+            // Scheduled event: grace_period_expired
+            tx = await this.nutsPlatform.processScheduledEvent(this.issuanceId, this.gracePeriodExpiredTimestamp, "grace_period_expired", "");
+            await expectEvent.inTransaction(tx.receipt.transactionHash, Loan, "IssuanceStateUpdated", {
+                issuanceId: new BN(this.issuanceId),
+                state: "Complete Engaged"
+            });
+
+            const curIssuanceEther = await this.nutsEscrow.balanceOfIssuance(this.issuanceId);
+            const curIssuanceToken = await this.nutsEscrow.tokenBalanceOfIssuance(this.issuanceId, this.collateralToken.address);
+            const curSellerEther = await this.nutsEscrow.balanceOf({from: seller});
+            const curSellerToken = await this.nutsEscrow.tokenBalanceOf(this.collateralToken.address, {from: seller});
+            const curBuyerEther = await this.nutsEscrow.balanceOf({from: buyer});
+            const curBuyerToken = await this.nutsEscrow.tokenBalanceOf(this.collateralToken.address, {from: buyer});
+
+            // The issuance balance should be zero
+            expect(curIssuanceEther).be.bignumber.equal('0');
+            expect(curIssuanceToken).be.bignumber.equal('0');
+            // The Ether is returned to seller
+            expect(curSellerEther.sub(prevSellerEther)).be.bignumber.equal(ether('5'));
+            expect(prevBuyerEther.sub(curBuyerEther)).be.bignumber.equal(ether('5'));
+            // Interest
+            expect(curSellerToken.sub(prevSellerToken)).be.bignumber.equal('564');;
+            expect(curBuyerToken.sub(prevBuyerToken)).be.bignumber.equal('299436');
+        }),
+        it("should default if no payment is made", async function() {
+            const prevIssuanceEther = await this.nutsEscrow.balanceOfIssuance(this.issuanceId);
+            const prevIssuanceToken = await this.nutsEscrow.tokenBalanceOfIssuance(this.issuanceId, this.collateralToken.address);
+            const prevSellerEther = await this.nutsEscrow.balanceOf({from: seller});
+            const prevSellerToken = await this.nutsEscrow.tokenBalanceOf(this.collateralToken.address, {from: seller});
+            const prevBuyerEther = await this.nutsEscrow.balanceOf({from: buyer});
+            const prevBuyerToken = await this.nutsEscrow.tokenBalanceOf(this.collateralToken.address, {from: buyer});
+            expect(prevIssuanceEther).be.bignumber.equal('0');
+            expect(prevIssuanceToken).be.bignumber.equal('300000');
+
+            // Tenor days = 30, grace period = 5
+            await time.increase(30 * 24 * 3600);
+            // Scheduled event: loan_expired
+            tx = await this.nutsPlatform.processScheduledEvent(this.issuanceId, this.loanExpiredTimestamp, "loan_expired", "");
+            await time.increase(5 * 24 * 3600);
+            // Scheduled event: grace_period_expired
+            tx = await this.nutsPlatform.processScheduledEvent(this.issuanceId, this.gracePeriodExpiredTimestamp, "grace_period_expired", "");
+            await expectEvent.inTransaction(tx.receipt.transactionHash, Loan, "IssuanceStateUpdated", {
+                issuanceId: new BN(this.issuanceId),
+                state: "Delinquent"
+            });
+
+            const curIssuanceEther = await this.nutsEscrow.balanceOfIssuance(this.issuanceId);
+            const curIssuanceToken = await this.nutsEscrow.tokenBalanceOfIssuance(this.issuanceId, this.collateralToken.address);
+            const curSellerEther = await this.nutsEscrow.balanceOf({from: seller});
+            const curSellerToken = await this.nutsEscrow.tokenBalanceOf(this.collateralToken.address, {from: seller});
+            const curBuyerEther = await this.nutsEscrow.balanceOf({from: buyer});
+            const curBuyerToken = await this.nutsEscrow.tokenBalanceOf(this.collateralToken.address, {from: buyer});
+
+            // The issuance balance should be zero
+            expect(curIssuanceEther).be.bignumber.equal('0');
+            expect(curIssuanceToken).be.bignumber.equal('0');
+            // No Ether is returned to seller
+            expect(curSellerEther.sub(prevSellerEther)).be.bignumber.equal(ether('0'));
+            expect(prevBuyerEther.sub(curBuyerEther)).be.bignumber.equal(ether('0'));
+            // Interest
+            expect(curSellerToken.sub(prevSellerToken)).be.bignumber.equal('1050');;
+            expect(curBuyerToken.sub(prevBuyerToken)).be.bignumber.equal('298950');
+        }),
+        it("should default if not enough payment is made", async function() {
+            const prevIssuanceEther = await this.nutsEscrow.balanceOfIssuance(this.issuanceId);
+            const prevIssuanceToken = await this.nutsEscrow.tokenBalanceOfIssuance(this.issuanceId, this.collateralToken.address);
+            const prevSellerEther = await this.nutsEscrow.balanceOf({from: seller});
+            const prevSellerToken = await this.nutsEscrow.tokenBalanceOf(this.collateralToken.address, {from: seller});
+            const prevBuyerEther = await this.nutsEscrow.balanceOf({from: buyer});
+            const prevBuyerToken = await this.nutsEscrow.tokenBalanceOf(this.collateralToken.address, {from: buyer});
+            expect(prevIssuanceEther).be.bignumber.equal('0');
+            expect(prevIssuanceToken).be.bignumber.equal('300000');
+
+            // Tenor days = 30, grace period = 5
+            await time.increase(30 * 24 * 3600);
+            // Scheduled event: loan_expired
+            tx = await this.nutsPlatform.processScheduledEvent(this.issuanceId, this.loanExpiredTimestamp, "loan_expired", "");
+            // Pay in full in 32 days
+            await time.increase(2 * 24 * 3600);
+            await this.nutsPlatform.deposit(this.issuanceId, ether('4'), {from: buyer});
+            await time.increase(3 * 24 * 3600 + 100);
+            // Scheduled event: grace_period_expired
+            tx = await this.nutsPlatform.processScheduledEvent(this.issuanceId, this.gracePeriodExpiredTimestamp, "grace_period_expired", "");
+            await expectEvent.inTransaction(tx.receipt.transactionHash, Loan, "IssuanceStateUpdated", {
+                issuanceId: new BN(this.issuanceId),
+                state: "Delinquent"
+            });
+
+            const curIssuanceEther = await this.nutsEscrow.balanceOfIssuance(this.issuanceId);
+            const curIssuanceToken = await this.nutsEscrow.tokenBalanceOfIssuance(this.issuanceId, this.collateralToken.address);
+            const curSellerEther = await this.nutsEscrow.balanceOf({from: seller});
+            const curSellerToken = await this.nutsEscrow.tokenBalanceOf(this.collateralToken.address, {from: seller});
+            const curBuyerEther = await this.nutsEscrow.balanceOf({from: buyer});
+            const curBuyerToken = await this.nutsEscrow.tokenBalanceOf(this.collateralToken.address, {from: buyer});
+
+            // The issuance balance should be zero
+            expect(curIssuanceEther).be.bignumber.equal('0');
+            expect(curIssuanceToken).be.bignumber.equal('0');
+            // The Ether is returned to seller
+            expect(curSellerEther.sub(prevSellerEther)).be.bignumber.equal(ether('4'));
+            expect(prevBuyerEther.sub(curBuyerEther)).be.bignumber.equal(ether('4'));
+            // Interest
+            expect(curSellerToken.sub(prevSellerToken)).be.bignumber.equal('1050');;
+            expect(curBuyerToken.sub(prevBuyerToken)).be.bignumber.equal('298950');
         })
     })
 });

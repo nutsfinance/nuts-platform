@@ -201,7 +201,7 @@ contract Loan is Instrument {
 
             // Calculate interest
             uint interest = _properties.getUintValue("interest");
-            interest.add(interestByAmountAndDays(amount, _properties.getUintValue("interest_rate"),
+            interest = interest.add(interestByAmountAndDays(amount, _properties.getUintValue("interest_rate"),
                 daysBetween(_properties.getUintValue("engage_date"), now)));
             _properties.setUintValue("interest", interest);
 
