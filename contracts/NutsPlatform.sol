@@ -19,6 +19,8 @@ contract NutsPlatform is FspRole, TimerOracleRole {
     using Property for Property.Properties;
     using Transfer for Transfer.Transfers;
 
+    event InstrumentCreated(address indexed instrumentAddress, address indexed fspAddress);
+
     event IssuanceCreated(uint indexed issuanceId, address indexed instrumentAddress,
         address indexed sellerAddress);
 
@@ -53,6 +55,8 @@ contract NutsPlatform is FspRole, TimerOracleRole {
     function createInstrument(address instrumentAddress, uint256 expiration) external onlyFsp {
         _token.transferFrom(msg.sender, address(this), TOKEN_AMOUNT);
         _instrumentRegistry.create(msg.sender, instrumentAddress, expiration);
+
+        emit InstrumentCreated(instrumentAddress, msg.sender);
     }
 
     /**
