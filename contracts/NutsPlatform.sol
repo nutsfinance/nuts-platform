@@ -36,7 +36,7 @@ contract NutsPlatform is FspRole, TimerOracleRole {
     uint256 constant TOKEN_AMOUNT = 10;
 
     // TODO Can we use local variable instead?
-    Property.Properties private _properties;
+    Property.Properties private _commonProperties;
     Transfer.Transfers private _transfers;
 
     constructor(address unifiedStorageAddress, address instrumentRegistry,
@@ -83,16 +83,16 @@ contract NutsPlatform is FspRole, TimerOracleRole {
         (string memory updatedProperties, string memory transfers) = instrument.createIssuance(issuanceId, msg.sender, sellerParameters);
 
         // Create a new property map for the issuance
-        _properties.clear();
-        _properties.setUintValue('issuanceId', issuanceId);
-        _properties.setAddressValue('instrumentAddress', instrumentAddress);
-        _properties.setAddressValue('sellerAddress', msg.sender);
-        _properties.setUintValue('created', now);
-        _properties.setStringValue('properties', updatedProperties);
-        // Persist the updated properties
-        string memory issuanceData = string(_properties.save());
-        _storage.save(StringUtil.uintToString(issuanceId), issuanceData);
-        _properties.clear();
+        _commonProperties.clear();
+        _commonProperties.setUintValue('issuanceId', issuanceId);
+        _commonProperties.setAddressValue('instrumentAddress', instrumentAddress);
+        _commonProperties.setAddressValue('sellerAddress', msg.sender);
+        _commonProperties.setUintValue('created', now);
+
+        // Persist common and custom properties
+        _storage.saveCommonProperties(issuanceId, string(_commonProperties.save()));
+        _storage.saveCustomProperties(issuanceId, updatedProperties);
+        _commonProperties.clear();
 
         // Post-transferss
         processTransfers(issuanceId, transfers);
@@ -110,28 +110,26 @@ contract NutsPlatform is FspRole, TimerOracleRole {
         // Validation
         require(issuanceId > 0, "Issuance id must be set.");
 
-        // Retrieve the issuance data
-        string memory issuanceData = _storage.lookup(StringUtil.uintToString(issuanceId));
+        // Retrieve common and custom properties
+        string memory commonPropertiesData = _storage.getCommonProperties(issuanceId);
         // Validate whether the issuance exists
-        require(bytes(issuanceData).length > 0, "Issuance does not exist.");
+        require(bytes(commonPropertiesData).length > 0, "Issuance does not exist.");
+        string memory customPropertiesData = _storage.getCustomProperties(issuanceId);
 
-        _properties.clear();
-        _properties.load(bytes(issuanceData));
-        address instrumentAddress = _properties.getAddressValue('instrumentAddress');
+        _commonProperties.clear();
+        _commonProperties.load(bytes(commonPropertiesData));
+        address instrumentAddress = _commonProperties.getAddressValue('instrumentAddress');
         Instrument instrument = Instrument(instrumentAddress);
 
         // Retrieve the issuance balance
-        string memory properties = _properties.getStringValue('properties');
         string memory balance = _escrow.getIssuanceBalance(issuanceId);
 
         (string memory updatedProperties, string memory transfers) = instrument.engage(issuanceId,
-            properties, balance, msg.sender, buyerParameters);
+            customPropertiesData, balance, msg.sender, buyerParameters);
 
         // Update issuance properties
-        _properties.setStringValue('properties', updatedProperties);
-        issuanceData = string(_properties.save());
-        _storage.save(StringUtil.uintToString(issuanceId), issuanceData);
-        _properties.clear();
+        _storage.saveCustomProperties(issuanceId, updatedProperties);
+        _commonProperties.clear();
 
         // Post transferss
         processTransfers(issuanceId, transfers);
@@ -150,29 +148,28 @@ contract NutsPlatform is FspRole, TimerOracleRole {
         require(issuanceId > 0, "Issuance id must be set.");
         require(amount > 0, "Deposit amount must be larger than 0.");
 
-        // Retrieve issuance data
-        string memory issuanceData = _storage.lookup(StringUtil.uintToString(issuanceId));
+        // Retrieve common and custom properties
+        string memory commonPropertiesData = _storage.getCommonProperties(issuanceId);
         // Validate whether the issuance exists
-        require(bytes(issuanceData).length > 0, "Issuance does not exist.");
+        require(bytes(commonPropertiesData).length > 0, "Issuance does not exist.");
+        string memory customPropertiesData = _storage.getCustomProperties(issuanceId);
 
-        _properties.clear();
-        _properties.load(bytes(issuanceData));
-        Instrument instrument = Instrument(_properties.getAddressValue('instrumentAddress'));
+        _commonProperties.clear();
+        _commonProperties.load(bytes(commonPropertiesData));
+        address instrumentAddress = _commonProperties.getAddressValue('instrumentAddress');
+        Instrument instrument = Instrument(instrumentAddress);
 
         // Complete Ether transfer
         _escrow.transferToIssuance(msg.sender, issuanceId, amount);
 
         // Process the transfer event
-        string memory properties = _properties.getStringValue('properties');
         string memory balance = _escrow.getIssuanceBalance(issuanceId);
         (string memory updatedProperties, string memory transfers) = instrument.processTransfer(issuanceId,
-            properties, balance, msg.sender, amount);
+            customPropertiesData, balance, msg.sender, amount);
 
         // Update issuance properties
-        _properties.setStringValue('properties', updatedProperties);
-        issuanceData = string(_properties.save());
-        _storage.save(StringUtil.uintToString(issuanceId), issuanceData);
-        _properties.clear();
+        _storage.saveCustomProperties(issuanceId, updatedProperties);
+        _commonProperties.clear();
 
         // Post-transferss
         processTransfers(issuanceId, transfers);
@@ -191,29 +188,28 @@ contract NutsPlatform is FspRole, TimerOracleRole {
         require(tokenAddress != address(0x0), "Token address must be set.");
         require(amount > 0, "Deposit amount must be larger than 0.");
 
-        // Retrieve issuance data
-        string memory issuanceData = _storage.lookup(StringUtil.uintToString(issuanceId));
+        // Retrieve common and custom properties
+        string memory commonPropertiesData = _storage.getCommonProperties(issuanceId);
         // Validate whether the issuance exists
-        require(bytes(issuanceData).length > 0, "Issuance does not exist.");
+        require(bytes(commonPropertiesData).length > 0, "Issuance does not exist.");
+        string memory customPropertiesData = _storage.getCustomProperties(issuanceId);
 
-        _properties.clear();
-        _properties.load(bytes(issuanceData));
-        Instrument instrument = Instrument(_properties.getAddressValue('instrumentAddress'));
+        _commonProperties.clear();
+        _commonProperties.load(bytes(commonPropertiesData));
+        address instrumentAddress = _commonProperties.getAddressValue('instrumentAddress');
+        Instrument instrument = Instrument(instrumentAddress);
 
         // Complete the token transfer
         _escrow.transferTokenToIssuance(msg.sender, issuanceId, ERC20(tokenAddress), amount);
 
         // Process the transfer event
-        string memory properties = _properties.getStringValue('properties');
         string memory balance = _escrow.getIssuanceBalance(issuanceId);
         (string memory updatedProperties, string memory transfers) = instrument.processTokenTransfer(issuanceId,
-           properties, balance, msg.sender, tokenAddress, amount);
+           customPropertiesData, balance, msg.sender, tokenAddress, amount);
 
         // Update issuance properties
-        _properties.setStringValue('properties', updatedProperties);
-        issuanceData = string(_properties.save());
-        _storage.save(StringUtil.uintToString(issuanceId), issuanceData);
-        _properties.clear();
+        _storage.saveCustomProperties(issuanceId, updatedProperties);
+        _commonProperties.clear();
 
         // Post-transferss
         processTransfers(issuanceId, transfers);
@@ -233,27 +229,26 @@ contract NutsPlatform is FspRole, TimerOracleRole {
         require(bytes(eventName).length > 0, "Event name must be set.");
         require(timestamp <= now, "The scheduled event is not due now.");
 
-        // Retrieve issuance data
-        string memory issuanceData = _storage.lookup(StringUtil.uintToString(issuanceId));
+        // Retrieve common and custom properties
+        string memory commonPropertiesData = _storage.getCommonProperties(issuanceId);
         // Validate whether the issuance exists
-        require(bytes(issuanceData).length > 0, "Issuance does not exist.");
+        require(bytes(commonPropertiesData).length > 0, "Issuance does not exist.");
+        string memory customPropertiesData = _storage.getCustomProperties(issuanceId);
 
-        _properties.clear();
-        _properties.load(bytes(issuanceData));
-        Instrument instrument = Instrument(_properties.getAddressValue('instrumentAddress'));
+        _commonProperties.clear();
+        _commonProperties.load(bytes(commonPropertiesData));
+        address instrumentAddress = _commonProperties.getAddressValue('instrumentAddress');
+        Instrument instrument = Instrument(instrumentAddress);
 
         // Retrieve the issuance balance
-        string memory properties = _properties.getStringValue('properties');
         string memory balance = _escrow.getIssuanceBalance(issuanceId);
 
         (string memory updatedProperties, string memory transfers) = instrument.processScheduledEvent(issuanceId,
-            properties, balance, eventName, eventPayload);
+            customPropertiesData, balance, eventName, eventPayload);
 
         // Update issuance properties
-        _properties.setStringValue('properties', updatedProperties);
-        issuanceData = string(_properties.save());
-        _storage.save(StringUtil.uintToString(issuanceId), issuanceData);
-        _properties.clear();
+        _storage.saveCustomProperties(issuanceId, updatedProperties);
+        _commonProperties.clear();
 
         // Post transfers
         processTransfers(issuanceId, transfers);
@@ -270,27 +265,26 @@ contract NutsPlatform is FspRole, TimerOracleRole {
         require(issuanceId > 0, "Issuance id must be set.");
         require(bytes(eventName).length > 0, "Event name must be set.");
 
-        // Retrieve issuance data
-        string memory issuanceData = _storage.lookup(StringUtil.uintToString(issuanceId));
+        // Retrieve common and custom properties
+        string memory commonPropertiesData = _storage.getCommonProperties(issuanceId);
         // Validate whether the issuance exists
-        require(bytes(issuanceData).length > 0, "Issuance does not exist.");
+        require(bytes(commonPropertiesData).length > 0, "Issuance does not exist.");
+        string memory customPropertiesData = _storage.getCustomProperties(issuanceId);
 
-        _properties.clear();
-        _properties.load(bytes(issuanceData));
-        Instrument instrument = Instrument(_properties.getAddressValue('instrumentAddress'));
+        _commonProperties.clear();
+        _commonProperties.load(bytes(commonPropertiesData));
+        address instrumentAddress = _commonProperties.getAddressValue('instrumentAddress');
+        Instrument instrument = Instrument(instrumentAddress);
 
         // Retrieve the issuance balance
-        string memory properties = _properties.getStringValue('properties');
         string memory balance = _escrow.getIssuanceBalance(issuanceId);
 
         (string memory updatedProperties, string memory transfers) = instrument.processCustomEvent(issuanceId,
-            properties, balance, eventName, eventPayload);
+            customPropertiesData, balance, eventName, eventPayload);
 
         // Update issuance properties
-        _properties.setStringValue('properties', updatedProperties);
-        issuanceData = string(_properties.save());
-        _storage.save(StringUtil.uintToString(issuanceId), issuanceData);
-        _properties.clear();
+        _storage.saveCustomProperties(issuanceId, updatedProperties);
+        _commonProperties.clear();
 
         // Post transfers
         processTransfers(issuanceId, transfers);
