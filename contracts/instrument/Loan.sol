@@ -12,11 +12,26 @@ contract Loan is Instrument {
     event SomethingHappen(uint num1, uint num2, string str1, string str2, address addr1, address addr2);
     using SafeMath for uint256;
 
+    // Scheduled event list
     string constant DEPOSIT_EXPIRED_EVENT = "deposit_expired";
     string constant ENGAGEMENT_EXPIRED_EVENT = "engagement_expired";
     string constant COLLATERAL_EXPIRED_EVENT = "collateral_expired";
     string constant LOAN_EXPIRED_EVENT = "loan_expired";
     string constant GRACE_PERIOD_EXPIRED_EVENT = "grace_period_expired";
+
+    // Property key list
+    string constant SELLER_ADDRESS_KEY = "1";
+    string constant START_DATE_KEY = "2";
+    string constant COLLATERAL_TOKEN_ADDRESS_KEY = "3";
+    string constant COLLATERAL_AMOUNT_KEY = "4";
+    string constant BORROW_AMOUNT_KEY = "5";
+    string constant ENGAGEMENT_DUE_DAYS_KEY = "6";
+    string constant COLLATERAL_DUE_DAYS_KEY = "7";
+    string constant TENOR_DAYS_KEY = "8";
+    string constant INTEREST_RATE_KEY = "9";
+    string constant GRACE_PERIOD_KEY = "10";
+    string constant INTEREST_KEY = "11";
+    string constant COLLATERAL_COMPLETE_KEY = "12";
 
     uint constant RATE_DECIMALS = 8;
 
@@ -64,17 +79,17 @@ contract Loan is Instrument {
 
         // Set propertiess
         _properties.clear();
-        _properties.setAddressValue("seller_address", sellerAddress);
-        _properties.setUintValue("start_date", now);
-        _properties.setAddressValue("collateral_token_address", collateralTokenAddress);
-        _properties.setUintValue("collateral_amount", collateralAmount);
-        _properties.setUintValue("borrow_amount", borrowAmount);
-        _properties.setUintValue("engagement_due_days", engagementDueDays);
-        _properties.setUintValue("collateral_due_days", collateralDueDays);
-        _properties.setUintValue("tenor_days", tenorDays);
-        _properties.setUintValue("interest_rate", interestRate);
-        _properties.setUintValue("grace_period", gracePeriod);
-        _properties.setUintValue("interest", 0);                // Initialize the interest to pay
+        _properties.setAddressValue(SELLER_ADDRESS_KEY, sellerAddress);
+        _properties.setUintValue(START_DATE_KEY, now);
+        _properties.setAddressValue(COLLATERAL_TOKEN_ADDRESS_KEY, collateralTokenAddress);
+        _properties.setUintValue(COLLATERAL_AMOUNT_KEY, collateralAmount);
+        _properties.setUintValue(BORROW_AMOUNT_KEY, borrowAmount);
+        _properties.setUintValue(ENGAGEMENT_DUE_DAYS_KEY, engagementDueDays);
+        _properties.setUintValue(COLLATERAL_DUE_DAYS_KEY, collateralDueDays);
+        _properties.setUintValue(TENOR_DAYS_KEY, tenorDays);
+        _properties.setUintValue(INTEREST_RATE_KEY, interestRate);
+        _properties.setUintValue(GRACE_PERIOD_KEY, gracePeriod);
+        _properties.setUintValue(INTEREST_KEY, 0);                // Initialize the interest to pay
 
         // Set expiration for deposit
         emit EventScheduled(issuanceId, now + depositDueDays * 1 days, DEPOSIT_EXPIRED_EVENT, "");
@@ -117,15 +132,15 @@ contract Loan is Instrument {
         _properties.setUintValue("engage_date", now);
 
         // Set expiration for collateral
-        uint collateralDueDays = _properties.getUintValue("collateral_due_days");
+        uint collateralDueDays = _properties.getUintValue(COLLATERAL_DUE_DAYS_KEY);
         emit EventScheduled(issuanceId, now + collateralDueDays * 1 days, COLLATERAL_EXPIRED_EVENT, "");
 
         // Set expiration for loan
-        uint loanDueDays = _properties.getUintValue("tenor_days");
+        uint loanDueDays = _properties.getUintValue(TENOR_DAYS_KEY);
         emit EventScheduled(issuanceId, now + loanDueDays * 1 days, LOAN_EXPIRED_EVENT, "");
 
         // Set expiration for grace period
-        uint gracePeriod = _properties.getUintValue("grace_period");
+        uint gracePeriod = _properties.getUintValue(GRACE_PERIOD_KEY);
         emit EventScheduled(issuanceId, now + (loanDueDays + gracePeriod) * 1 days, GRACE_PERIOD_EXPIRED_EVENT, "");
 
         // Change to Active state
@@ -165,9 +180,9 @@ contract Loan is Instrument {
         _balances.load(bytes(balance));
 
         uint etherBalance = _balances.getEtherBalance();
-        uint borrowAmount = _properties.getUintValue("borrow_amount");
-        // emit SomthingHappen(etherBalance, borrowAmount, balance, '', fromAddress, _properties.getAddressValue("seller_address"));
-        if (_properties.getAddressValue("seller_address") == fromAddress) {
+        uint borrowAmount = _properties.getUintValue(BORROW_AMOUNT_KEY);
+        // emit SomthingHappen(etherBalance, borrowAmount, balance, '', fromAddress, _properties.getAddressValue(SELLER_ADDRESS_KEY));
+        if (_properties.getAddressValue(SELLER_ADDRESS_KEY) == fromAddress) {
             // The Ether transfer is from seller
             // This must be deposit
             // Deposit check:
@@ -184,7 +199,7 @@ contract Loan is Instrument {
                 updateIssuanceState(issuanceId, ENGAGABLE_STATE);
 
                 // Schedule engagement expiration
-                uint engagementDueDays = _properties.getUintValue("engagement_due_days");
+                uint engagementDueDays = _properties.getUintValue(ENGAGEMENT_DUE_DAYS_KEY);
                 emit EventScheduled(issuanceId, now + engagementDueDays * 1 days, ENGAGEMENT_EXPIRED_EVENT, "");
             }
 
@@ -196,14 +211,14 @@ contract Loan is Instrument {
             // 2. Collateral deposit must be done
             // 3. The Ether balance must not exceed the borrow amount
             require(isIssuanceInState(ACTIVE_STATE), "Ether repay must happen in Active state.");
-            require(_properties.getBoolOrDefault("collateral_complete", false), "Ether repay must happen after collateral is deposited.");
+            require(_properties.getBoolOrDefault(COLLATERAL_COMPLETE_KEY, false), "Ether repay must happen after collateral is deposited.");
             require(etherBalance <= borrowAmount, "The Ether repay cannot exceed the borrow amount.");
 
             // Calculate interest
-            uint interest = _properties.getUintValue("interest");
-            interest = interest.add(interestByAmountAndDays(amount, _properties.getUintValue("interest_rate"),
+            uint interest = _properties.getUintValue(INTEREST_KEY);
+            interest = interest.add(interestByAmountAndDays(amount, _properties.getUintValue(INTEREST_RATE_KEY),
                 daysBetween(_properties.getUintValue("engage_date"), now)));
-            _properties.setUintValue("interest", interest);
+            _properties.setUintValue(INTEREST_KEY, interest);
 
         } else {
             revert("Unknown transferer. Only seller or buyer can send Ether to issuance.");
@@ -255,19 +270,19 @@ contract Loan is Instrument {
         require(isIssuanceInState(ACTIVE_STATE), "Collateral deposit must occur in Active state.");
         require(_properties.getAddressOrDefault("buyer_address", address(0x0)) == fromAddress,
             "Collateral deposit must come from the buyer.");
-        require(!_properties.getBoolOrDefault("collateral_complete", false),
+        require(!_properties.getBoolOrDefault(COLLATERAL_COMPLETE_KEY, false),
             "Collateral deposit must occur during the collateral depoit phase.");
         uint tokenBalance = _balances.getTokenBalance(tokenAddress);
-        uint collateralAmount = _properties.getUintValue("collateral_amount");
+        uint collateralAmount = _properties.getUintValue(COLLATERAL_AMOUNT_KEY);
         require(tokenBalance <= collateralAmount, "Collateral token balance must not exceed the collateral amount");
 
         if (tokenBalance == collateralAmount) {
             // Mark the collateral collection as complete
-            _properties.setBoolValue("collateral_complete", true);
+            _properties.setBoolValue(COLLATERAL_COMPLETE_KEY, true);
             // Transfer Ether to buyer
             _transfers.clear();
             _transfers.addEtherTransfer(_properties.getAddressValue("buyer_address"),
-                _properties.getUintValue("borrow_amount"));
+                _properties.getUintValue(BORROW_AMOUNT_KEY));
             transfers = string(_transfers.save());
             _transfers.clear();
         }
@@ -328,8 +343,8 @@ contract Loan is Instrument {
             // Check whether the issuance is still in Active state
             // and the collateral is not complete
             if (isIssuanceInState(ACTIVE_STATE)
-                    && !_properties.getBoolOrDefault("collateral_complete", false)) {
-                _properties.setBoolValue("collateral_complete", false);
+                    && !_properties.getBoolOrDefault(COLLATERAL_COMPLETE_KEY, false)) {
+                _properties.setBoolValue(COLLATERAL_COMPLETE_KEY, false);
                 // Change to Delinquent state
                 updateIssuanceState(issuanceId, DELINQUENT_STATE);
                 // Return Ethers to seller and collateral to buyer
@@ -342,7 +357,7 @@ contract Loan is Instrument {
             // 1. The issuance is in Active state
             // 2. The Ether balance is equal to the borrow amount
             if (isIssuanceInState(ACTIVE_STATE)
-                && _balances.getEtherBalance() == _properties.getUintValue("borrow_amount")) {
+                && _balances.getEtherBalance() == _properties.getUintValue(BORROW_AMOUNT_KEY)) {
                 // Change to Complete Engaged state
                 updateIssuanceState(issuanceId, COMPLETE_ENGAGED_STATE);
                 // Also add transfers
@@ -354,7 +369,7 @@ contract Loan is Instrument {
             if (isIssuanceInState(ACTIVE_STATE)) {
                 // Default check
                 // 1. The Ether balance is smaller than the borrow amount
-                if (_balances.getEtherBalance() < _properties.getUintValue("borrow_amount")) {
+                if (_balances.getEtherBalance() < _properties.getUintValue(BORROW_AMOUNT_KEY)) {
                     // Change to Delinquent state
                     updateIssuanceState(issuanceId, DELINQUENT_STATE);
                     defaultRelease();
@@ -415,8 +430,8 @@ contract Loan is Instrument {
      * @dev Return Ether and collateral token
      */
     function release() private {
-        // uint borrowAmount = _properties.getUintValue("borrow_amount");
-        // uint collateralAmount = _properties.getUintValue("collateral_amount");
+        // uint borrowAmount = _properties.getUintValue(BORROW_AMOUNT_KEY);
+        // uint collateralAmount = _properties.getUintValue(COLLATERAL_AMOUNT_KEY);
 
         // Use Ether balance instead of borrow amount, as the balance might be
         // smaller than the borrow amount(deposit_expired or engagement_expired)
@@ -425,15 +440,15 @@ contract Loan is Instrument {
         // If the buyer fails to repay any Ether, it's handled by defaultRelease()
         if (borrowAmount == 0)  return;
 
-        address collateralTokenAddress = _properties.getAddressValue("collateral_token_address");
+        address collateralTokenAddress = _properties.getAddressValue(COLLATERAL_TOKEN_ADDRESS_KEY);
         // Use token balance instead of collateral amount, as the balance might be
         // smaller than the collateral amount(collateral_expired)
         uint collateralAmount = _balances.getTokenBalance(collateralTokenAddress);
-        uint interest = _properties.getUintValue("interest");
+        uint interest = _properties.getUintValue(INTEREST_KEY);
 
         // Transfer Ether back to seller
         // In all case, we want to send all Ether back to seller
-        _transfers.addEtherTransfer(_properties.getAddressValue("seller_address"),
+        _transfers.addEtherTransfer(_properties.getAddressValue(SELLER_ADDRESS_KEY),
             borrowAmount);
 
         // TODO Is this calculation correct?
@@ -447,7 +462,7 @@ contract Loan is Instrument {
         // Transfer collateral token to seller as interest if it's greater than 0(interest rate could be 0)
         if (tokenToSellerAmount > 0) {
             _transfers.addTokenTransfer(collateralTokenAddress,
-                _properties.getAddressValue("seller_address"), tokenToSellerAmount);
+                _properties.getAddressValue(SELLER_ADDRESS_KEY), tokenToSellerAmount);
         }
 
         // Transfer collateral token back to buyer if it's greater than 0
@@ -458,16 +473,16 @@ contract Loan is Instrument {
     }
 
     function defaultRelease() private {
-        uint borrowAmount = _properties.getUintValue("borrow_amount");
-        uint collateralAmount = _properties.getUintValue("collateral_amount");
+        uint borrowAmount = _properties.getUintValue(BORROW_AMOUNT_KEY);
+        uint collateralAmount = _properties.getUintValue(COLLATERAL_AMOUNT_KEY);
         // Full interest on default
-        uint interest = interestByAmountAndDays(borrowAmount, _properties.getUintValue("interest_rate"),
+        uint interest = interestByAmountAndDays(borrowAmount, _properties.getUintValue(INTEREST_RATE_KEY),
                 daysBetween(_properties.getUintValue("engage_date"), now));
 
         // Transfer whatever Ether the issuance has back to seller
         uint etherBalance = _balances.getEtherBalance();
         if (etherBalance > 0) {
-            _transfers.addEtherTransfer(_properties.getAddressValue("seller_address"),
+            _transfers.addEtherTransfer(_properties.getAddressValue(SELLER_ADDRESS_KEY),
                 etherBalance);
         }
 
@@ -479,13 +494,13 @@ contract Loan is Instrument {
 
         // Transfer collateral token to seller as interest if it's greater than 0(interest rate could be 0)
         if (tokenToSellerAmount > 0) {
-            _transfers.addTokenTransfer(_properties.getAddressValue("collateral_token_address"),
-                _properties.getAddressValue("seller_address"), tokenToSellerAmount);
+            _transfers.addTokenTransfer(_properties.getAddressValue(COLLATERAL_TOKEN_ADDRESS_KEY),
+                _properties.getAddressValue(SELLER_ADDRESS_KEY), tokenToSellerAmount);
         }
 
         // Transfer collateral token back to buyer if it's greater than 0
         if (tokenToBuyerAmount > 0) {
-            _transfers.addTokenTransfer(_properties.getAddressValue("collateral_token_address"),
+            _transfers.addTokenTransfer(_properties.getAddressValue(COLLATERAL_TOKEN_ADDRESS_KEY),
                 _properties.getAddressValue("buyer_address"), tokenToBuyerAmount);
         }
     }

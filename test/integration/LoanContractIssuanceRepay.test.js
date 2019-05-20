@@ -32,11 +32,11 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, buyer2, tokenOwner]) => {
 
         // Create instrument 
         let tx = await this.nutsPlatform.createInstrument(this.loan.address, 0, {from: fsp});
-        // console.log("Create instrument: Gas used = " + tx.receipt.gasUsed);
+        console.log("Create instrument: Gas used = " + tx.receipt.gasUsed);
 
         // Seller deposits Ether to Escrow
         tx = await this.nutsEscrow.deposit({from: seller, value: ether("200")});
-        // console.log("Deposit Ether to Escrow: Gas used = " + tx.receipt.gasUsed);
+        console.log("Deposit Ether to Escrow: Gas used = " + tx.receipt.gasUsed);
         await this.nutsEscrow.deposit({from: buyer, value: ether("200")});
         await this.nutsEscrow.deposit({from: buyer2, value: ether("200")});
     }),
@@ -48,7 +48,7 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, buyer2, tokenOwner]) => {
         await this.collateralToken.mint(buyer, 500000, {from: tokenOwner});
         await this.collateralToken.approve(this.nutsEscrow.address, 500000, {from: buyer});
         let tx = await this.nutsEscrow.depositToken(this.collateralToken.address, 400000, {from: buyer});
-        // console.log("Deposit token to Escrow: Gas used = " + tx.receipt.gasUsed);
+        console.log("Deposit token to Escrow: Gas used = " + tx.receipt.gasUsed);
         await this.collateralToken.mint(seller, 500000, {from: tokenOwner});
         await this.collateralToken.approve(this.nutsEscrow.address, 500000, {from: seller});
         await this.nutsEscrow.depositToken(this.collateralToken.address, 400000, {from: seller});
@@ -58,7 +58,7 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, buyer2, tokenOwner]) => {
             `collateral-token-address=${this.collateralToken.address}&collateral-amount=300000&` + 
             `borrow-amount=${ether('5')}&deposit-due-days=3&engagement-due-days=20&collateral-due-days=5&` +
             `tenor-days=30&interest-rate=10000&grace-period=5`, {from: seller});
-        // console.log("Create issuance: Gas used = " + tx.receipt.gasUsed);
+        console.log("Create issuance: Gas used = " + tx.receipt.gasUsed);
         this.issuanceId = tx.logs.find(e => e.event == "IssuanceCreated").args.issuanceId.toNumber();
         await expectEvent.inTransaction(tx.receipt.transactionHash, Loan, "IssuanceStateUpdated", {
             issuanceId: new BN(this.issuanceId),
@@ -67,7 +67,7 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, buyer2, tokenOwner]) => {
 
         // Seller deposit Ether: borrow amount = 5 Ethers
         tx = await this.nutsPlatform.deposit(this.issuanceId, ether('5'), {from: seller});
-        // console.log("Deposit Ether to issuance: Gas used = " + tx.receipt.gasUsed);
+        console.log("Deposit Ether to issuance: Gas used = " + tx.receipt.gasUsed);
         this.engagementExpiredTimestamp = await getEventTimestamp(tx.receipt.transactionHash, Loan, "engagement_expired");
         await expectEvent.inTransaction(tx.receipt.transactionHash, Loan, "IssuanceStateUpdated", {
             issuanceId: new BN(this.issuanceId),
@@ -79,7 +79,7 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, buyer2, tokenOwner]) => {
         tx = await this.nutsPlatform.engageIssuance(this.issuanceId, "", {from: buyer});
         this.loanExpiredTimestamp = await getEventTimestamp(tx.receipt.transactionHash, Loan, "loan_expired");
         this.gracePeriodExpiredTimestamp = await getEventTimestamp(tx.receipt.transactionHash, Loan, "grace_period_expired");
-        // console.log("Engage issuance: Gas used = " + tx.receipt.gasUsed);
+        console.log("Engage issuance: Gas used = " + tx.receipt.gasUsed);
         await expectEvent.inTransaction(tx.receipt.transactionHash, Loan, "IssuanceStateUpdated", {
             issuanceId: new BN(this.issuanceId),
             state: "Active"
@@ -88,7 +88,7 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, buyer2, tokenOwner]) => {
         // Buyer deposits collateral
         // Buyer deposit the collateral
         tx = await this.nutsPlatform.depositToken(this.issuanceId, this.collateralToken.address, 300000, {from: buyer});
-        // console.log("Deposit token to issuance: Gas used = " + tx.receipt.gasUsed);
+        console.log("Deposit token to issuance: Gas used = " + tx.receipt.gasUsed);
     }),
     context("Issuance Repay", async function() {
         it("should repay and complete the issuance before loan due", async function() {
