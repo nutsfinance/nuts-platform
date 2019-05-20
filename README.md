@@ -23,15 +23,15 @@ To deploy the NUTS platform to test net/main net, follow the steps below:
 1. Deploy the **NutsToken** contract;
 1. Deploy the **NutsEscrow** contract;
 1. Deploy the **NutsPlatform** contract and pass the addresses of **UnifiedStorage, InstrumentRegistry, NutsToken, NutsEscrow** as parameters;
-1. Whitelist **NutsPlatform**'s access to **UnifiedStorage**
-```
-unifiedStorage.addWhitelistAdmin(nutsPlatform.address);
-```
-1. Whitelist **NutsPlatform**'s access to **InstrumentRegistry**
-```
+1. Whitelist **NutsPlatform**'s access to **UnifiedStorage** 
+` 
+unifiedStorage.addWhitelistAdmin(nutsPlatform.address); 
+`
+1. Whitelist **NutsPlatform**'s access to **InstrumentRegistry** 
+`
 instrumentRegistry.addWhitelistAdmin(nutsPlatform.address);
-```
+`
 1. Whitelist **NutsPlatform**'s access to **NutsEscrow**
-```
+`
 nutsEscrow.addWhitelistAdmin(nutsPlatform.address);
-```
+`
