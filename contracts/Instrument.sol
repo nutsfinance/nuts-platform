@@ -1,5 +1,8 @@
 pragma solidity ^0.5.0;
 
+// Enable the ABI v2 Coder
+pragma experimental ABIEncoderV2;
+
 import "./common/property/Property.sol";
 import "./common/payment/Balance.sol";
 import "./common/payment/Transfer.sol";
@@ -44,7 +47,7 @@ contract Instrument {
      * @return transfers The transfers to perform after the invocation
      */
     function createIssuance(uint256 issuanceId, address sellerAddress, string memory sellerParameters)
-        public returns (string memory updatedProperties, string memory transfers);
+        public returns (string memory updatedProperties, Transfer.Transfers memory transfers);
 
     /**
      * @dev A buyer engages to the issuance
@@ -56,8 +59,9 @@ contract Instrument {
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
      */
-    function engage(uint256 issuanceId, string memory properties, string memory balance, address buyerAddress,
-        string memory buyerParameters) public returns (string memory updatedProperties, string memory transfers);
+    function engage(uint256 issuanceId, string memory properties, Balance.Balances memory balance,
+        address buyerAddress, string memory buyerParameters)
+        public returns (string memory updatedProperties, Transfer.Transfers memory transfers);
 
     /**
      * @dev Buyer/Seller has made an Ether transfer to the issuance
@@ -69,8 +73,9 @@ contract Instrument {
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
      */
-    function processTransfer(uint256 issuanceId, string memory properties, string memory balance,
-        address fromAddress, uint256 amount) public returns (string memory updatedProperties, string memory transfers);
+    function processTransfer(uint256 issuanceId, string memory properties, Balance.Balances memory balance,
+        address fromAddress, uint256 amount)
+        public returns (string memory updatedProperties, Transfer.Transfers memory transfers);
 
     /**
      * @dev Buyer/Seller has made an ERC20 token transfer to the issuance
@@ -83,9 +88,9 @@ contract Instrument {
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
      */
-    function processTokenTransfer(uint256 issuanceId, string memory properties, string memory balance,
+    function processTokenTransfer(uint256 issuanceId, string memory properties, Balance.Balances memory balance,
         address fromAddress, address tokenAddress, uint256 amount)
-        public returns (string memory updatedProperties, string memory transfers);
+        public returns (string memory updatedProperties, Transfer.Transfers memory transfers);
 
     /**
      * @dev Process scheduled event
@@ -97,8 +102,9 @@ contract Instrument {
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
      */
-    function processScheduledEvent(uint256 issuanceId, string memory properties, string memory balance,
-        string memory eventName, string memory eventPayload) public returns (string memory updatedProperties, string memory transfers);
+    function processScheduledEvent(uint256 issuanceId, string memory properties, Balance.Balances memory balance,
+        string memory eventName, string memory eventPayload)
+        public returns (string memory updatedProperties, Transfer.Transfers memory transfers);
 
     /**
      * @dev Process customer event
@@ -110,8 +116,9 @@ contract Instrument {
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
      */
-    function processCustomEvent(uint256 issuanceId, string memory properties, string memory balance,
-        string memory eventName, string memory eventPayload) public returns (string memory updatedProperties, string memory transfers);
+    function processCustomEvent(uint256 issuanceId, string memory properties, Balance.Balances memory balance,
+        string memory eventName, string memory eventPayload)
+        public returns (string memory updatedProperties, Transfer.Transfers memory transfers);
 
     /**
      *
@@ -122,8 +129,6 @@ contract Instrument {
     Property.Properties internal _properties;
     // Custom parameters
     Property.Properties internal _parameters;
-    // Current balance of the issuance
-    Balance.Balances internal _balances;
     // Transfer transferss to take
     Transfer.Transfers internal _transfers;
 

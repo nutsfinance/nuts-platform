@@ -1,5 +1,8 @@
 pragma solidity ^0.5.0;
 
+// Enable the ABI v2 Coder
+pragma experimental ABIEncoderV2;
+
 import "../../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
 
 import "../Instrument.sol";
@@ -29,7 +32,7 @@ contract Loan is Instrument {
      * @return transfers The transfers to perform after the invocation
      */
     function createIssuance(uint256 issuanceId, address sellerAddress, string memory sellerParameters)
-        public returns (string memory updatedProperties, string memory transfers) {
+        public returns (string memory updatedProperties, Transfer.Transfers memory transfers) {
         // Parameter validation
         require(issuanceId > 0, "Issuance id must be set.");
         require(sellerAddress != address(0x0), "Seller address must be set.");
@@ -100,8 +103,8 @@ contract Loan is Instrument {
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
      */
-    function engage(uint256 issuanceId, string memory properties, string memory balance, address buyerAddress,
-        string memory buyerParameters) public returns (string memory updatedProperties, string memory transfers) {
+    function engage(uint256 issuanceId, string memory properties, Balance.Balances memory balance, address buyerAddress,
+        string memory buyerParameters) public returns (string memory updatedProperties, Transfer.Transfers memory transfers) {
         // Parameter validation
         require(issuanceId > 0, "Issuance id must be set.");
         require(bytes(properties).length > 0, "Properties must be set.");
@@ -148,8 +151,8 @@ contract Loan is Instrument {
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
      */
-    function processTransfer(uint256 issuanceId, string memory properties, string memory balance,
-        address fromAddress, uint256 amount) public returns (string memory updatedProperties, string memory transfers) {
+    function processTransfer(uint256 issuanceId, string memory properties, Balance.Balances memory balance,
+        address fromAddress, uint256 amount) public returns (string memory updatedProperties, Transfer.Transfers memory transfers) {
         // Parameter validation
         require(issuanceId > 0, "Issuance id must be set.");
         require(bytes(properties).length > 0, "Properties must be set.");
@@ -160,11 +163,7 @@ contract Loan is Instrument {
         _properties.clear();
         _properties.load(bytes(properties));
 
-        // Load balance
-        _balances.clear();
-        _balances.load(bytes(balance));
-
-        uint etherBalance = _balances.getEtherBalance();
+        uint etherBalance = balance.getEtherBalance();
         uint borrowAmount = _properties.getUintValue("borrow_amount");
         // emit SomthingHappen(etherBalance, borrowAmount, balance, '', fromAddress, _properties.getAddressValue("seller_address"));
         if (_properties.getAddressValue("seller_address") == fromAddress) {
@@ -214,7 +213,6 @@ contract Loan is Instrument {
 
         // Clean up
         _properties.clear();
-        _balances.clear();
     }
 
     /**
@@ -228,8 +226,9 @@ contract Loan is Instrument {
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
      */
-    function processTokenTransfer(uint256 issuanceId, string memory properties, string memory balance,
-        address fromAddress, address tokenAddress, uint256 amount) public returns (string memory updatedProperties, string memory transfers) {
+    function processTokenTransfer(uint256 issuanceId, string memory properties, Balance.Balances memory balance,
+            address fromAddress, address tokenAddress, uint256 amount)
+            public returns (string memory updatedProperties, Transfer.Transfers memory transfers) {
         // Parameter validation
         require(issuanceId > 0, "Issuance id must be set.");
         require(bytes(properties).length > 0, "Properties must be set.");
@@ -240,10 +239,6 @@ contract Loan is Instrument {
         // Load properties
         _properties.clear();
         _properties.load(bytes(properties));
-
-        // Load balance
-        _balances.clear();
-        _balances.load(bytes(balance));
 
         // Note: Token transfer only occurs in colleteral deposit!
         // Collateral check
@@ -257,7 +252,7 @@ contract Loan is Instrument {
             "Collateral deposit must come from the buyer.");
         require(!_properties.getBoolOrDefault("collateral_complete", false),
             "Collateral deposit must occur during the collateral depoit phase.");
-        uint tokenBalance = _balances.getTokenBalance(tokenAddress);
+        uint tokenBalance = balance.getTokenBalance(tokenAddress);
         uint collateralAmount = _properties.getUintValue("collateral_amount");
         require(tokenBalance <= collateralAmount, "Collateral token balance must not exceed the collateral amount");
 
@@ -268,7 +263,7 @@ contract Loan is Instrument {
             _transfers.clear();
             _transfers.addEtherTransfer(_properties.getAddressValue("buyer_address"),
                 _properties.getUintValue("borrow_amount"));
-            transfers = string(_transfers.save());
+            transfers = _transfers;
             _transfers.clear();
         }
 
@@ -277,7 +272,6 @@ contract Loan is Instrument {
 
         // Clean up
         _properties.clear();
-        _balances.clear();
     }
 
     /**
@@ -290,8 +284,9 @@ contract Loan is Instrument {
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
      */
-    function processScheduledEvent(uint256 issuanceId, string memory properties, string memory balance,
-        string memory eventName, string memory eventPayload) public returns (string memory updatedProperties, string memory transfers) {
+    function processScheduledEvent(uint256 issuanceId, string memory properties, Balance.Balances memory balance,
+            string memory eventName, string memory eventPayload)
+            public returns (string memory updatedProperties, Transfer.Transfers memory transfers) {
         // Parameter validation
         require(issuanceId > 0, "Issuance id must be set.");
         require(bytes(properties).length > 0, "Properties must be set.");
@@ -300,9 +295,6 @@ contract Loan is Instrument {
         // Load properties
         _properties.clear();
         _properties.load(bytes(properties));
-        // Load balances
-        _balances.clear();
-        _balances.load(bytes(balance));
         _transfers.clear();
 
         // Check for deposit_expired event
@@ -313,7 +305,7 @@ contract Loan is Instrument {
                 updateIssuanceState(issuanceId, UNFUNDED_STATE);
                 // If there is any deposit, return to the seller
                 release();
-                transfers = string(_transfers.save());
+                transfers = _transfers;
             }
         } else if (StringUtil.equals(eventName, ENGAGEMENT_EXPIRED_EVENT)) {
             // Check whether the issuance is still in Engagable state
@@ -322,7 +314,7 @@ contract Loan is Instrument {
                 updateIssuanceState(issuanceId, COMPLETE_NOT_ENGAGED_STATE);
                 // Return the Ether depost to seller
                 release();
-                transfers = string(_transfers.save());
+                transfers = _transfers;
             }
         } else if (StringUtil.equals(eventName, COLLATERAL_EXPIRED_EVENT)) {
             // Check whether the issuance is still in Active state
@@ -342,7 +334,7 @@ contract Loan is Instrument {
             // 1. The issuance is in Active state
             // 2. The Ether balance is equal to the borrow amount
             if (isIssuanceInState(ACTIVE_STATE)
-                && _balances.getEtherBalance() == _properties.getUintValue("borrow_amount")) {
+                && balance.getEtherBalance() == _properties.getUintValue("borrow_amount")) {
                 // Change to Complete Engaged state
                 updateIssuanceState(issuanceId, COMPLETE_ENGAGED_STATE);
                 // Also add transfers
@@ -354,7 +346,7 @@ contract Loan is Instrument {
             if (isIssuanceInState(ACTIVE_STATE)) {
                 // Default check
                 // 1. The Ether balance is smaller than the borrow amount
-                if (_balances.getEtherBalance() < _properties.getUintValue("borrow_amount")) {
+                if (balance.getEtherBalance() < _properties.getUintValue("borrow_amount")) {
                     // Change to Delinquent state
                     updateIssuanceState(issuanceId, DELINQUENT_STATE);
                     defaultRelease();
@@ -374,15 +366,15 @@ contract Loan is Instrument {
 
         // Clean up
         _properties.clear();
-        _balances.clear();
         _transfers.clear();
     }
 
     /**
      * @dev Custom event is not supported in loan contract.
      */
-    function processCustomEvent(uint256 issuanceId, string memory properties, string memory balance,
-        string memory eventName, string memory eventPayload) public returns (string memory updatedProperties, string memory transfers) {
+    function processCustomEvent(uint256 issuanceId, string memory properties, Balance.Balances memory balance,
+        string memory eventName, string memory eventPayload)
+        public returns (string memory updatedProperties, Transfer.Transfers memory transfers) {
         revert("Custom evnet unsupported.");
     }
 
@@ -414,13 +406,13 @@ contract Loan is Instrument {
     /**
      * @dev Return Ether and collateral token
      */
-    function release() private {
+    function release(Balance.Balances memory balance) private {
         // uint borrowAmount = _properties.getUintValue("borrow_amount");
         // uint collateralAmount = _properties.getUintValue("collateral_amount");
 
         // Use Ether balance instead of borrow amount, as the balance might be
         // smaller than the borrow amount(deposit_expired or engagement_expired)
-        uint borrowAmount = _balances.getEtherBalance();
+        uint borrowAmount = balance.getEtherBalance();
         // The only case borrow amount = 0 is, there is no deposit in deposit_expired
         // If the buyer fails to repay any Ether, it's handled by defaultRelease()
         if (borrowAmount == 0)  return;
@@ -428,7 +420,7 @@ contract Loan is Instrument {
         address collateralTokenAddress = _properties.getAddressValue("collateral_token_address");
         // Use token balance instead of collateral amount, as the balance might be
         // smaller than the collateral amount(collateral_expired)
-        uint collateralAmount = _balances.getTokenBalance(collateralTokenAddress);
+        uint collateralAmount = balance.getTokenBalance(collateralTokenAddress);
         uint interest = _properties.getUintValue("interest");
 
         // Transfer Ether back to seller
@@ -457,7 +449,7 @@ contract Loan is Instrument {
         }
     }
 
-    function defaultRelease() private {
+    function defaultRelease(Balance.Balances memory balance) private {
         uint borrowAmount = _properties.getUintValue("borrow_amount");
         uint collateralAmount = _properties.getUintValue("collateral_amount");
         // Full interest on default
@@ -465,7 +457,7 @@ contract Loan is Instrument {
                 daysBetween(_properties.getUintValue("engage_date"), now));
 
         // Transfer whatever Ether the issuance has back to seller
-        uint etherBalance = _balances.getEtherBalance();
+        uint etherBalance = balance.getEtherBalance();
         if (etherBalance > 0) {
             _transfers.addEtherTransfer(_properties.getAddressValue("seller_address"),
                 etherBalance);

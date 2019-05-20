@@ -1,5 +1,8 @@
 pragma solidity ^0.5.0;
 
+// Enable the ABI v2 Coder
+pragma experimental ABIEncoderV2;
+
 import "../seriality/BytesToTypes.sol";
 import "../seriality/TypesToBytes.sol";
 import "../seriality/SizeOf.sol";

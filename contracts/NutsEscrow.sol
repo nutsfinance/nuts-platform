@@ -1,5 +1,8 @@
 pragma solidity ^0.5.0;
 
+// Enable the ABI v2 Coder
+pragma experimental ABIEncoderV2;
+
 import "./common/payment/Balance.sol";
 import "../node_modules/openzeppelin-solidity/contracts/access/roles/WhitelistAdminRole.sol";
 import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
@@ -185,7 +188,7 @@ contract NutsEscrow is WhitelistAdminRole {
      * @param issuanceId The issuance id
      * @return The serialized balance
      */
-    function getIssuanceBalance(uint256 issuanceId) public view onlyWhitelistAdmin returns (string memory) {
-        return string(_issuanceBalances[issuanceId].save());
+    function getIssuanceBalance(uint256 issuanceId) public view onlyWhitelistAdmin returns (Balance.Balances memory) {
+        return _issuanceBalances[issuanceId];
     }
 }

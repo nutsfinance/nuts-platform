@@ -1,5 +1,8 @@
 pragma solidity ^0.5.0;
 
+// Enable the ABI v2 Coder
+pragma experimental ABIEncoderV2;
+
 import "./UnifiedStorage.sol";
 import "./InstrumentRegistry.sol";
 import "./NutsToken.sol";
@@ -37,7 +40,6 @@ contract NutsPlatform is FspRole, TimerOracleRole {
 
     // TODO Can we use local variable instead?
     Property.Properties private _properties;
-    Transfer.Transfers private _transfers;
 
     constructor(address unifiedStorageAddress, address instrumentRegistry,
         address nutsTokenAddress, address nutsEscrowAddress) public {
@@ -80,7 +82,7 @@ contract NutsPlatform is FspRole, TimerOracleRole {
         lastIssuanceId = lastIssuanceId + 1;
         uint issuanceId = lastIssuanceId;
         Instrument instrument = Instrument(instrumentAddress);
-        (string memory updatedProperties, string memory transfers) = instrument.createIssuance(issuanceId, msg.sender, sellerParameters);
+        (string memory updatedProperties, Transfer.Transfers memory transfers) = instrument.createIssuance(issuanceId, msg.sender, sellerParameters);
 
         // Create a new property map for the issuance
         _properties.clear();
@@ -122,9 +124,9 @@ contract NutsPlatform is FspRole, TimerOracleRole {
 
         // Retrieve the issuance balance
         string memory properties = _properties.getStringValue('properties');
-        string memory balance = _escrow.getIssuanceBalance(issuanceId);
+        Balance.Balances memory balance = _escrow.getIssuanceBalance(issuanceId);
 
-        (string memory updatedProperties, string memory transfers) = instrument.engage(issuanceId,
+        (string memory updatedProperties, Transfer.Transfers memory transfers) = instrument.engage(issuanceId,
             properties, balance, msg.sender, buyerParameters);
 
         // Update issuance properties
@@ -164,8 +166,8 @@ contract NutsPlatform is FspRole, TimerOracleRole {
 
         // Process the transfer event
         string memory properties = _properties.getStringValue('properties');
-        string memory balance = _escrow.getIssuanceBalance(issuanceId);
-        (string memory updatedProperties, string memory transfers) = instrument.processTransfer(issuanceId,
+        Balance.Balances memory balance = _escrow.getIssuanceBalance(issuanceId);
+        (string memory updatedProperties, Transfer.Transfers memory transfers) = instrument.processTransfer(issuanceId,
             properties, balance, msg.sender, amount);
 
         // Update issuance properties
@@ -205,8 +207,8 @@ contract NutsPlatform is FspRole, TimerOracleRole {
 
         // Process the transfer event
         string memory properties = _properties.getStringValue('properties');
-        string memory balance = _escrow.getIssuanceBalance(issuanceId);
-        (string memory updatedProperties, string memory transfers) = instrument.processTokenTransfer(issuanceId,
+        Balance.Balances memory balance = _escrow.getIssuanceBalance(issuanceId);
+        (string memory updatedProperties, Transfer.Transfers memory transfers) = instrument.processTokenTransfer(issuanceId,
            properties, balance, msg.sender, tokenAddress, amount);
 
         // Update issuance properties
@@ -216,7 +218,15 @@ contract NutsPlatform is FspRole, TimerOracleRole {
         _properties.clear();
 
         // Post-transferss
-        processTransfers(issuanceId, transfers);
+        for (uint i = 0; i < transfers.actions.length; i++) {
+            if (transfers.actions[i].isEther) {
+                _escrow.transferFromIssuance(transfers.actions[i].receiverAddress, issuanceId,
+                    transfers.actions[i].amount);
+            } else {
+                _escrow.transferTokenFromIssuance(transfers.actions[i].receiverAddress, issuanceId,
+                    ERC20(transfers.actions[i].tokenAddress), transfers.actions[i].amount);
+            }
+        }
     }
 
     /**
@@ -244,9 +254,9 @@ contract NutsPlatform is FspRole, TimerOracleRole {
 
         // Retrieve the issuance balance
         string memory properties = _properties.getStringValue('properties');
-        string memory balance = _escrow.getIssuanceBalance(issuanceId);
+        Balance.Balances memory balance = _escrow.getIssuanceBalance(issuanceId);
 
-        (string memory updatedProperties, string memory transfers) = instrument.processScheduledEvent(issuanceId,
+        (string memory updatedProperties, Transfer.Transfers memory transfers) = instrument.processScheduledEvent(issuanceId,
             properties, balance, eventName, eventPayload);
 
         // Update issuance properties
@@ -281,9 +291,9 @@ contract NutsPlatform is FspRole, TimerOracleRole {
 
         // Retrieve the issuance balance
         string memory properties = _properties.getStringValue('properties');
-        string memory balance = _escrow.getIssuanceBalance(issuanceId);
+        Balance.Balances memory balance = _escrow.getIssuanceBalance(issuanceId);
 
-        (string memory updatedProperties, string memory transfers) = instrument.processCustomEvent(issuanceId,
+        (string memory updatedProperties, Transfer.Transfers memory transfers) = instrument.processCustomEvent(issuanceId,
             properties, balance, eventName, eventPayload);
 
         // Update issuance properties
@@ -301,21 +311,17 @@ contract NutsPlatform is FspRole, TimerOracleRole {
      * @param issuanceId The id of the issuance which owns the Ether/token
      * @param transfers The transfer actions
      */
-    function processTransfers(uint issuanceId, string memory transfers) private {
-        if (bytes(transfers).length == 0)  return;
-        _transfers.load(bytes(transfers));
-
+    function processTransfers(uint issuanceId, Transfer.Transfers memory transfers) private {
         // Note: The Escrow performs validation of transfer against the balance,
         // so there is no need to do the validation here.
-        for (uint i = 0; i < _transfers.actions.length; i++) {
-            if (_transfers.actions[i].isEther) {
-                _escrow.transferFromIssuance(_transfers.actions[i].receiverAddress, issuanceId,
-                    _transfers.actions[i].amount);
+        for (uint i = 0; i < transfers.actions.length; i++) {
+            if (transfers.actions[i].isEther) {
+                _escrow.transferFromIssuance(transfers.actions[i].receiverAddress, issuanceId,
+                    transfers.actions[i].amount);
             } else {
-                _escrow.transferTokenFromIssuance(_transfers.actions[i].receiverAddress, issuanceId,
-                    ERC20(_transfers.actions[i].tokenAddress), _transfers.actions[i].amount);
+                _escrow.transferTokenFromIssuance(transfers.actions[i].receiverAddress, issuanceId,
+                    ERC20(transfers.actions[i].tokenAddress), transfers.actions[i].amount);
             }
         }
-        _transfers.clear();
     }
 }

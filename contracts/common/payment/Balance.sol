@@ -24,7 +24,7 @@ library Balance {
     /**
      * Serialize the balances into bytes
      */
-    function save(Balances storage self) internal view returns (bytes memory data) {
+    function save(Balances storage self) internal pure returns (bytes memory data) {
         // Size of one balance = size of address(20) + size of uint(32) = 52
         uint size = 32 + self.entries.length * 52;
         data = new bytes(size);
@@ -67,7 +67,7 @@ library Balance {
     /**
      * @dev Get the Ether balance
      */
-    function getEtherBalance(Balances storage self) internal view returns (uint amount) {
+    function getEtherBalance(Balances memory self) internal pure returns (uint amount) {
         for (uint i = 0; i < self.entries.length; i++) {
             if (self.entries[i].isEther) {
                 amount = self.entries[i].amount;
@@ -93,7 +93,7 @@ library Balance {
     /**
      * @dev Get the ERC20 token balance
      */
-    function getTokenBalance(Balances storage self, address tokenAddress) internal view returns (uint amount) {
+    function getTokenBalance(Balances memory self, address tokenAddress) internal pure returns (uint amount) {
         for (uint i = 0; i < self.entries.length; i++) {
             if (self.entries[i].tokenAddress == tokenAddress) {
                 amount = self.entries[i].amount;
