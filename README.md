@@ -14,3 +14,24 @@ To get the contract size, run the following command:
 ```
 grep \"bytecode\" build/contracts/* | awk '{print $1 " " length($3)/2}'
 ```
+## How to Deploy
+
+To deploy the NUTS platform to test net/main net, follow the steps below:
+
+1. Deploy the **UnifiedStorage** contract;
+1. Deploy the **InstrumentRegistry** contract;
+1. Deploy the **NutsToken** contract;
+1. Deploy the **NutsEscrow** contract;
+1. Deploy the **NutsPlatform** contract and pass the addresses of **UnifiedStorage, InstrumentRegistry, NutsToken, NutsEscrow** as parameters;
+1. Whitelist **NutsPlatform**'s access to **UnifiedStorage**
+```
+unifiedStorage.addWhitelistAdmin(nutsPlatform.address);
+```
+1. Whitelist **NutsPlatform**'s access to **InstrumentRegistry**
+```
+instrumentRegistry.addWhitelistAdmin(nutsPlatform.address);
+```
+1. Whitelist **NutsPlatform**'s access to **NutsEscrow**
+```
+nutsEscrow.addWhitelistAdmin(nutsPlatform.address);
+```
