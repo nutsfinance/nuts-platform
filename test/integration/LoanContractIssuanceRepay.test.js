@@ -20,6 +20,8 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, buyer2, tokenOwner]) => {
         this.nutsToken = await NutsToken.deployed();
         this.nutsEscrow = await NutsEscrow.deployed();
         this.loan = await Loan.deployed();
+        console.log("Nuts Platform address: " + this.nutsPlatform.address);
+        console.log("Loan contract address: " + this.loan.address);
 
         // Grant Nuts token to fsp and seller
         await this.nutsToken.mint(fsp, 400);
