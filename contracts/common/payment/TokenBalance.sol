@@ -1,15 +1,10 @@
 pragma solidity ^0.5.0;
 
-import "../seriality/BytesToTypes.sol";
-import "../seriality/TypesToBytes.sol";
-import "../seriality/SizeOf.sol";
-import "../util/StringUtil.sol";
-
 /**
- * @title Core library to represent the balance of an issuance.
+ * @title Core library to represent the token balance, including ETH.
  */
-library Balance {
-    struct BalanceEntry {
+library TokenBalance {
+    struct Balance {
         // Whether it's the Ether balance entry
         bool isEther;
         // Address of the ERC20 token; not applicable if isEther = true
@@ -18,46 +13,7 @@ library Balance {
     }
 
     struct Balances {
-        BalanceEntry[] entries;
-    }
-
-    /**
-     * Serialize the balances into bytes
-     */
-    function save(Balances storage self) internal view returns (bytes memory data) {
-        // Size of one balance = size of address(20) + size of uint(32) = 52
-        uint size = 32 + self.entries.length * 52;
-        data = new bytes(size);
-        uint offset = size;
-        TypesToBytes.uintToBytes(offset, self.entries.length, data);
-        offset -= 32;
-
-        for (uint i = 0; i < self.entries.length; i++) {
-            TypesToBytes.addressToBytes(offset, self.entries[i].tokenAddress, data);
-            offset -= 20;
-
-            TypesToBytes.uintToBytes(offset, self.entries[i].amount, data);
-            offset -= 32;
-        }
-    }
-
-    /**
-     * Deserialize the self from bytes
-     */
-    function load(Balances storage self, bytes memory data) internal {
-        self.entries.length = 0;
-        uint offset = data.length;
-        uint length = BytesToTypes.bytesToUint256(offset, data);
-        offset -= 32;
-        
-        for (uint i = 0; i < length; i++) {
-            address tokenAddress = BytesToTypes.bytesToAddress(offset, data);
-            offset -= 20;
-            uint amount = BytesToTypes.bytesToUint256(offset, data);
-            offset -= 32;
-
-            self.entries.push(BalanceEntry(tokenAddress == address(0x0), tokenAddress, amount));
-        }
+        Balance[] entries;
     }
 
     function clear(Balances storage self) internal {
@@ -87,7 +43,7 @@ library Balance {
             }
         }
         // Ether not in balance
-        self.entries.push(BalanceEntry(true, address(0x0), amount));
+        self.entries.push(Balance(true, address(0x0), amount));
     }
 
     /**
@@ -113,6 +69,6 @@ library Balance {
             }
         }
         // Token not in balance
-        self.entries.push(BalanceEntry(false, tokenAddress, amount));
+        self.entries.push(Balance(false, tokenAddress, amount));
     }
 }

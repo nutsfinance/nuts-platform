@@ -1,23 +1,31 @@
 pragma solidity ^0.5.0;
 
-import "./common/payment/Balance.sol";
+pragma experimental ABIEncoderV2;
+
+import "./common/payment/TokenBalance.sol";
 import "../node_modules/openzeppelin-solidity/contracts/access/roles/WhitelistAdminRole.sol";
 import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "../node_modules/openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 
+/**
+ * @title Escrow for both user and issuance.
+ * Tokens owned by issuance are alway locked in this escrow.
+ */
 contract NutsEscrow is WhitelistAdminRole {
     using SafeMath for uint256;
-    using Balance for Balance.Balances;
+    using TokenBalance for TokenBalance.Balances;
 
     event EtherDeposited(address indexed payee, uint256 amount);
     event EtherWithdrawn(address indexed payee, uint256 amount);
     event TokenDeposited(address indexed payee, address indexed token, uint256 amount);
     event TokenWithdrawn(address indexed payee, address indexed token, uint256 amount);
-    event EtherTransfered(address indexed payee, string indexed insurance_id, bool indexed fromIssuance, uint256 amount);
-
+ 
+    // The balance information about a user are kept in mapping instead of TokenBalance.Balances.
+    // This is because there is no requirement to iterate balance of a user.
+    // Might review this requirement later.
     mapping(address => uint256) private _etherBalance;                          // Balance of Ether deposited by user
     mapping(address => mapping(address => uint256)) private _tokenBalance;      // Balance of token deposited by user
-    mapping(uint256 => Balance.Balances) private _issuanceBalances;             // Balance of issuance
+    mapping(uint256 => TokenBalance.Balances) private _issuanceBalances;        // Balance of issuance
     /**
      * API for users to deposit and withdraw Ether
      */
@@ -181,11 +189,24 @@ contract NutsEscrow is WhitelistAdminRole {
     }
 
     /**
-     * @dev Return the serialized repreentation of the issuance balance
+     * @dev Get the balance information about all tokens of the issuance.
      * @param issuanceId The issuance id
-     * @return The serialized balance
+     * @return The balance of all tokens about this issuance.
      */
-    function getIssuanceBalance(uint256 issuanceId) public view onlyWhitelistAdmin returns (string memory) {
-        return string(_issuanceBalances[issuanceId].save());
+    function getIssuanceBalance(uint256 issuanceId) public view onlyWhitelistAdmin returns (TokenBalance.Balances memory) {
+        return _issuanceBalances[issuanceId];
+    }
+
+    /**
+     * @dev Transfer the token balance from one issuance to another.
+     * @param prevIssuanceId The id of the issuance from which the balance is transfereed.
+     * @param newIssuanceId The id of the issuance to which the balance is transferred.
+     */
+    function transferBalance(uint256 prevIssuanceId, uint256 newIssuanceId) public onlyWhitelistAdmin {
+        _issuanceBalances[newIssuanceId].clear();
+        for (uint i = 0; i < _issuanceBalances[prevIssuanceId].entries.length; i++) {
+            _issuanceBalances[newIssuanceId].entries.push(_issuanceBalances[prevIssuanceId].entries[i]);
+        }
+        _issuanceBalances[prevIssuanceId].clear();
     }
 }

@@ -2,7 +2,7 @@ pragma solidity ^0.5.0;
 
 import "../Instrument.sol";
 
-contract InstrumentMock is Instrument {
+contract InstrumentMock {
     function createIssuance(uint256 issuanceId, address sellerAddress, string memory sellerParameters)
         public returns (string memory updatedProperties, string memory transfers) {
         // solhint-disable-previous-line no-empty-blocks

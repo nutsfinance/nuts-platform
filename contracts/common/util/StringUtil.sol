@@ -5,6 +5,14 @@ pragma solidity ^0.5.0;
  */
 library StringUtil {
 
+    function concat(string memory a, string memory b) internal pure returns (string memory) {
+        return string(abi.encodePacked(a, b));
+    }
+
+    function concat(uint256 a, string memory b) internal pure returns (string memory) {
+        return string(abi.encodePacked(a, b));
+    }
+
     /**
      * Convert a unint data to string
      */
