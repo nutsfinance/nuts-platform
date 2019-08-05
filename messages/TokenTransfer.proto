@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+import "Solidity.proto";
+
+message Transfer {
+    bool isEther = 1;
+    .solidity.address tokenAddress = 2;
+    .solidity.address receiverAddress = 3;
+    .solidity.uint256 amount = 4;
+}
+
+message Transfers {
+    repeated Transfer transfers = 1;
+}

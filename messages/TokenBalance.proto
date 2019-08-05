@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+import "Solidity.proto";
+
+message Balance {
+    bool isEther = 1;
+    .solidity.address tokenAddress = 2;
+    .solidity.uint256 amount = 4;
+}
+
+message Balances {
+    repeated Balance balances = 1;
+}
