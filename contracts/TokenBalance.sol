@@ -1,16 +1,16 @@
 pragma solidity ^0.5.0;
-import "./runtime.sol";
 
-library ProtoBufTransfer {
+import "./ProtoBufParser.sol";
+
+library Balance {
 
   //enum definition
-  
+
 
   //struct definition
   struct Data {
     bool isEther;
     address tokenAddress;
-    address receiverAddress;
     uint256 amount;
     //non serialized field for map
 
@@ -40,21 +40,18 @@ library ProtoBufTransfer {
     while(p < offset+sz) {
       (fieldId, wireType, bytesRead) = ProtoBufParser._decode_key(p, bs);
       p += bytesRead;
-      
+
       if(fieldId == 1) {
         p += _read_isEther(p, bs, r, counters);
       }
       else if(fieldId == 2) {
         p += _read_tokenAddress(p, bs, r, counters);
       }
-      else if(fieldId == 3) {
-        p += _read_receiverAddress(p, bs, r, counters);
-      }
       else if(fieldId == 4) {
         p += _read_amount(p, bs, r, counters);
       }
     }
-    
+
     return (r, sz);
   }
 
@@ -77,16 +74,6 @@ library ProtoBufTransfer {
     } else {
       r.tokenAddress = x;
       if(counters[2] > 0) counters[2] -= 1;
-    }
-    return sz;
-  }
-  function _read_receiverAddress(uint p, bytes memory bs, Data memory r, uint[5] memory counters) internal pure returns (uint) {
-    (address x, uint sz) = ProtoBufParser._decode_sol_address(p, bs);
-    if(isNil(r)) {
-      counters[3] += 1;
-    } else {
-      r.receiverAddress = x;
-      if(counters[3] > 0) counters[3] -= 1;
     }
     return sz;
   }
@@ -118,14 +105,12 @@ library ProtoBufTransfer {
   function _encode(Data memory r, uint p, bytes memory bs)
       internal pure returns (uint) {
     uint offset = p;
-    
-    
+
+
     p += ProtoBufParser._encode_key(1, ProtoBufParser.WireType.Varint, p, bs);
     p += ProtoBufParser._encode_bool(r.isEther, p, bs);
     p += ProtoBufParser._encode_key(2, ProtoBufParser.WireType.LengthDelim, p, bs);
     p += ProtoBufParser._encode_sol_address(r.tokenAddress, p, bs);
-    p += ProtoBufParser._encode_key(3, ProtoBufParser.WireType.LengthDelim, p, bs);
-    p += ProtoBufParser._encode_sol_address(r.receiverAddress, p, bs);
     p += ProtoBufParser._encode_key(4, ProtoBufParser.WireType.LengthDelim, p, bs);
     p += ProtoBufParser._encode_sol_uint256(r.amount, p, bs);
     return p - offset;
@@ -143,10 +128,9 @@ library ProtoBufTransfer {
 
   function _estimate(Data memory /* r */) internal pure returns (uint) {
     uint e;
-    
-    
+
+
     e += 1 + 1;
-    e += 1 + 23;
     e += 1 + 23;
     e += 1 + 35;
     return e;
@@ -156,7 +140,6 @@ library ProtoBufTransfer {
   function store(Data memory input, Data storage output) internal {
     output.isEther = input.isEther;
     output.tokenAddress = input.tokenAddress;
-    output.receiverAddress = input.receiverAddress;
     output.amount = input.amount;
 
   }
@@ -174,16 +157,16 @@ library ProtoBufTransfer {
     }
   }
 }
-//library ProtoBufTransfer
+//library Balance
 
-library ProtoBufTransfers {
+library Balances {
 
   //enum definition
-  
+
 
   //struct definition
   struct Data {
-    ProtoBufTransfer.Data[] transfers;
+    Balance.Data[] balances;
     //non serialized field for map
 
   }
@@ -212,22 +195,22 @@ library ProtoBufTransfers {
     while(p < offset+sz) {
       (fieldId, wireType, bytesRead) = ProtoBufParser._decode_key(p, bs);
       p += bytesRead;
-      
+
       if(fieldId == 1) {
-        p += _read_transfers(p, bs, nil(), counters);
+        p += _read_balances(p, bs, nil(), counters);
       }
     }
-    
+
     p = offset;
-    
-    r.transfers = new ProtoBufTransfer.Data[](counters[1]);
+
+    r.balances = new Balance.Data[](counters[1]);
 
     while(p < offset+sz) {
       (fieldId, wireType, bytesRead) = ProtoBufParser._decode_key(p, bs);
       p += bytesRead;
-      
+
       if(fieldId == 1) {
-        p += _read_transfers(p, bs, r, counters);
+        p += _read_balances(p, bs, r, counters);
       }
     }
     return (r, sz);
@@ -235,23 +218,23 @@ library ProtoBufTransfers {
 
   // field readers
 
-  function _read_transfers(uint p, bytes memory bs, Data memory r, uint[2] memory counters) internal pure returns (uint) {
-    (ProtoBufTransfer.Data memory x, uint sz) = _decode_Transfer(p, bs);
+  function _read_balances(uint p, bytes memory bs, Data memory r, uint[2] memory counters) internal pure returns (uint) {
+    (Balance.Data memory x, uint sz) = _decode_Balance(p, bs);
     if(isNil(r)) {
       counters[1] += 1;
     } else {
-      r.transfers[ r.transfers.length - counters[1] ] = x;
+      r.balances[ r.balances.length - counters[1] ] = x;
       if(counters[1] > 0) counters[1] -= 1;
     }
     return sz;
   }
   // struct decoder
 
-  function _decode_Transfer(uint p, bytes memory bs)
-      internal pure returns (ProtoBufTransfer.Data memory, uint) {
+  function _decode_Balance(uint p, bytes memory bs)
+      internal pure returns (Balance.Data memory, uint) {
     (uint sz, uint bytesRead) = ProtoBufParser._decode_varint(p, bs);
     p += bytesRead;
-    (ProtoBufTransfer.Data memory r,) = ProtoBufTransfer._decode(p, bs, sz);
+    (Balance.Data memory r,) = Balance._decode(p, bs, sz);
     return (r, sz + bytesRead);
   }
 
@@ -271,10 +254,10 @@ library ProtoBufTransfers {
       internal pure returns (uint) {
     uint offset = p;
     uint i;
-    
-    for(i = 0; i < r.transfers.length; i++) {
+
+    for(i = 0; i < r.balances.length; i++) {
       p += ProtoBufParser._encode_key(1, ProtoBufParser.WireType.LengthDelim, p, bs);
-      p += ProtoBufTransfer._encode_nested(r.transfers[i], p, bs);
+      p += Balance._encode_nested(r.balances[i], p, bs);
     }
     return p - offset;
   }
@@ -292,9 +275,9 @@ library ProtoBufTransfers {
   function _estimate(Data memory r) internal pure returns (uint) {
     uint e;
     uint i;
-    
-    for(i = 0; i < r.transfers.length; i++) {
-      e+= 1 + ProtoBufParser._sz_lendelim(ProtoBufTransfer._estimate(r.transfers[i]));
+
+    for(i = 0; i < r.balances.length; i++) {
+      e+= 1 + ProtoBufParser._sz_lendelim(Balance._estimate(r.balances[i]));
     }
     return e;
   }
@@ -302,11 +285,11 @@ library ProtoBufTransfers {
     //store function
   function store(Data memory input, Data storage output) internal {
 
-    output.transfers.length = input.transfers.length;
-    for(uint i1 = 0; i1 < input.transfers.length; i1++) {
-      ProtoBufTransfer.store(input.transfers[i1], output.transfers[i1]);
+    output.balances.length = input.balances.length;
+    for(uint i1 = 0; i1 < input.balances.length; i1++) {
+      Balance.store(input.balances[i1], output.balances[i1]);
     }
-    
+
 
   }
 
@@ -323,4 +306,4 @@ library ProtoBufTransfers {
     }
   }
 }
-//library ProtoBufTransfers
+//library Balances

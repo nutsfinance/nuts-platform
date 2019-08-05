@@ -1,8 +1,10 @@
-// pragma solidity ^0.5.0;
+pragma solidity ^0.5.0;
 
-// import "../../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "../../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
 
-// import "../Instrument.sol";
+import "../Instrument.sol";
+
+contract Loan is Instrument {}
 
 // /**
 //  * The loan contract is a contract that buyer borrows in Ethers by
@@ -121,7 +123,7 @@
 //         require(issuanceId > 0, "Issuance id must be set.");
 //         require(bytes(properties).length > 0, "Properties must be set.");
 //         require(buyerAddress != address(0x0), "Buyer address must be set.");
-    
+
 //         // Load properties
 //         _properties.clear();
 //         _properties.load(bytes(properties));
@@ -194,7 +196,7 @@
 //             // If the Ether balance is equal to the borrow amount, the issuance
 //             // becomes Engagable
 //             if (etherBalance == borrowAmount) {
-        
+
 //                 // Change to Engagable state
 //                 updateIssuanceState(issuanceId, ENGAGABLE_STATE);
 
@@ -411,7 +413,7 @@
 //         require(start <= end, "start must not be greater than end");
 //         return end.sub(start).div(1 days);
 //     }
-    
+
 //     /**
 //      * @dev Calculate the interest
 //      * @param amount The amount to calculate interest
