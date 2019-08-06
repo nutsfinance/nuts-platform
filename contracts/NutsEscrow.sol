@@ -3,7 +3,8 @@ pragma solidity ^0.5.0;
 import "./TokenBalance.sol";
 import "./lib/access/WhitelistAdminRole.sol";
 import "./lib/math/SafeMath.sol";
-import "./lib/token/ERC20.sol";
+import "./lib/token/IERC20.sol";
+import "./lib/token/SafeERC20.sol";
 
 /**
  * @title Escrow for both user and issuance.
@@ -14,6 +15,7 @@ import "./lib/token/ERC20.sol";
  */
 contract NutsEscrow is WhitelistAdminRole {
     using SafeMath for uint256;
+    using SafeERC20 for IERC20;
     using Balances for Balances.Data;
 
     event EtherDeposited(address indexed payee, uint256 amount);
@@ -71,15 +73,15 @@ contract NutsEscrow is WhitelistAdminRole {
     }
 
     /***********************************************
-     *  API for users to deposit and withdraw ERC20 token
+     *  API for users to deposit and withdraw IERC20 token
      **********************************************/
 
     /**
-     * @dev Get the balance of the requested ERC20 token in the escrow
-     * @param token The ERC20 token to check balance
+     * @dev Get the balance of the requested IERC20 token in the escrow
+     * @param token The IERC20 token to check balance
      * @return The balance
      */
-    function tokenBalanceOf(ERC20 token) public view returns (uint256) {
+    function tokenBalanceOf(IERC20 token) public view returns (uint256) {
         Balances.Data storage balances = _userBalances[msg.sender];
         for (uint i = 0; i < balances.entries.length; i++) {
             if (balances.entries[i].tokenAddress == address(token)) {
@@ -90,28 +92,28 @@ contract NutsEscrow is WhitelistAdminRole {
     }
 
     /**
-     * @dev Deposit ERC20 token to the escrow
-     * @param token The ERC20 token to deposit
+     * @dev Deposit IERC20 token to the escrow
+     * @param token The IERC20 token to deposit
      * @param amount The amount to deposit
      */
-    function depositToken(ERC20 token, uint256 amount) public {
+    function depositToken(IERC20 token, uint256 amount) public {
         Balance.Data storage userBalance = getUserTokenBalance(msg.sender, address(token));
         userBalance.amount = userBalance.amount.add(amount);
-        require(token.transferFrom(msg.sender, address(this), amount), "Insufficient balance to deposit");
+        token.safeTransferFrom(msg.sender, address(this), amount);
 
         emit TokenDeposited(msg.sender, address(token), amount);
     }
 
     /**
-     * @dev Withdraw ERC20 token from the escrow
-     * @param token The ERC20 token to withdraw
+     * @dev Withdraw IERC20 token from the escrow
+     * @param token The IERC20 token to withdraw
      * @param amount The amount to withdraw
      */
-    function withdrawToken(ERC20 token, uint256 amount) public {
+    function withdrawToken(IERC20 token, uint256 amount) public {
         Balance.Data storage userBalance = getUserTokenBalance(msg.sender, address(token));
         userBalance.amount = userBalance.amount.sub(amount);
 
-        require(token.transfer(msg.sender, amount), "Insufficient balance to withdraw");
+        token.safeTransfer(msg.sender, amount);
 
         emit TokenWithdrawn(msg.sender, address(token), amount);
     }
@@ -179,12 +181,12 @@ contract NutsEscrow is WhitelistAdminRole {
     }
 
     /**
-     * @dev Get the ERC20 token balance of an issuance in the escrow
+     * @dev Get the IERC20 token balance of an issuance in the escrow
      * @param issuanceId The id of the issuance
-     * @param token The ERC20 token to check balance
-     * @return The ERC20 token balance of the issuance in the escrow
+     * @param token The IERC20 token to check balance
+     * @return The IERC20 token balance of the issuance in the escrow
      */
-    function tokenBalanceOfIssuance(uint256 issuanceId, ERC20 token) public view onlyWhitelistAdmin returns (uint256) {
+    function tokenBalanceOfIssuance(uint256 issuanceId, IERC20 token) public view onlyWhitelistAdmin returns (uint256) {
         Balances.Data storage balances = _issuanceBalances[issuanceId];
         for (uint i = 0; i < balances.entries.length; i++) {
             if (balances.entries[i].tokenAddress == address(token)) {
@@ -195,13 +197,13 @@ contract NutsEscrow is WhitelistAdminRole {
     }
 
     /**
-     * @dev Transfer ERC20 token from a seller/buyer to the issuance
+     * @dev Transfer IERC20 token from a seller/buyer to the issuance
      * @param payee The address of the seller/buyer
      * @param issuanceId The id of the issuance
-     * @param token The ERC20 token to transfer
-     * @param amount The amount of ERC20 token to transfer
+     * @param token The IERC20 token to transfer
+     * @param amount The amount of IERC20 token to transfer
      */
-    function transferTokenToIssuance(address payee, uint256 issuanceId, ERC20 token, uint256 amount) public onlyWhitelistAdmin {
+    function transferTokenToIssuance(address payee, uint256 issuanceId, IERC20 token, uint256 amount) public onlyWhitelistAdmin {
         // Subtract from the seller/buyer balance
         Balance.Data storage userBalance = getUserTokenBalance(payee, address(token));
         require(userBalance.amount >= amount, "Inssufficient token balance");
@@ -213,13 +215,13 @@ contract NutsEscrow is WhitelistAdminRole {
     }
 
     /**
-     * @dev Transfer ERC20 token from the issuance to a seller/buyer
+     * @dev Transfer IERC20 token from the issuance to a seller/buyer
      * @param payee The address of the seller/buyer
      * @param issuanceId The id of the issuance
-     * @param token The ERC20 token to transfer
-     * @param amount The amount of ERC20 token to transfer
+     * @param token The IERC20 token to transfer
+     * @param amount The amount of IERC20 token to transfer
      */
-    function transferTokenFromIssuance(address payee, uint256 issuanceId, ERC20 token, uint256 amount) public onlyWhitelistAdmin {
+    function transferTokenFromIssuance(address payee, uint256 issuanceId, IERC20 token, uint256 amount) public onlyWhitelistAdmin {
         // Subtract from the issuance balance
         Balance.Data storage issuanceBalance = getIssuanceTokenBalance(issuanceId, address(token));
         require(issuanceBalance.amount >= amount, "Insufficient token balance");

@@ -32,7 +32,8 @@ contract('NutsEscrow', (accounts) => {
     it('should deposit and withdraw ERC20 tokens', async () => {
         // console.log(escrowInstance.address);
         // console.log(tokenInstance.address);
-        await tokenInstance.mint(accounts[0], 200);
+        await tokenInstance.setMinterCap(accounts[5], 20000);
+        await tokenInstance.mint(accounts[0], 200, {from: accounts[5]});
         await tokenInstance.approve(escrowInstance.address, 150);
         await escrowInstance.depositToken(tokenInstance.address, 80);
         let balance = (await escrowInstance.tokenBalanceOf(tokenInstance.address)).toNumber();
@@ -71,7 +72,8 @@ contract('NutsEscrow', (accounts) => {
         // console.log(escrowInstance.address);
         // console.log(tokenInstance.address);
         let issuanceId = 100;
-        await tokenInstance.mint(accounts[0], 200);
+        await tokenInstance.setMinterCap(accounts[5], 2000);
+        await tokenInstance.mint(accounts[0], 200, {from: accounts[5]});
         await tokenInstance.approve(escrowInstance.address, 150);
         
         // account - 120, escrow - 80

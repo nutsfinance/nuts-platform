@@ -5,13 +5,14 @@ const NutsPlatform = artifacts.require("../../contracts/NutsPlatform.sol");
 const NutsToken = artifacts.require("../../contracts/NutsToken.sol");
 const InstrumentMock = artifacts.require("../../contracts/mock/InstrumentMock.sol");
 
-contract("NutsPlatform", ([owner, fsp, seller, buyer]) => {
+contract("NutsPlatform", ([owner, fsp, seller, buyer, minter]) => {
     before("deploy NUTS platform", async function() {
         this.nutsPlatform = await NutsPlatform.deployed();
         this.nutsToken = await NutsToken.deployed();
         // Grant Nuts token to fsp and seller
-        await this.nutsToken.mint(fsp, 200);
-        await this.nutsToken.mint(seller, 200);
+        await this.nutsToken.setMinterCap(minter, 20000);
+        await this.nutsToken.mint(fsp, 200), {from: minter};
+        await this.nutsToken.mint(seller, 200, {from: minter});
         await this.nutsToken.approve(this.nutsPlatform.address, 200, {from: fsp});
         await this.nutsToken.approve(this.nutsPlatform.address, 200, {from: seller});
         await this.nutsPlatform.addFsp(fsp, {from: owner});
