@@ -3,7 +3,7 @@ pragma solidity ^0.5.0;
 import "../node_modules/openzeppelin-solidity/contracts/access/roles/WhitelistAdminRole.sol";
 import "./InstrumentInfo.sol";
 import "./UnifiedStorage.sol";
-import "./common/util/StringUtil.sol";
+import "./lib/util/StringUtil.sol";
 
 /**
  * @title The registry of instruments.
