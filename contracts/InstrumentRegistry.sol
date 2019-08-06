@@ -1,6 +1,6 @@
 pragma solidity ^0.5.0;
 
-import "../node_modules/openzeppelin-solidity/contracts/access/roles/WhitelistAdminRole.sol";
+import "./lib/access/WhitelistAdminRole.sol";
 import "./InstrumentInfo.sol";
 import "./UnifiedStorage.sol";
 import "./lib/util/StringUtil.sol";

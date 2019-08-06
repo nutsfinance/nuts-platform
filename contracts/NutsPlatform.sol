@@ -1,14 +1,14 @@
 pragma solidity ^0.5.0;
 
-import "./UnifiedStorage.sol";
+import "./access/TimerOracleRole.sol";
+import "./access/FspRole.sol";
+import "./Instrument.sol";
 import "./InstrumentRegistry.sol";
 import "./NutsToken.sol";
 import "./NutsEscrow.sol";
-import "./Instrument.sol";
 import "./IssuanceInfo.sol";
-import "./access/TimerOracleRole.sol";
-import "./access/FspRole.sol";
 import "./TokenTransfer.sol";
+import "./UnifiedStorage.sol";
 import "./lib/util/StringUtil.sol";
 
 /**

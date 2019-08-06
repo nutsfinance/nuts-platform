@@ -1,6 +1,6 @@
 pragma solidity ^0.5.0;
 
-import "../node_modules/openzeppelin-solidity/contracts/access/roles/WhitelistAdminRole.sol";
+import "./lib/access/WhitelistAdminRole.sol";
 
 /**
  * @title A generic data storage where all data are string-to-string mappings.

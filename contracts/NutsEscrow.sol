@@ -1,9 +1,9 @@
 pragma solidity ^0.5.0;
 
 import "./TokenBalance.sol";
-import "../node_modules/openzeppelin-solidity/contracts/access/roles/WhitelistAdminRole.sol";
-import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "../node_modules/openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
+import "./lib/access/WhitelistAdminRole.sol";
+import "./lib/math/SafeMath.sol";
+import "./lib/token/ERC20.sol";
 
 /**
  * @title Escrow for both user and issuance.
