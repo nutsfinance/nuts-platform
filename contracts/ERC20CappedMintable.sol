@@ -50,6 +50,22 @@ contract ERC20CappedMintable is ERC20, Ownable, IMintable {
     }
 
     /**
+     * @dev Gets the minter cap.
+     * @param account The account of the minter to check minter cap.
+     */
+    function getMinterCap(address account) public view returns (uint256) {
+        return _minterCaps[account];
+    }
+
+    /**
+     * @dev Get the token amount minted by this minter.
+     * @param account The account of the minter to check minter cap.
+     */
+    function getMinterAmount(address account) public view returns (uint256) {
+        return _minterAmount[account];
+    }
+
+    /**
      * @dev See `ERC20Mintable.mint`.
      *
      * Requirements:

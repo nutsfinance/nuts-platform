@@ -11,7 +11,7 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, minter]) => {
         this.nutsToken = await NutsToken.deployed();
         // Grant Nuts token to fsp and seller
         await this.nutsToken.setMinterCap(minter, 20000);
-        await this.nutsToken.mint(fsp, 200), {from: minter};
+        await this.nutsToken.mint(fsp, 200, {from: minter});
         await this.nutsToken.mint(seller, 200, {from: minter});
         await this.nutsToken.approve(this.nutsPlatform.address, 200, {from: fsp});
         await this.nutsToken.approve(this.nutsPlatform.address, 200, {from: seller});
