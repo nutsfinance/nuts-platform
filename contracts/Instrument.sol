@@ -92,7 +92,7 @@ contract Instrument {
      * @param issuanceId The id of the issuance
      * @param state The current state of the issuance
      * @param properties The current properties of the issuance
-     * @param balances The current balance of the issuance
+     * @param balances The current balance of the issuance (after the withdraw)
      * @param fromAddress The address of the Ether sender
      * @param amount The amount of Ether transfered
      * @return updatedState The new state of the issuance.

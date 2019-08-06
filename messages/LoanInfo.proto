@@ -2,6 +2,10 @@ syntax = "proto3";
 
 import "SolidityTypes.proto";
 
+/**
+ * Represents the input parameters from sellers in
+ * creating new loan issuance.
+ */
 message SellerParameters {
     .solidity.address seller_address = 1;
     .solidity.uint256 start_date = 2;
@@ -15,6 +19,9 @@ message SellerParameters {
     .solidity.uint32 grace_period = 10;
 }
 
+/**
+ * Represents the properties of a loan issuance.
+ */
 message LoanProperties {
     .solidity.address collateral_token_address = 1;
     .solidity.uint256 collateral_token_amount = 2;

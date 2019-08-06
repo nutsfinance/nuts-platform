@@ -1,8 +1,8 @@
 pragma solidity ^0.5.0;
 
-import "../lib/math/SafeMath.sol";
+import "../../lib/math/SafeMath.sol";
 
-import "../Instrument.sol";
+import "../../Instrument.sol";
 
 contract Loan {
     function add(uint256 a, uint256 b) public pure returns (uint256) {

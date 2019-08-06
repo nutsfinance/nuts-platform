@@ -128,6 +128,9 @@ contract NutsPlatform is FspRole, TimerOracleRole {
     /**
      * @dev Inovked by seller/buyer to transfer Ether to the issuance. The Ether to be transferred
      *      must be deposited in the escrow already, so the transfer is done in the escrow internally.
+     * Note: Instrument.processDeposit() is invoked AFTER the deposit is done so that balances show the balance
+     * after the deposit.
+     * Note: Instrument might revert the transfer in Instrument.processDeposit() if transfer is not supported.
      * @param issuanceId The id of the issuance to which the Ether is deposited
      * @param amount The amount of Ether, in wei, to transfer to the issuance
      */
@@ -162,6 +165,9 @@ contract NutsPlatform is FspRole, TimerOracleRole {
      /**
      * @dev Inovked by seller/buyer to transfer ERC20 token to the issuance. The token to be transferred
      *      must be deposited in the escrow already, so the transfer is done in the escrow internally.
+     * Note: Instrument.processTokenDeposit() is invoked AFTER the deposit is done so that balances show the balance
+     * after the deposit.
+     * Note: Instrument might revert the transfer in Instrument.processTokenDeposit() if transfer is not supported.
      * @param issuanceId The id of the issuance to which the token is deposited
      @ @param tokenAddress The address of the token
      * @param amount The amount of token to transfer to the issuance
@@ -184,6 +190,80 @@ contract NutsPlatform is FspRole, TimerOracleRole {
         Instrument instrument = Instrument(commonProperties.instrumentAddress);
         (Instrument.IssuanceStates updatedState, string memory updatedProperties,
             string memory transfers) = instrument.processTokenDeposit(issuanceId,
+            Instrument.IssuanceStates(commonProperties.state), customPropertiesData,
+            balances, msg.sender, tokenAddress, amount);
+
+        // Update issuance properties
+        commonProperties.state = uint256(updatedState);
+        saveIssuanceData(issuanceId, commonProperties, updatedProperties);
+
+        // Post-transferss
+        processTransfers(issuanceId, transfers);
+    }
+
+    /**
+     * @dev Inovked by seller/buyer to withdraw Ether from the issuance.
+     * Note: Instrument.processWithdraw() is invoked AFTER the withdraw is done so that balances show the balance
+     * after the withdraw.
+     * Note: Instrument might revert the withdraw in Instrument.processWithdraw() if withdraw is not supported.
+     * @param issuanceId The id of the issuance to which the Ether is deposited
+     * @param amount The amount of Ether, in wei, to withdraw from the issuance
+     */
+    function withdraw(uint256 issuanceId, uint256 amount) public {
+        // Validation
+        require(issuanceId > 0, "Issuance id must be set.");
+        require(amount > 0, "Deposit amount must be larger than 0.");
+
+        // Retrieve common and custom properties
+        (CommonProperties.Data memory commonProperties,
+            string memory customPropertiesData) = loadIssuanceData(issuanceId);
+
+        // Complete Ether transfer
+        _escrow.transferFromIssuance(msg.sender, issuanceId, amount);
+
+        // Process the transfer event
+        string memory balances = _escrow.getIssuanceBalances(issuanceId);
+        Instrument instrument = Instrument(commonProperties.instrumentAddress);
+        (Instrument.IssuanceStates updatedState, string memory updatedProperties,
+            string memory transfers) = instrument.processWithdraw(issuanceId,
+            Instrument.IssuanceStates(commonProperties.state), customPropertiesData,
+            balances, msg.sender, amount);
+
+        // Update issuance properties
+        commonProperties.state = uint256(updatedState);
+        saveIssuanceData(issuanceId, commonProperties, updatedProperties);
+
+        // Post-transferss
+        processTransfers(issuanceId, transfers);
+    }
+
+     /**
+     * @dev Inovked by seller/buyer to withdraw ERC20 token from the issuance.
+     * Note: Instrument.processTokenWithdraw() is invoked AFTER the withdraw is done so that balances show the balance
+     * after the withdraw.
+     * Note: Instrument might revert the withdraw in Instrument.processTokenWithdraw() if withdraw is not supported.
+     * @param issuanceId The id of the issuance from which the token is withdrawn
+     @ @param tokenAddress The address of the token
+     * @param amount The amount of token to transfer to the issuance
+     */
+    function withdrawToken(uint256 issuanceId, address tokenAddress, uint256 amount) public {
+        // Validation
+        require(issuanceId > 0, "Issuance id must be set.");
+        require(tokenAddress != address(0x0), "Token address must be set.");
+        require(amount > 0, "Deposit amount must be larger than 0.");
+
+        // Retrieve common and custom properties
+        (CommonProperties.Data memory commonProperties,
+            string memory customPropertiesData) = loadIssuanceData(issuanceId);
+
+        // Complete the token transfer
+        _escrow.transferTokenFromIssuance(msg.sender, issuanceId, ERC20(tokenAddress), amount);
+
+        // Process the transfer event
+        string memory balances = _escrow.getIssuanceBalances(issuanceId);
+        Instrument instrument = Instrument(commonProperties.instrumentAddress);
+        (Instrument.IssuanceStates updatedState, string memory updatedProperties,
+            string memory transfers) = instrument.processTokenWithdraw(issuanceId,
             Instrument.IssuanceStates(commonProperties.state), customPropertiesData,
             balances, msg.sender, tokenAddress, amount);
 

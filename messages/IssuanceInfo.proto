@@ -2,6 +2,9 @@ syntax = "proto3";
 
 import "SolidityTypes.proto";
 
+/**
+ * Represents common properties shared by all financial instruments.
+ */
 message CommonProperties {
     .solidity.uint256 issuanceId = 1;
     .solidity.address instrumentAddress = 2;
