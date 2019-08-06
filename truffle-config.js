@@ -92,7 +92,7 @@ module.exports = {
          enabled: true,
          runs: 1000
        },
-      //  evmVersion: "byzantium"
+      evmVersion: "constantinople"
       }
     }
   }

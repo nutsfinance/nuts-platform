@@ -113,7 +113,7 @@ contract NutsPlatform is FspRole, TimerOracleRole {
             Instrument instrument) = loadIssuanceData(issuanceId);
 
         // Retrieve the issuance balance
-        string memory balances = _escrow.getIssuanceBalance(issuanceId);
+        string memory balances = _escrow.getIssuanceBalances(issuanceId);
         (Instrument.IssuanceStates updatedState, string memory updatedProperties,
             string memory transfers) = instrument.engage(issuanceId, state,
             customPropertiesData, balances, msg.sender, buyerParameters);
@@ -147,7 +147,7 @@ contract NutsPlatform is FspRole, TimerOracleRole {
         _escrow.transferToIssuance(msg.sender, issuanceId, amount);
 
         // Process the transfer event
-        string memory balances = _escrow.getIssuanceBalance(issuanceId);
+        string memory balances = _escrow.getIssuanceBalances(issuanceId);
         (Instrument.IssuanceStates updatedState, string memory updatedProperties,
             string memory transfers) = instrument.processDeposit(issuanceId, state,
             customPropertiesData, balances, msg.sender, amount);
@@ -180,7 +180,7 @@ contract NutsPlatform is FspRole, TimerOracleRole {
         _escrow.transferTokenToIssuance(msg.sender, issuanceId, ERC20(tokenAddress), amount);
 
         // Process the transfer event
-        string memory balances = _escrow.getIssuanceBalance(issuanceId);
+        string memory balances = _escrow.getIssuanceBalances(issuanceId);
         (Instrument.IssuanceStates updatedState, string memory updatedProperties,
             string memory transfers) = instrument.processTokenDeposit(issuanceId, state,
             customPropertiesData, balances, msg.sender, tokenAddress, amount);
@@ -211,7 +211,7 @@ contract NutsPlatform is FspRole, TimerOracleRole {
             Instrument instrument) = loadIssuanceData(issuanceId);
 
         // Retrieve the issuance balance
-        string memory balances = _escrow.getIssuanceBalance(issuanceId);
+        string memory balances = _escrow.getIssuanceBalances(issuanceId);
 
         (Instrument.IssuanceStates updatedState, string memory updatedProperties,
             string memory transfers) = instrument.processScheduledEvent(issuanceId, state,
@@ -239,7 +239,7 @@ contract NutsPlatform is FspRole, TimerOracleRole {
             Instrument instrument) = loadIssuanceData(issuanceId);
 
         // Retrieve the issuance balance
-        string memory balances = _escrow.getIssuanceBalance(issuanceId);
+        string memory balances = _escrow.getIssuanceBalances(issuanceId);
 
         (Instrument.IssuanceStates updatedState, string memory updatedProperties,
             string memory transfers) = instrument.processCustomEvent(issuanceId,
@@ -289,7 +289,7 @@ contract NutsPlatform is FspRole, TimerOracleRole {
      * @param transfers The transfer actions
      */
     function processTransfers(uint issuanceId, string memory transfers) private {
-      Transfers.Data memory transferData = Transfers.decode(transfers);
+      Transfers.Data memory transferData = Transfers.decode(bytes(transfers));
       // Note: The Escrow performs validation of transfer against the balance,
       // so there is no need to do the validation here.
       for (uint i = 0; i < transferData.transfers.length; i++) {

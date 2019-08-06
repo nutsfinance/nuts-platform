@@ -7,7 +7,9 @@ import "../node_modules/openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 
 /**
  * @title Escrow for both user and issuance.
- * Tokens owned by issuance are alway locked in this escrow.
+ * Note: Unlike other infrastructure components of NUTS platform,
+ * data of NutsEscrow is stored locally instead of in UnifiedStorage.
+ * Might review this decision later.
  */
 contract NutsEscrow is WhitelistAdminRole {
     using SafeMath for uint256;
@@ -21,19 +23,25 @@ contract NutsEscrow is WhitelistAdminRole {
     // The balance information about a user are kept in mapping instead of TokenBalance.Balances.
     // This is because there is no requirement to iterate balance of a user.
     // Might review this requirement later.
-    mapping(address => uint256) private _etherBalance;                          // Balance of Ether deposited by user
-    mapping(address => mapping(address => uint256)) private _tokenBalance;      // Balance of token deposited by user
-    mapping(uint256 => Balances.Data) private _issuanceBalances;                // Balance of issuance
-    /**
+    mapping(address => Balances.Data) private _userBalances;                // Balance of user
+    mapping(uint256 => Balances.Data) private _issuanceBalances;            // Balance of issuance
+
+    /**********************************************
      * API for users to deposit and withdraw Ether
-     */
+     ***********************************************/
 
     /**
      * @dev Get the current balance in the escrow
      * @return Current balance of the invoker
      */
     function balanceOf() public view returns (uint256) {
-        return _etherBalance[msg.sender];
+        Balances.Data storage balances = _userBalances[msg.sender];
+        for (uint i = 0; i < balances.balances.length; i++) {
+            if (balances.balances[i].isEther) {
+                return balances.balances[i].amount;
+            }
+        }
+        return 0;
     }
 
     /**
@@ -41,7 +49,8 @@ contract NutsEscrow is WhitelistAdminRole {
      */
     function deposit() public payable {
         uint256 amount = msg.value;
-        _etherBalance[msg.sender] = _etherBalance[msg.sender].add(amount);
+        Balance.Data storage userBalance = getUserEtherBalance(msg.sender);
+        userBalance.amount = userBalance.amount.add(amount);
 
         emit EtherDeposited(msg.sender, amount);
     }
@@ -51,17 +60,18 @@ contract NutsEscrow is WhitelistAdminRole {
      * @param amount The amount of Ethers to withdraw
      */
     function withdraw(uint256 amount) public {
-        require(_etherBalance[msg.sender] >= amount, "Insufficial ether balance to withdraw");
-        _etherBalance[msg.sender] = _etherBalance[msg.sender].sub(amount);
+        Balance.Data storage userBalance = getUserEtherBalance(msg.sender);
+        require(userBalance.amount >= amount, "Insufficial ether balance to withdraw");
+        userBalance.amount = userBalance.amount.sub(amount);
 
         msg.sender.transfer(amount);
 
         emit EtherWithdrawn(msg.sender, amount);
     }
 
-    /**
-        API for users to deposit and withdraw ERC20 token
-     */
+    /***********************************************
+     *  API for users to deposit and withdraw ERC20 token
+     **********************************************/
 
     /**
      * @dev Get the balance of the requested ERC20 token in the escrow
@@ -69,7 +79,13 @@ contract NutsEscrow is WhitelistAdminRole {
      * @return The balance
      */
     function tokenBalanceOf(ERC20 token) public view returns (uint256) {
-        return _tokenBalance[msg.sender][address(token)];
+        Balances.Data storage balances = _userBalances[msg.sender];
+        for (uint i = 0; i < balances.balances.length; i++) {
+            if (balances.balances[i].tokenAddress == address(token)) {
+                return balances.balances[i].amount;
+            }
+        }
+        return 0;
     }
 
     /**
@@ -78,7 +94,8 @@ contract NutsEscrow is WhitelistAdminRole {
      * @param amount The amount to deposit
      */
     function depositToken(ERC20 token, uint256 amount) public {
-        _tokenBalance[msg.sender][address(token)] = _tokenBalance[msg.sender][address(token)].add(amount);
+        Balance.Data storage userBalance = getUserTokenBalance(msg.sender, address(token));
+        userBalance.amount = userBalance.amount.add(amount);
         require(token.transferFrom(msg.sender, address(this), amount), "Insufficient balance to deposit");
 
         emit TokenDeposited(msg.sender, address(token), amount);
@@ -90,15 +107,26 @@ contract NutsEscrow is WhitelistAdminRole {
      * @param amount The amount to withdraw
      */
     function withdrawToken(ERC20 token, uint256 amount) public {
-        _tokenBalance[msg.sender][address(token)] = _tokenBalance[msg.sender][address(token)].sub(amount);
+        Balance.Data storage userBalance = getUserTokenBalance(msg.sender, address(token));
+        userBalance.amount = userBalance.amount.sub(amount);
+
         require(token.transfer(msg.sender, amount), "Insufficient balance to withdraw");
 
         emit TokenWithdrawn(msg.sender, address(token), amount);
     }
 
     /**
-        API used by NUTS platform to hold tokens for issuance
+     * @dev Get the balance information about all tokens of the user.
+     * @param payee The user address
+     * @return The balance of all tokens about this user.
      */
+    function getUserBalances(address payee) public view onlyWhitelistAdmin returns (string memory) {
+        return string(_userBalances[payee].encode());
+    }
+
+    /***********************************************
+     *  API used by NUTS platform to hold tokens for issuance
+     **********************************************/
 
     /**
      * @dev Get the Ether balance of an issuance in the escrow
@@ -106,8 +134,13 @@ contract NutsEscrow is WhitelistAdminRole {
      * @return The Ether balance of the issuance in the escrow
      */
     function balanceOfIssuance(uint256 issuanceId) public view onlyWhitelistAdmin returns (uint256) {
-        // return _issuanceEther[issuanceId];
-        return getEtherBalance(issuanceId).amount;
+        Balances.Data storage balances = _issuanceBalances[issuanceId];
+        for (uint i = 0; i < balances.balances.length; i++) {
+            if (balances.balances[i].isEther) {
+                return balances.balances[i].amount;
+            }
+        }
+        return 0;
     }
 
     /**
@@ -118,12 +151,13 @@ contract NutsEscrow is WhitelistAdminRole {
      */
     function transferToIssuance(address payee, uint256 issuanceId, uint256 amount) public onlyWhitelistAdmin {
         // Subtract from the seller/buyer balance
-        require(_etherBalance[payee] >= amount, "Insufficient Ether balance");
-        _etherBalance[payee] = _etherBalance[payee].sub(amount);
+        Balance.Data storage userBalance = getUserEtherBalance(payee);
+        require(userBalance.amount >= amount, "Insufficient Ether balance");
+        userBalance.amount = userBalance.amount.sub(amount);
 
         // Increase to the issuance balance
-        Balance.Data storage balance = getEtherBalance(issuanceId);
-        balance.amount = balance.amount.add(amount);
+        Balance.Data storage issuanceBalance = getIssuanceEtherBalance(issuanceId);
+        issuanceBalance.amount = issuanceBalance.amount.add(amount);
     }
 
     /**
@@ -134,12 +168,13 @@ contract NutsEscrow is WhitelistAdminRole {
      */
     function transferFromIssuance(address payee, uint256 issuanceId, uint256 amount) public onlyWhitelistAdmin {
         // Subtract from the issuance balance
-        Balance.Data storage balance = getEtherBalance(issuanceId);
-        require(balance.amount >= amount, "Insufficient Ether balance");
-        balance.amount = balance.amount.sub(amount);
+        Balance.Data storage issuanceBalance = getIssuanceEtherBalance(issuanceId);
+        require(issuanceBalance.amount >= amount, "Insufficient Ether balance");
+        issuanceBalance.amount = issuanceBalance.amount.sub(amount);
 
         // Increase to the seller/buyer balance
-        _etherBalance[payee] = _etherBalance[payee].add(amount);
+        Balance.Data storage userBalance = getUserEtherBalance(payee);
+        userBalance.amount = userBalance.amount.add(amount);
     }
 
     /**
@@ -149,7 +184,13 @@ contract NutsEscrow is WhitelistAdminRole {
      * @return The ERC20 token balance of the issuance in the escrow
      */
     function tokenBalanceOfIssuance(uint256 issuanceId, ERC20 token) public view onlyWhitelistAdmin returns (uint256) {
-        return getTokenBalance(issuanceId, address(token)).amount;
+        Balances.Data storage balances = _issuanceBalances[issuanceId];
+        for (uint i = 0; i < balances.balances.length; i++) {
+            if (balances.balances[i].tokenAddress == address(token)) {
+                return balances.balances[i].amount;
+            }
+        }
+        return 0;
     }
 
     /**
@@ -161,12 +202,13 @@ contract NutsEscrow is WhitelistAdminRole {
      */
     function transferTokenToIssuance(address payee, uint256 issuanceId, ERC20 token, uint256 amount) public onlyWhitelistAdmin {
         // Subtract from the seller/buyer balance
-        require(_tokenBalance[payee][address(token)] >= amount, "Inssufficient token balance");
-        _tokenBalance[payee][address(token)] = _tokenBalance[payee][address(token)].sub(amount);
+        Balance.Data storage userBalance = getUserTokenBalance(payee, address(token));
+        require(userBalance.amount >= amount, "Inssufficient token balance");
+        userBalance.amount = userBalance.amount.sub(amount);
 
         // Increase to the issuance balance
-        Balance.Data storage balance = getTokenBalance(issuanceId, address(token));
-        balance.amount = balance.amount.add(amount);
+        Balance.Data storage issuanceBalance = getIssuanceTokenBalance(issuanceId, address(token));
+        issuanceBalance.amount = issuanceBalance.amount.add(amount);
     }
 
     /**
@@ -178,12 +220,13 @@ contract NutsEscrow is WhitelistAdminRole {
      */
     function transferTokenFromIssuance(address payee, uint256 issuanceId, ERC20 token, uint256 amount) public onlyWhitelistAdmin {
         // Subtract from the issuance balance
-        Balance.Data storage balance = getTokenBalance(issuanceId, address(token));
-        require(balance.amount >= amount, "Insufficient token balance");
-        balance.amount = balance.amount.sub(amount);
+        Balance.Data storage issuanceBalance = getIssuanceTokenBalance(issuanceId, address(token));
+        require(issuanceBalance.amount >= amount, "Insufficient token balance");
+        issuanceBalance.amount = issuanceBalance.amount.sub(amount);
 
         // Increase to the seller/buyer balance
-        _tokenBalance[payee][address(token)] = _tokenBalance[payee][address(token)].add(amount);
+        Balance.Data storage userBalance = getUserTokenBalance(payee, address(token));
+        userBalance.amount = userBalance.amount.add(amount);
     }
 
     /**
@@ -191,7 +234,7 @@ contract NutsEscrow is WhitelistAdminRole {
      * @param issuanceId The issuance id
      * @return The balance of all tokens about this issuance.
      */
-    function getIssuanceBalance(uint256 issuanceId) public view onlyWhitelistAdmin returns (string memory) {
+    function getIssuanceBalances(uint256 issuanceId) public view onlyWhitelistAdmin returns (string memory) {
         return string(_issuanceBalances[issuanceId].encode());
     }
 
@@ -208,7 +251,32 @@ contract NutsEscrow is WhitelistAdminRole {
         _issuanceBalances[prevIssuanceId].balances.length = 0;
     }
 
-    function getEtherBalance(uint256 issuanceId) private returns (Balance.Data storage) {
+    function getUserEtherBalance(address payee) private returns (Balance.Data storage) {
+      Balances.Data storage balances = _userBalances[payee];
+      for (uint i = 0; i < balances.balances.length; i++) {
+        if (balances.balances[i].isEther) {
+          return balances.balances[i];
+        }
+      }
+      Balance.Data memory newBalance = Balance.Data(true, address(0x0), 0);
+      balances.balances.push(newBalance);
+      return balances.balances[balances.balances.length - 1];
+    }
+
+    function getUserTokenBalance(address payee, address tokenAddress) private returns (Balance.Data storage balance) {
+      Balances.Data storage balances = _userBalances[payee];
+      for (uint i = 0; i < balances.balances.length; i++) {
+        if (balances.balances[i].tokenAddress == tokenAddress) {
+          balance = balances.balances[i];
+          return balance;
+        }
+      }
+      Balance.Data memory newBalance = Balance.Data(false, tokenAddress, 0);
+      balances.balances.push(newBalance);
+      return balances.balances[balances.balances.length - 1];
+    }
+
+    function getIssuanceEtherBalance(uint256 issuanceId) private returns (Balance.Data storage) {
       Balances.Data storage balances = _issuanceBalances[issuanceId];
       for (uint i = 0; i < balances.balances.length; i++) {
         if (balances.balances[i].isEther) {
@@ -217,10 +285,10 @@ contract NutsEscrow is WhitelistAdminRole {
       }
       Balance.Data memory newBalance = Balance.Data(true, address(0x0), 0);
       balances.balances.push(newBalance);
-      return newBalance;
+      return balances.balances[balances.balances.length - 1];
     }
 
-    function getTokenBalance(uint256 issuanceId, address tokenAddress) private returns (Balance.Data storage balance) {
+    function getIssuanceTokenBalance(uint256 issuanceId, address tokenAddress) private returns (Balance.Data storage balance) {
       Balances.Data storage balances = _issuanceBalances[issuanceId];
       for (uint i = 0; i < balances.balances.length; i++) {
         if (balances.balances[i].tokenAddress == tokenAddress) {
@@ -228,7 +296,8 @@ contract NutsEscrow is WhitelistAdminRole {
           return balance;
         }
       }
-      balance = Balance.Data(true, tokenAddress, 0);
-      balances.balances.push(balance);
+      Balance.Data memory newBalance = Balance.Data(false, tokenAddress, 0);
+      balances.balances.push(newBalance);
+      return balances.balances[balances.balances.length - 1];
     }
 }

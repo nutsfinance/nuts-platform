@@ -9,5 +9,5 @@ message Balance {
 }
 
 message Balances {
-    repeated Balance balances = 1;
+    repeated Balance transfer = 1;
 }

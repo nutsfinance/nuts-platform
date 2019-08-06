@@ -4,7 +4,7 @@ const assert = require('assert');
 
 let escrowInstance;
 let tokenInstance;
-const DIFF = 1000000000000000000;       // The transaction cost should be less then 1 Ether
+const DIFF = 100000000000000000;       // The transaction cost should be less then 0.1 Ether
 
 contract('NutsEscrow', (accounts) => {
     beforeEach(async () => {
@@ -12,14 +12,17 @@ contract('NutsEscrow', (accounts) => {
         escrowInstance = await NutsEscrow.new();
     }),
     it('should deposit and withdraw Ethers', async () => {
-        // console.log(escrowInstance.address);
-        // console.log(tokenInstance.address);
         let prev = parseInt(await web3.eth.getBalance(accounts[0]));
-        let amount = 10000000000000000000;
+        let amount = 10000000000000000000;  // 10 ETH
         await escrowInstance.deposit({from: accounts[0], value: amount});
         let current = parseInt(await web3.eth.getBalance(accounts[0]));
+        // Verify wallet balance after deposit
         assert.ok(prev - amount - current > 0 && prev - amount - current < DIFF, "The Ether is not transfered");
-        let balance = web3.utils.fromWei(await escrowInstance.balanceOf(), "Ether");
+
+        // Verify escrow balance
+        let escrowBalance = await escrowInstance.balanceOf({from: accounts[0]});
+        console.log(escrowBalance);
+        let balance = web3.utils.fromWei(escrowBalance, "Ether");
         assert.equal(balance, 10);
 
         await escrowInstance.withdraw(new web3.utils.BN('10000000000000000000'));

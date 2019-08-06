@@ -4,7 +4,11 @@ import "../../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
 
 import "../Instrument.sol";
 
-contract Loan is Instrument {}
+contract Loan {
+    function add(uint256 a, uint256 b) public pure returns (uint256) {
+        return a + b;
+    }
+}
 
 // /**
 //  * The loan contract is a contract that buyer borrows in Ethers by
