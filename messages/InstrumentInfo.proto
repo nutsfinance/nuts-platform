@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-import "Solidity.proto";
+import "SolidityTypes.proto";
 
 message InstrumentStatus {
     .solidity.address instrumentAddress = 1;

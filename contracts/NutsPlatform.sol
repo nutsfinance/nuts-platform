@@ -93,7 +93,7 @@ contract NutsPlatform is FspRole, TimerOracleRole {
         saveIssuanceData(issuanceId, updatedState, updatedProperties);
 
         // Post-transferss
-        // processTransfers(issuanceId, transfers);
+        processTransfers(issuanceId, transfers);
 
         emit IssuanceCreated(issuanceId, instrumentAddress, msg.sender);
         return issuanceId;
@@ -292,13 +292,13 @@ contract NutsPlatform is FspRole, TimerOracleRole {
       Transfers.Data memory transferData = Transfers.decode(bytes(transfers));
       // Note: The Escrow performs validation of transfer against the balance,
       // so there is no need to do the validation here.
-      for (uint i = 0; i < transferData.transfers.length; i++) {
-          if (transferData.transfers[i].isEther) {
-              _escrow.transferFromIssuance(transferData.transfers[i].receiverAddress, issuanceId,
-                  transferData.transfers[i].amount);
+      for (uint i = 0; i < transferData.actions.length; i++) {
+          if (transferData.actions[i].isEther) {
+              _escrow.transferFromIssuance(transferData.actions[i].receiverAddress, issuanceId,
+                  transferData.actions[i].amount);
           } else {
-              _escrow.transferTokenFromIssuance(transferData.transfers[i].receiverAddress, issuanceId,
-                  ERC20(transferData.transfers[i].tokenAddress), transferData.transfers[i].amount);
+              _escrow.transferTokenFromIssuance(transferData.actions[i].receiverAddress, issuanceId,
+                  ERC20(transferData.actions[i].tokenAddress), transferData.actions[i].amount);
           }
       }
     }

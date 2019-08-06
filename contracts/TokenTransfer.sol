@@ -1,10 +1,7 @@
 pragma solidity ^0.5.0;
-
-import "./ProtoBufParser.sol";
+import "./ProtoBufRuntime.sol";
 
 library Transfer {
-
-  //enum definition
 
 
   //struct definition
@@ -13,8 +10,6 @@ library Transfer {
     address tokenAddress;
     address receiverAddress;
     uint256 amount;
-    //non serialized field for map
-
   }
 
   // Decoder section
@@ -35,34 +30,33 @@ library Transfer {
     Data memory r;
     uint[5] memory counters;
     uint fieldId;
-    ProtoBufParser.WireType wireType;
+    ProtoBufRuntime.WireType wireType;
     uint bytesRead;
     uint offset = p;
-    while(p < offset+sz) {
-      (fieldId, wireType, bytesRead) = ProtoBufParser._decode_key(p, bs);
-      p += bytesRead;
-
+    uint pointer = p;
+    while(pointer < offset+sz) {
+      (fieldId, wireType, bytesRead) = ProtoBufRuntime._decode_key(pointer, bs);
+      pointer += bytesRead;
       if(fieldId == 1) {
-        p += _read_isEther(p, bs, r, counters);
+        pointer += _read_isEther(pointer, bs, r, counters);
       }
       else if(fieldId == 2) {
-        p += _read_tokenAddress(p, bs, r, counters);
+        pointer += _read_tokenAddress(pointer, bs, r, counters);
       }
       else if(fieldId == 3) {
-        p += _read_receiverAddress(p, bs, r, counters);
+        pointer += _read_receiverAddress(pointer, bs, r, counters);
       }
       else if(fieldId == 4) {
-        p += _read_amount(p, bs, r, counters);
+        pointer += _read_amount(pointer, bs, r, counters);
       }
     }
-
     return (r, sz);
   }
 
   // field readers
 
   function _read_isEther(uint p, bytes memory bs, Data memory r, uint[5] memory counters) internal pure returns (uint) {
-    (bool x, uint sz) = ProtoBufParser._decode_bool(p, bs);
+    (bool x, uint sz) = ProtoBufRuntime._decode_bool(p, bs);
     if(isNil(r)) {
       counters[1] += 1;
     } else {
@@ -72,7 +66,7 @@ library Transfer {
     return sz;
   }
   function _read_tokenAddress(uint p, bytes memory bs, Data memory r, uint[5] memory counters) internal pure returns (uint) {
-    (address x, uint sz) = ProtoBufParser._decode_sol_address(p, bs);
+    (address x, uint sz) = ProtoBufRuntime._decode_sol_address(p, bs);
     if(isNil(r)) {
       counters[2] += 1;
     } else {
@@ -82,7 +76,7 @@ library Transfer {
     return sz;
   }
   function _read_receiverAddress(uint p, bytes memory bs, Data memory r, uint[5] memory counters) internal pure returns (uint) {
-    (address x, uint sz) = ProtoBufParser._decode_sol_address(p, bs);
+    (address x, uint sz) = ProtoBufRuntime._decode_sol_address(p, bs);
     if(isNil(r)) {
       counters[3] += 1;
     } else {
@@ -92,7 +86,7 @@ library Transfer {
     return sz;
   }
   function _read_amount(uint p, bytes memory bs, Data memory r, uint[5] memory counters) internal pure returns (uint) {
-    (uint256 x, uint sz) = ProtoBufParser._decode_sol_uint256(p, bs);
+    (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
     if(isNil(r)) {
       counters[4] += 1;
     } else {
@@ -119,33 +113,31 @@ library Transfer {
   function _encode(Data memory r, uint p, bytes memory bs)
       internal pure returns (uint) {
     uint offset = p;
-
-
-    p += ProtoBufParser._encode_key(1, ProtoBufParser.WireType.Varint, p, bs);
-    p += ProtoBufParser._encode_bool(r.isEther, p, bs);
-    p += ProtoBufParser._encode_key(2, ProtoBufParser.WireType.LengthDelim, p, bs);
-    p += ProtoBufParser._encode_sol_address(r.tokenAddress, p, bs);
-    p += ProtoBufParser._encode_key(3, ProtoBufParser.WireType.LengthDelim, p, bs);
-    p += ProtoBufParser._encode_sol_address(r.receiverAddress, p, bs);
-    p += ProtoBufParser._encode_key(4, ProtoBufParser.WireType.LengthDelim, p, bs);
-    p += ProtoBufParser._encode_sol_uint256(r.amount, p, bs);
-    return p - offset;
+    uint pointer = p;
+    pointer += ProtoBufRuntime._encode_key(1, ProtoBufRuntime.WireType.Varint, pointer, bs);
+    pointer += ProtoBufRuntime._encode_bool(r.isEther, pointer, bs);
+    pointer += ProtoBufRuntime._encode_key(2, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
+    pointer += ProtoBufRuntime._encode_sol_address(r.tokenAddress, pointer, bs);
+    pointer += ProtoBufRuntime._encode_key(3, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
+    pointer += ProtoBufRuntime._encode_sol_address(r.receiverAddress, pointer, bs);
+    pointer += ProtoBufRuntime._encode_key(4, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
+    pointer += ProtoBufRuntime._encode_sol_uint256(r.amount, pointer, bs);
+    return pointer - offset;
   }
   // nested encoder
 
   function _encode_nested(Data memory r, uint p, bytes memory bs)
       internal pure returns (uint) {
     uint offset = p;
-    p += ProtoBufParser._encode_varint(_estimate(r), p, bs);
-    p += _encode(r, p, bs);
-    return p - offset;
+    uint pointer = p;
+    pointer += ProtoBufRuntime._encode_varint(_estimate(r), pointer, bs);
+    pointer += _encode(r, pointer, bs);
+    return pointer - offset;
   }
   // estimator
 
   function _estimate(Data memory /* r */) internal pure returns (uint) {
     uint e;
-
-
     e += 1 + 1;
     e += 1 + 23;
     e += 1 + 23;
@@ -161,6 +153,7 @@ library Transfer {
     output.amount = input.amount;
 
   }
+
 
 
   //utility functions
@@ -179,14 +172,10 @@ library Transfer {
 
 library Transfers {
 
-  //enum definition
-
 
   //struct definition
   struct Data {
-    Transfer.Data[] transfers;
-    //non serialized field for map
-
+    Transfer.Data[] actions;
   }
 
   // Decoder section
@@ -207,28 +196,25 @@ library Transfers {
     Data memory r;
     uint[2] memory counters;
     uint fieldId;
-    ProtoBufParser.WireType wireType;
+    ProtoBufRuntime.WireType wireType;
     uint bytesRead;
     uint offset = p;
-    while(p < offset+sz) {
-      (fieldId, wireType, bytesRead) = ProtoBufParser._decode_key(p, bs);
-      p += bytesRead;
-
+    uint pointer = p;
+    while(pointer < offset+sz) {
+      (fieldId, wireType, bytesRead) = ProtoBufRuntime._decode_key(pointer, bs);
+      pointer += bytesRead;
       if(fieldId == 1) {
-        p += _read_transfers(p, bs, nil(), counters);
+        pointer += _read_actions(pointer, bs, nil(), counters);
       }
     }
+    pointer = offset;
+    r.actions = new Transfer.Data[](counters[1]);
 
-    p = offset;
-
-    r.transfers = new Transfer.Data[](counters[1]);
-
-    while(p < offset+sz) {
-      (fieldId, wireType, bytesRead) = ProtoBufParser._decode_key(p, bs);
-      p += bytesRead;
-
+    while(pointer < offset+sz) {
+      (fieldId, wireType, bytesRead) = ProtoBufRuntime._decode_key(pointer, bs);
+      pointer += bytesRead;
       if(fieldId == 1) {
-        p += _read_transfers(p, bs, r, counters);
+        pointer += _read_actions(pointer, bs, r, counters);
       }
     }
     return (r, sz);
@@ -236,12 +222,12 @@ library Transfers {
 
   // field readers
 
-  function _read_transfers(uint p, bytes memory bs, Data memory r, uint[2] memory counters) internal pure returns (uint) {
+  function _read_actions(uint p, bytes memory bs, Data memory r, uint[2] memory counters) internal pure returns (uint) {
     (Transfer.Data memory x, uint sz) = _decode_Transfer(p, bs);
     if(isNil(r)) {
       counters[1] += 1;
     } else {
-      r.transfers[ r.transfers.length - counters[1] ] = x;
+      r.actions[r.actions.length - counters[1]] = x;
       if(counters[1] > 0) counters[1] -= 1;
     }
     return sz;
@@ -250,9 +236,10 @@ library Transfers {
 
   function _decode_Transfer(uint p, bytes memory bs)
       internal pure returns (Transfer.Data memory, uint) {
-    (uint sz, uint bytesRead) = ProtoBufParser._decode_varint(p, bs);
-    p += bytesRead;
-    (Transfer.Data memory r,) = Transfer._decode(p, bs, sz);
+    uint pointer = p;
+    (uint sz, uint bytesRead) = ProtoBufRuntime._decode_varint(pointer, bs);
+    pointer += bytesRead;
+    (Transfer.Data memory r,) = Transfer._decode(pointer, bs, sz);
     return (r, sz + bytesRead);
   }
 
@@ -271,31 +258,29 @@ library Transfers {
   function _encode(Data memory r, uint p, bytes memory bs)
       internal pure returns (uint) {
     uint offset = p;
-    uint i;
-
-    for(i = 0; i < r.transfers.length; i++) {
-      p += ProtoBufParser._encode_key(1, ProtoBufParser.WireType.LengthDelim, p, bs);
-      p += Transfer._encode_nested(r.transfers[i], p, bs);
+    uint pointer = p;uint i;
+    for(i = 0; i < r.actions.length; i++) {
+      pointer += ProtoBufRuntime._encode_key(1, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
+      pointer += Transfer._encode_nested(r.actions[i], pointer, bs);
     }
-    return p - offset;
+    return pointer - offset;
   }
   // nested encoder
 
   function _encode_nested(Data memory r, uint p, bytes memory bs)
       internal pure returns (uint) {
     uint offset = p;
-    p += ProtoBufParser._encode_varint(_estimate(r), p, bs);
-    p += _encode(r, p, bs);
-    return p - offset;
+    uint pointer = p;
+    pointer += ProtoBufRuntime._encode_varint(_estimate(r), pointer, bs);
+    pointer += _encode(r, pointer, bs);
+    return pointer - offset;
   }
   // estimator
 
   function _estimate(Data memory r) internal pure returns (uint) {
-    uint e;
-    uint i;
-
-    for(i = 0; i < r.transfers.length; i++) {
-      e+= 1 + ProtoBufParser._sz_lendelim(Transfer._estimate(r.transfers[i]));
+    uint e;uint i;
+    for(i = 0; i < r.actions.length; i++) {
+      e += 1 + ProtoBufRuntime._sz_lendelim(Transfer._estimate(r.actions[i]));
     }
     return e;
   }
@@ -303,12 +288,23 @@ library Transfers {
     //store function
   function store(Data memory input, Data storage output) internal {
 
-    output.transfers.length = input.transfers.length;
-    for(uint i1 = 0; i1 < input.transfers.length; i1++) {
-      Transfer.store(input.transfers[i1], output.transfers[i1]);
+    output.actions.length = input.actions.length;
+    for(uint i1 = 0; i1 < input.actions.length; i1++) {
+      Transfer.store(input.actions[i1], output.actions[i1]);
     }
+    
+
+  }
 
 
+  //array helpers for actions
+  function add_actions(Data memory self, Transfer.Data memory value) internal pure {
+    Transfer.Data[] memory tmp = new Transfer.Data[](self.actions.length + 1);
+    for (uint i = 0; i < self.actions.length; i++) {
+      tmp[i] = self.actions[i];
+    }
+    tmp[self.actions.length] = value;
+    self.actions = tmp;
   }
 
 

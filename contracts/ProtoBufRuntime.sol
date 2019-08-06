@@ -1,9 +1,6 @@
 pragma solidity ^0.5.0;
 
-/**
- * @title Core library in protocol buffer binary encoding/decoding.
- */
-library ProtoBufParser {
+library ProtoBufRuntime {
 
   enum WireType { Varint, Fixed64, LengthDelim, StartGroup, EndGroup, Fixed32 }
   uint constant WORD_LENGTH = 32;
@@ -136,7 +133,7 @@ library ProtoBufParser {
 
   function _decode_key(uint p, bytes memory bs) internal pure returns (uint, WireType, uint) {
     (uint x, uint n) = _decode_varint(p, bs);
-    WireType typeId  = WireType(x & 7);
+    WireType typeId = WireType(x & 7);
     uint fieldId = x / 8;
     return (fieldId, typeId, n);
   }

@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-import "Solidity.proto";
+import "SolidityTypes.proto";
 
 message Balance {
     bool isEther = 1;
@@ -9,5 +9,5 @@ message Balance {
 }
 
 message Balances {
-    repeated Balance transfer = 1;
+    repeated Balance entries = 1;
 }

@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-import "Solidity.proto";
+import "SolidityTypes.proto";
 
 message Transfer {
     bool isEther = 1;
@@ -10,5 +10,5 @@ message Transfer {
 }
 
 message Transfers {
-    repeated Transfer transfers = 1;
+    repeated Transfer actions = 1;
 }

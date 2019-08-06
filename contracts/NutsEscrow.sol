@@ -37,9 +37,9 @@ contract NutsEscrow is WhitelistAdminRole {
      */
     function balanceOf() public view returns (uint256) {
         Balances.Data storage balances = _userBalances[msg.sender];
-        for (uint i = 0; i < balances.balances.length; i++) {
-            if (balances.balances[i].isEther) {
-                return balances.balances[i].amount;
+        for (uint i = 0; i < balances.entries.length; i++) {
+            if (balances.entries[i].isEther) {
+                return balances.entries[i].amount;
             }
         }
         return 0;
@@ -81,9 +81,9 @@ contract NutsEscrow is WhitelistAdminRole {
      */
     function tokenBalanceOf(ERC20 token) public view returns (uint256) {
         Balances.Data storage balances = _userBalances[msg.sender];
-        for (uint i = 0; i < balances.balances.length; i++) {
-            if (balances.balances[i].tokenAddress == address(token)) {
-                return balances.balances[i].amount;
+        for (uint i = 0; i < balances.entries.length; i++) {
+            if (balances.entries[i].tokenAddress == address(token)) {
+                return balances.entries[i].amount;
             }
         }
         return 0;
@@ -136,9 +136,9 @@ contract NutsEscrow is WhitelistAdminRole {
      */
     function balanceOfIssuance(uint256 issuanceId) public view onlyWhitelistAdmin returns (uint256) {
         Balances.Data storage balances = _issuanceBalances[issuanceId];
-        for (uint i = 0; i < balances.balances.length; i++) {
-            if (balances.balances[i].isEther) {
-                return balances.balances[i].amount;
+        for (uint i = 0; i < balances.entries.length; i++) {
+            if (balances.entries[i].isEther) {
+                return balances.entries[i].amount;
             }
         }
         return 0;
@@ -186,9 +186,9 @@ contract NutsEscrow is WhitelistAdminRole {
      */
     function tokenBalanceOfIssuance(uint256 issuanceId, ERC20 token) public view onlyWhitelistAdmin returns (uint256) {
         Balances.Data storage balances = _issuanceBalances[issuanceId];
-        for (uint i = 0; i < balances.balances.length; i++) {
-            if (balances.balances[i].tokenAddress == address(token)) {
-                return balances.balances[i].amount;
+        for (uint i = 0; i < balances.entries.length; i++) {
+            if (balances.entries[i].tokenAddress == address(token)) {
+                return balances.entries[i].amount;
             }
         }
         return 0;
@@ -239,66 +239,53 @@ contract NutsEscrow is WhitelistAdminRole {
         return string(_issuanceBalances[issuanceId].encode());
     }
 
-    /**
-     * @dev Transfer the token balance from one issuance to another.
-     * @param prevIssuanceId The id of the issuance from which the balance is transfereed.
-     * @param newIssuanceId The id of the issuance to which the balance is transferred.
-     */
-    function transferBalance(uint256 prevIssuanceId, uint256 newIssuanceId) public onlyWhitelistAdmin {
-        _issuanceBalances[newIssuanceId].balances.length = 0;
-        for (uint i = 0; i < _issuanceBalances[prevIssuanceId].balances.length; i++) {
-            _issuanceBalances[newIssuanceId].balances.push(_issuanceBalances[prevIssuanceId].balances[i]);
-        }
-        _issuanceBalances[prevIssuanceId].balances.length = 0;
-    }
-
     function getUserEtherBalance(address payee) private returns (Balance.Data storage) {
       Balances.Data storage balances = _userBalances[payee];
-      for (uint i = 0; i < balances.balances.length; i++) {
-        if (balances.balances[i].isEther) {
-          return balances.balances[i];
+      for (uint i = 0; i < balances.entries.length; i++) {
+        if (balances.entries[i].isEther) {
+          return balances.entries[i];
         }
       }
       Balance.Data memory newBalance = Balance.Data(true, address(0x0), 0);
-      balances.balances.push(newBalance);
-      return balances.balances[balances.balances.length - 1];
+      balances.entries.push(newBalance);
+      return balances.entries[balances.entries.length - 1];
     }
 
     function getUserTokenBalance(address payee, address tokenAddress) private returns (Balance.Data storage balance) {
       Balances.Data storage balances = _userBalances[payee];
-      for (uint i = 0; i < balances.balances.length; i++) {
-        if (balances.balances[i].tokenAddress == tokenAddress) {
-          balance = balances.balances[i];
+      for (uint i = 0; i < balances.entries.length; i++) {
+        if (balances.entries[i].tokenAddress == tokenAddress) {
+          balance = balances.entries[i];
           return balance;
         }
       }
       Balance.Data memory newBalance = Balance.Data(false, tokenAddress, 0);
-      balances.balances.push(newBalance);
-      return balances.balances[balances.balances.length - 1];
+      balances.entries.push(newBalance);
+      return balances.entries[balances.entries.length - 1];
     }
 
     function getIssuanceEtherBalance(uint256 issuanceId) private returns (Balance.Data storage) {
       Balances.Data storage balances = _issuanceBalances[issuanceId];
-      for (uint i = 0; i < balances.balances.length; i++) {
-        if (balances.balances[i].isEther) {
-          return balances.balances[i];
+      for (uint i = 0; i < balances.entries.length; i++) {
+        if (balances.entries[i].isEther) {
+          return balances.entries[i];
         }
       }
       Balance.Data memory newBalance = Balance.Data(true, address(0x0), 0);
-      balances.balances.push(newBalance);
-      return balances.balances[balances.balances.length - 1];
+      balances.entries.push(newBalance);
+      return balances.entries[balances.entries.length - 1];
     }
 
     function getIssuanceTokenBalance(uint256 issuanceId, address tokenAddress) private returns (Balance.Data storage balance) {
       Balances.Data storage balances = _issuanceBalances[issuanceId];
-      for (uint i = 0; i < balances.balances.length; i++) {
-        if (balances.balances[i].tokenAddress == tokenAddress) {
-          balance = balances.balances[i];
+      for (uint i = 0; i < balances.entries.length; i++) {
+        if (balances.entries[i].tokenAddress == tokenAddress) {
+          balance = balances.entries[i];
           return balance;
         }
       }
       Balance.Data memory newBalance = Balance.Data(false, tokenAddress, 0);
-      balances.balances.push(newBalance);
-      return balances.balances[balances.balances.length - 1];
+      balances.entries.push(newBalance);
+      return balances.entries[balances.entries.length - 1];
     }
 }

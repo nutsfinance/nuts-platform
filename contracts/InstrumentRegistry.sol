@@ -44,12 +44,7 @@ contract InstrumentRegistry is WhitelistAdminRole {
             fspStatus.instrumentAddresses[0] = instrumentAddress;
         } else {
             fspStatus = FSPStatus.decode(fspStatusData);
-            address[] memory newInstrumentAddresses = new address[](fspStatus.instrumentAddresses.length + 1);
-            for (uint i = 0; i < fspStatus.instrumentAddresses.length; i++) {
-                newInstrumentAddresses[i] = fspStatus.instrumentAddresses[i];
-            }
-            newInstrumentAddresses[fspStatus.instrumentAddresses.length] = instrumentAddress;
-            fspStatus.instrumentAddresses = newInstrumentAddresses;
+            fspStatus.addInstrumentAddresses(instrumentAddress);
         }
         _storage.setValue(getFSPStatusKey(fspAddress), string(fspStatus.encode()));
     }
