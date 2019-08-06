@@ -93,7 +93,7 @@ contract NutsPlatform is FspRole, TimerOracleRole {
         saveIssuanceData(issuanceId, updatedState, updatedProperties);
 
         // Post-transferss
-        processTransfers(issuanceId, transfers);
+        // processTransfers(issuanceId, transfers);
 
         emit IssuanceCreated(issuanceId, instrumentAddress, msg.sender);
         return issuanceId;

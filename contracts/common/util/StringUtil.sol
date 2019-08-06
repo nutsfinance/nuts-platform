@@ -13,6 +13,10 @@ library StringUtil {
         return string(abi.encodePacked(a, b));
     }
 
+    function concat(address a, string memory b) internal pure returns (string memory) {
+        return string(abi.encodePacked(a, b));
+    }
+
     /**
      * Convert a unint data to string
      */

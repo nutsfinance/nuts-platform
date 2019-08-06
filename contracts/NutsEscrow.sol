@@ -8,7 +8,8 @@ import "../node_modules/openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 /**
  * @title Escrow for both user and issuance.
  * Note: Unlike other infrastructure components of NUTS platform,
- * data of NutsEscrow is stored locally instead of in UnifiedStorage.
+ * data of NutsEscrow is stored locally instead of in UnifiedStorage
+ * as we don't expect NutsEscrow to upgrade.
  * Might review this decision later.
  */
 contract NutsEscrow is WhitelistAdminRole {

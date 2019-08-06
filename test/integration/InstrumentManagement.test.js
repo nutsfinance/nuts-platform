@@ -21,10 +21,14 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer]) => {
     }),
     context("Instrument management", async function() {
         it("should register instrument and create issuance", async function() {
-            await this.nutsPlatform.createInstrument(this.mockInstrument.address, 0, {from: fsp});
-            const { logs } = await this.nutsPlatform.createIssuance(this.mockInstrument.address, 
+            let tx = await this.nutsPlatform.createInstrument(this.mockInstrument.address, 0, {from: fsp});
+            expectEvent.inLogs(tx.logs, 'InstrumentCreated', {
+                instrumentAddress: this.mockInstrument.address,
+                fspAddress: fsp
+            });
+            tx = await this.nutsPlatform.createIssuance(this.mockInstrument.address, 
                 "", {from: seller});
-            expectEvent.inLogs(logs, 'IssuanceCreated', {
+            expectEvent.inLogs(tx.logs, 'IssuanceCreated', {
                 issuanceId: new BN(1),
                 instrumentAddress: this.mockInstrument.address,
                 sellerAddress: seller
