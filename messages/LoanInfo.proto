@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+import "SolidityTypes.proto";
+
+message SellerParameters {
+    .solidity.address seller_address = 1;
+    .solidity.uint256 start_date = 2;
+    .solidity.address collateral_token_address = 3;
+    .solidity.uint256 collateral_token_amount = 4;
+    .solidity.uint256 borrow_amount = 5;
+    .solidity.uint32 collateral_due_days = 6;
+    .solidity.uint32 engagement_due_days = 7;
+    .solidity.uint32 tenor_days = 8;
+    .solidity.uint32 interest_rate = 9;
+    .solidity.uint32 grace_period = 10;
+}
+
+message LoanProperties {
+    .solidity.address collateral_token_address = 1;
+    .solidity.uint256 collateral_token_amount = 2;
+    .solidity.uint256 borrow_amount = 3;
+    .solidity.uint32 deposit_due_days = 4;
+    .solidity.uint32 collateral_due_days = 5;
+    .solidity.uint32 engagement_due_days = 6;
+    .solidity.uint32 tenor_days = 7;
+    .solidity.uint32 interest_rate = 8;
+    .solidity.uint32 grace_period = 9;
+    bool collateral_complete = 10;
+}
