@@ -3,15 +3,24 @@ pragma solidity ^0.5.0;
 import "../../lib/math/SafeMath.sol";
 import "../../lib/util/StringUtil.sol";
 import "../../Instrument.sol";
+import "../../IMintable.sol";
 import "./StakeMiningInfo.sol";
+import "./PriceOracleInterface.sol";
 
 /**
  * @title A stake mining financial instrument.
  */
 contract StakeMining is Instrument {
+
+    event Minted(uint256 indexed issuanceId, address indexed staker, uint256 amount);
+
     using SafeMath for uint256;
+    using StakeMiningParameters for StakeMiningParameters.Data;
+    using StakeMiningProperties for StakeMiningProperties.Data;
 
     uint constant PERCENTAGE_DECIMALS = 4;
+    uint constant INDEX_NOT_FOUND = uint(-1);
+    uint constant ETH_IN_WEI = 10**18;
 
     /**
      * @dev Create a new stake mininig issuance
@@ -31,83 +40,52 @@ contract StakeMining is Instrument {
         StakeMiningParameters.Data memory parameters = StakeMiningParameters.decode(bytes(sellerParameters));
 
         // Validate parameters
-        require(parameters.collateralTokenAddress != address(0x0), "Collateral token address must not be 0");
-        require(parameters.collateralTokenAmount > 0, "Collateral amount must be greater than 0");
-        require(parameters.borrowAmount > 0, "Borrow amount must be greater than 0");
-        require(parameters.depositDueDays > 0, "Deposit due days must be greater than 0");
-        require(parameters.collateralDueDays > 0, "Collateral due days must be greater than 0");
-        require(parameters.engagementDueDays > 0, "Engagement due days must be greater than 0");
-        // TODO Min and max for tenor days?
-        require(parameters.tenorDays > 0, "Tenor days must be greater than 0");
-        require(parameters.tenorDays > parameters.collateralDueDays, "Tenor days must be greater than collateral due days");
-        // TODO Interest rate range?
-        // Grace period is set to > 0 so that loan_expired always happens before grace_period_expired
-        require(parameters.gracePeriod > 0, "Grace period must be greater than 0");
+        require(parameters.supportedTokens.length > 0 || parameters.supportETH, "Must support at least one token");
+        require(parameters.mintedToken != address(0x0), "Minted token address must not be 0");
+        require(parameters.startBlock > 0, "Start block must be greater than 0");
+        require(parameters.endBlock > parameters.startBlock, "End block must be greater than start block");
+        require(parameters.tokensPerBlock > 0, "Tokens per block must be greater than 0");
+        require(parameters.priceOracle != address(0x0), "Price oracle address must be provided");
 
         // Set propertiess
-        LoanProperties.Data memory loanProperties = LoanProperties.Data({
-          sellerAddress: sellerAddress,
-          startDate: now,
-          collateralTokenAddress: parameters.collateralTokenAddress,
-          collateralTokenAmount: parameters.collateralTokenAmount,
-          borrowAmount: parameters.borrowAmount,
-          collateralDueDays: parameters.collateralDueDays,
-          engagementDueDays: parameters.engagementDueDays,
-          tenorDays: parameters.tenorDays,
-          interestRate: parameters.interestRate,
-          gracePeriod: parameters.gracePeriod,
-          collateralComplete: false,
-          interest: 0,
-          buyerAddress: address(0x0),
-          engageDate: 0
+        // Array size is one more than the supported tokens in order to hold ETH.
+        StakeMiningProperties.Data memory stakeMiningProperties = StakeMiningProperties.Data({
+          tokens: new address[](parameters.supportedTokens.length + 1),
+          tokenSupported: new bool[](parameters.supportedTokens.length + 1),
+          mintedToken: parameters.mintedToken,
+          startBlock: parameters.startBlock,
+          endBlock: parameters.endBlock,
+          tokensPerBlock: parameters.tokensPerBlock,
+          minimumDeposit: parameters.minimumDeposit,
+          teamWallet: parameters.teamWallet,
+          teamPercentage: parameters.teamPercentage,
+          priceOracle: parameters.priceOracle,
+          tokenTotals: new uint256[](parameters.supportedTokens.length + 1),
+          tokenBalances: new TokenBalances.Data[](parameters.supportedTokens.length + 1)
         });
 
-        // Set expiration for deposit
-        emit EventScheduled(issuanceId, now + parameters.depositDueDays * 1 days, DEPOSIT_EXPIRED_EVENT, "");
+        // Initialize arrays
+        // First element is ETH
+        stakeMiningProperties.tokenSupported[0] = parameters.supportETH;
+        for (uint i = 0; i < parameters.supportedTokens.length; i++) {
+          stakeMiningProperties.tokens[i + 1] = parameters.supportedTokens[i];
+          stakeMiningProperties.tokenSupported[i + 1] = true;
+        }
 
         // Change to Initiated state
         updatedState = IssuanceStates.Initiated;
 
         // Persist the propertiess
-        updatedProperties = string(loanProperties.encode());
+        updatedProperties = string(stakeMiningProperties.encode());
     }
 
     /**
-     * @dev A buyer engages to the issuance
-     * @param issuanceId The id of the issuance
-     * @param properties The current properties of the issuance
-     * @param buyerAddress The address of the buyer who engages in the issuance
-     * @return updatedProperties The updated issuance properties
-     * @return transfers The transfers to perform after the invocation
+     * @dev Engage is not supported in stake mining.
      */
-    function engage(uint256 issuanceId, IssuanceStates state, string memory properties,
-        string memory /** balances */, address buyerAddress, string memory /**buyerParameters */)
-        public returns (IssuanceStates updatedState, string memory updatedProperties, string memory /** transfers */) {
-        // Parameter validation
-        require(issuanceId > 0, "Issuance id must be set.");
-        require(bytes(properties).length > 0, "Properties must be set.");
-        require(buyerAddress != address(0x0), "Buyer address must be set.");
-        require(state == IssuanceStates.Engageable, "Issuance must be in the Engagable state");
-
-        // Load properties
-        LoanProperties.Data memory loanProperties = LoanProperties.decode(bytes(properties));
-        loanProperties.buyerAddress = buyerAddress;
-        loanProperties.engageDate = now;
-
-        // Set expiration for collateral
-        emit EventScheduled(issuanceId, now + loanProperties.collateralDueDays * 1 days, COLLATERAL_EXPIRED_EVENT, "");
-
-        // Set expiration for loan
-        emit EventScheduled(issuanceId, now + loanProperties.tenorDays * 1 days, LOAN_EXPIRED_EVENT, "");
-
-        // Set expiration for grace period
-        emit EventScheduled(issuanceId, now + (loanProperties.tenorDays + loanProperties.gracePeriod) * 1 days, GRACE_PERIOD_EXPIRED_EVENT, "");
-
-        // Change to Active state
-        updatedState = IssuanceStates.Active;
-
-        // Persist the propertiess
-        updatedProperties = string(loanProperties.encode());
+    function engage(uint256 /** issuanceId */, IssuanceStates /** state */, string memory /** properties */,
+        string memory /** balances */, address /** buyerAddress */ , string memory /**buyerParameters */)
+        public returns (IssuanceStates /** updatedState */ , string memory /** updatedProperties */, string memory /** transfers */) {
+        revert('Engagement is not supported in stake mining.');
     }
 
     /**
@@ -130,54 +108,12 @@ contract StakeMining is Instrument {
         require(amount > 0, "Transfer amount must be greater than 0.");
 
         // Load properties
-        LoanProperties.Data memory loanProperties = LoanProperties.decode(bytes(properties));
+        StakeMiningProperties.Data memory stakeMiningProperties = StakeMiningProperties.decode(bytes(properties));
+        // Validate whether ETH is supported
+        require(stakeMiningProperties.tokenSupported[0], "ETH is not supported");
 
-        // Load balance
-        Balances.Data memory loanBalances = Balances.decode(bytes(balances));
-
-        uint etherBalance = getEtherBalance(loanBalances);
-        updatedState = state;       // In case there is no state change.
-        if (loanProperties.sellerAddress == fromAddress) {
-            // The Ether transfer is from seller
-            // This must be deposit
-            // Deposit check:
-            // 1. Issuance must in Initiated state
-            // 2. The Ether balance must not exceed the borrow amount
-            require(state == IssuanceStates.Initiated, "Ether deposit must happen in Initiated state.");
-            require(etherBalance <= loanProperties.borrowAmount, "The Ether deposit cannot exceed the borrow amount.");
-
-            // If the Ether balance is equal to the borrow amount, the issuance
-            // becomes Engagable
-            if (etherBalance == loanProperties.borrowAmount) {
-
-                // Change to Engagable state
-                updatedState = IssuanceStates.Engageable;
-
-                // Schedule engagement expiration
-                emit EventScheduled(issuanceId, now + loanProperties.engagementDueDays * 1 days, ENGAGEMENT_EXPIRED_EVENT, "");
-            }
-
-        } else if (loanProperties.buyerAddress == fromAddress) {
-            // This Ether transfer is from buyer
-            // This must be repay
-            // Repay check:
-            // 1. Issuance must in Active state
-            // 2. Collateral deposit must be done
-            // 3. The Ether balance must not exceed the borrow amount
-            require(state == IssuanceStates.Active, "Ether repay must happen in Active state.");
-            require(!loanProperties.collateralComplete, "Ether repay must happen after collateral is deposited.");
-            require(etherBalance <= loanProperties.borrowAmount, "The Ether repay cannot exceed the borrow amount.");
-
-            // Calculate interest
-            loanProperties.interest = loanProperties.interest.add(interestByAmountAndDays(amount, loanProperties.interestRate,
-                daysBetween(loanProperties.engageDate, now)));
-
-        } else {
-            revert("Unknown transferer. Only seller or buyer can send Ether to issuance.");
-        }
-
-        // Persist the propertiess
-        updatedProperties = string(loanProperties.encode());
+        // Mint tokens should take place before transfer
+        mintTokens(issuanceId, stakeMiningProperties);
     }
 
     /**
@@ -202,45 +138,13 @@ contract StakeMining is Instrument {
         require(amount > 0, "Transfer amount must be greater than 0.");
 
         // Load properties
-        LoanProperties.Data memory loanProperties = LoanProperties.decode(bytes(properties));
+        StakeMiningProperties.Data memory stakeMiningProperties = StakeMiningProperties.decode(bytes(properties));
+        // Validate whether the token is supported
+        uint256 tokenIndex = getTokenIndex(stakeMiningProperties.tokens, tokenAddress);
+        require(tokenIndex != INDEX_NOT_FOUND, "ERC20 token is not supported.");
 
-        // Load balance
-        Balances.Data memory loanBalances = Balances.decode(bytes(balances));
-
-        // Note: Token transfer only occurs in colleteral deposit!
-        // Collateral check
-        // 1. The issuance is in active state
-        // 2. The token is from the buyer
-        // 3. The token is the collateral token
-        // 4. The balance collateral balance is equals to the collateral amount
-        // 5. The issuance is still collecting collateral(collateral_complete = false)
-        require(state == IssuanceStates.Active, "Collateral deposit must occur in Active state.");
-        require(loanProperties.buyerAddress == fromAddress,
-            "Collateral deposit must come from the buyer.");
-        require(!loanProperties.collateralComplete,
-            "Collateral deposit must occur during the collateral depoit phase.");
-        uint tokenBalance = getTokenBalance(loanBalances, tokenAddress);
-        require(tokenBalance <= loanProperties.collateralTokenAmount,
-            "Collateral token balance must not exceed the collateral amount");
-
-        updatedState = state;       // In case there is no state change.
-        if (tokenBalance == loanProperties.collateralTokenAmount) {
-            // Mark the collateral collection as complete
-            loanProperties.collateralComplete = true;
-            // Transfer Ether to buyer
-
-            Transfers.Data memory tokenTransfers = Transfers.Data(new Transfer.Data[](1));
-            tokenTransfers.actions[0] = Transfer.Data({
-                isEther: true,
-                tokenAddress: address(0x0),
-                receiverAddress: loanProperties.buyerAddress,
-                amount: loanProperties.borrowAmount
-            });
-            transfers = string(tokenTransfers.encode());
-        }
-
-        // Persist the propertiess
-        updatedProperties = string(loanProperties.encode());
+        // Mint tokens should take place before transfer
+        mintTokens(issuanceId, stakeMiningProperties);
     }
 
     /**
@@ -259,81 +163,6 @@ contract StakeMining is Instrument {
         require(issuanceId > 0, "Issuance id must be set.");
         require(bytes(properties).length > 0, "Properties must be set.");
         require(bytes(eventName).length > 0, "Event name must be set.");
-
-        // Load properties
-        LoanProperties.Data memory loanProperties = LoanProperties.decode(bytes(properties));
-
-        // Load balance
-        Balances.Data memory loanBalances = Balances.decode(bytes(balances));
-
-        updatedState = state;       // In case there is no state change.
-        // Check for deposit_expired event
-        if (StringUtil.equals(eventName, DEPOSIT_EXPIRED_EVENT)) {
-            // Check whether the issuance is still in Initiated state
-            if (state == IssuanceStates.Initiated) {
-                // Change to Unfunded state
-                updatedState = IssuanceStates.Unfunded;
-                // If there is any deposit, return to the seller
-                Transfers.Data memory tokenTransfers = release(loanProperties, loanBalances);
-                transfers = string(tokenTransfers.encode());
-            }
-        } else if (StringUtil.equals(eventName, ENGAGEMENT_EXPIRED_EVENT)) {
-            // Check whether the issuance is still in Engagable state
-            if (state == IssuanceStates.Engageable) {
-                // Change to Complete Not Engaged state
-                updatedState = IssuanceStates.CompleteNotEngaged;
-                // Return the Ether depost to seller
-                Transfers.Data memory tokenTransfers = release(loanProperties, loanBalances);
-                transfers = string(tokenTransfers.encode());
-            }
-        } else if (StringUtil.equals(eventName, COLLATERAL_EXPIRED_EVENT)) {
-            // Check whether the issuance is still in Active state
-            // and the collateral is not complete
-            if (state == IssuanceStates.Active
-                    && !loanProperties.collateralComplete) {
-                // Change to Delinquent state
-                updatedState = IssuanceStates.Delinquent;
-                // Return Ethers to seller and collateral to buyer
-                Transfers.Data memory tokenTransfers = release(loanProperties, loanBalances);
-                transfers = string(tokenTransfers.encode());
-            }
-        } else if (StringUtil.equals(eventName, LOAN_EXPIRED_EVENT)) {
-            // If the issuance is already Delinquent(colleteral due), no action
-            // Loan due check
-            // 1. The issuance is in Active state
-            // 2. The Ether balance is equal to the borrow amount
-            if (state == IssuanceStates.Active
-                && getEtherBalance(loanBalances) == loanProperties.borrowAmount) {
-                // Change to Complete Engaged state
-                updatedState = IssuanceStates.CompleteEngaged;
-                // Also add transfers
-                Transfers.Data memory tokenTransfers = release(loanProperties, loanBalances);
-                transfers = string(tokenTransfers.encode());
-            }
-        } else if (StringUtil.equals(eventName, GRACE_PERIOD_EXPIRED_EVENT)) {
-            // If the issuance is already Delinquent or COMPLETE_ENGAGED_STATE, no action
-            if (state == IssuanceStates.Active) {
-                // Default check
-                // 1. The Ether balance is smaller than the borrow amount
-                if (getEtherBalance(loanBalances) < loanProperties.borrowAmount) {
-                    // Change to Delinquent state
-                    updatedState = IssuanceStates.Delinquent;
-                    Transfers.Data memory tokenTransfers = defaultRelease(loanProperties, loanBalances);
-                    transfers = string(tokenTransfers.encode());
-                } else {
-                    // Change to Complete Engaged state
-                    updatedState = IssuanceStates.CompleteEngaged;
-                    // Also add transfers
-                    Transfers.Data memory tokenTransfers = release(loanProperties, loanBalances);
-                    transfers = string(tokenTransfers.encode());
-                }
-            }
-        } else {
-            revert("Unknown event");
-        }
-
-        // Persist the propertiess
-        updatedProperties = string(loanProperties.encode());
     }
 
     /**
@@ -361,5 +190,111 @@ contract StakeMining is Instrument {
         string memory /** balances */, string memory /** eventName */, string memory /** eventPayload */)
         public returns (IssuanceStates /** updatedState */, string memory /** updatedProperties */, string memory /** transfers */) {
         revert("Custom evnet unsupported.");
+    }
+
+    /**
+     * @dev Get the index of the token
+     */
+    function getTokenIndex(address[] memory tokens, address tokenAddress) private pure returns (uint256) {
+      for (uint256 i = 0; i < tokens.length; i++) {
+        if (tokens[i] == tokenAddress) {
+          return i;
+        }
+      }
+
+      return INDEX_NOT_FOUND;
+    }
+
+    function getAccountIndex(address[] memory accounts, address accountAddress) private pure returns (uint256) {
+      for (uint256 j = 0; j < accounts.length; j++) {
+        if (accounts[j] == accountAddress) {
+          return j;
+        }
+      }
+
+      return INDEX_NOT_FOUND;
+    }
+
+    /**
+     * @dev Core function: This is the function to do the actual token minting.
+     */
+    function mintTokens(uint256 issuanceId, StakeMiningProperties.Data memory properties) private pure {
+      // Check whether it's in the stake mininig period
+      if (block.number < properties.startBlock || block.number > properties.endBlock) {
+        return;
+      }
+
+      // Check whether the pool is empty
+      bool poolEmpty = true;
+      for (uint i = 0; i < properties.tokens.length; i++) {
+        // If a token is supported and its total balance is non-zero, the pool is non empty
+        if (properties.tokenSupported[i] && properties.tokenTotals[i] > 0) {
+          poolEmpty = false;
+          break;
+        }
+      }
+      if (poolEmpty) {
+        properties.lastMintBlock = block.number;
+        return;
+      }
+
+      // Get the price for each token
+      uint256[] memory tokenPrices = new uint256[](properties.tokens.length);
+      // Price is in ETH, and
+      tokenPrices[0] = 1;
+      for (uint i = 1; i < properties.tokens.length; i++) {
+        if (!properties.tokenSupported[i]) {
+          continue;
+        }
+        tokenPrices[i] = PriceOracleInterface(properties.priceOracle).getTokenPrice(properties.tokens[i]);
+      }
+
+      // Calculate the amount of tokens to mint since last mint
+      uint256 mintedAmount = (block.number - properties.lastMintBlock).mul(properties.tokensPerBlock);
+      // If team wallet address is specified, mint to the team wallet address
+      // with proportion specified in team percentage.
+      if (properties.teamWallet != address(0x0)) {
+          uint256 teamMintedAmount = mintedAmount.mul(properties.teamPercentage).div(PERCENTAGE_DECIMALS);
+          IMintable(properties.mintedToken).mint(properties.teamWallet, teamMintedAmount);
+          mintedAmount = mintedAmount.sub(teamMintedAmount);
+
+          emit Minted(issuanceId, properties.teamWallet, teamMintedAmount);
+      }
+
+      // Calculate the total mining pool value
+      uint256 totalBalance = 0;
+      for (uint i = 0; i < properties.tokens.length; i++) {
+        if (!properties.tokenSupported[i]) {
+          continue;
+        }
+        totalBalance = totalBalance.add(properties.tokenTotals[i].mul(tokenPrices[i]));
+      }
+      // Calculate the total balance of each accounts
+      uint256[] memory accountTotals = new uint256[](properties.accounts.length);
+      for (uint i = 0; i < properties.tokens.length; i++) {
+        // No need to check supported tokens
+        if (!properties.tokenSupported[i]) {
+          continue;
+        }
+        for (uint j = 0; j < properties.accounts.length; j++) {
+          // Skip tokens with zero balance
+          if (properties.accountBalances[i].balances[j] == 0) {
+            continue;
+          }
+          accountTotals[j] = accountTotals[j].add(properties.accountBalances[i].balances[j].mul(tokenPrices[i]));
+        }
+      }
+      // Mint for each account
+      for (uint j = 0; j < properties.accounts.length; j++) {
+        // Skip accounts with zero total balance
+        if (accountTotals[j] == 0) {
+          continue;
+        }
+        uint256 stakerMintedAmount = mintedAmount.mul(accountTotals[j]).div(totalBalance);
+        IMintable(properties.mintedToken).mint(properties.accounts[j], stakerMintedAmount);
+
+        emit Minted(issuanceId, properties.accounts[j], stakerMintedAmount);
+      }
+      properties.lastMintBlock = block.number;
     }
 }

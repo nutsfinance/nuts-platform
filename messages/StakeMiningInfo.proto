@@ -27,14 +27,11 @@ message StakeMiningProperties {
     .solidity.address teamPercentage = 9;
     .solidity.address priceOracle = 10;
     repeated .solidity.uint256 tokenTotals = 11;
-    repeated TokenBalances tokenBalances = 12;
+    repeated .solidity.address accounts = 12;
+    repeated TokenBalances accountBalances = 13;
+    .solidity.uint256 lastMintBlock = 14;
 }
 
 message TokenBalances {
-    repeated TokenBalance balances = 1;
-}
-
-message TokenBalance {
-    .solidity.address account = 1;
-    .solidity.uint256 balance = 2;
+    repeated .solidity.uint256 balances = 1;
 }
