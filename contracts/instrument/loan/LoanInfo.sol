@@ -6,16 +6,15 @@ library SellerParameters {
 
   //struct definition
   struct Data {
-    address seller_address;
-    uint256 start_date;
-    address collateral_token_address;
-    uint256 collateral_token_amount;
-    uint256 borrow_amount;
-    uint32 collateral_due_days;
-    uint32 engagement_due_days;
-    uint32 tenor_days;
-    uint32 interest_rate;
-    uint32 grace_period;
+    address collateralTokenAddress;
+    uint256 collateralTokenAmount;
+    uint256 borrowAmount;
+    uint32 depositDueDays;
+    uint32 collateralDueDays;
+    uint32 engagementDueDays;
+    uint32 tenorDays;
+    uint32 interestRate;
+    uint32 gracePeriod;
   }
 
   // Decoder section
@@ -34,7 +33,7 @@ library SellerParameters {
   function _decode(uint p, bytes memory bs, uint sz)
       internal pure returns (Data memory, uint) {
     Data memory r;
-    uint[11] memory counters;
+    uint[10] memory counters;
     uint fieldId;
     ProtoBufRuntime.WireType wireType;
     uint bytesRead;
@@ -44,34 +43,31 @@ library SellerParameters {
       (fieldId, wireType, bytesRead) = ProtoBufRuntime._decode_key(pointer, bs);
       pointer += bytesRead;
       if(fieldId == 1) {
-        pointer += _read_seller_address(pointer, bs, r, counters);
+        pointer += _read_collateralTokenAddress(pointer, bs, r, counters);
       }
       else if(fieldId == 2) {
-        pointer += _read_start_date(pointer, bs, r, counters);
+        pointer += _read_collateralTokenAmount(pointer, bs, r, counters);
       }
       else if(fieldId == 3) {
-        pointer += _read_collateral_token_address(pointer, bs, r, counters);
+        pointer += _read_borrowAmount(pointer, bs, r, counters);
       }
       else if(fieldId == 4) {
-        pointer += _read_collateral_token_amount(pointer, bs, r, counters);
+        pointer += _read_depositDueDays(pointer, bs, r, counters);
       }
       else if(fieldId == 5) {
-        pointer += _read_borrow_amount(pointer, bs, r, counters);
+        pointer += _read_collateralDueDays(pointer, bs, r, counters);
       }
       else if(fieldId == 6) {
-        pointer += _read_collateral_due_days(pointer, bs, r, counters);
+        pointer += _read_engagementDueDays(pointer, bs, r, counters);
       }
       else if(fieldId == 7) {
-        pointer += _read_engagement_due_days(pointer, bs, r, counters);
+        pointer += _read_tenorDays(pointer, bs, r, counters);
       }
       else if(fieldId == 8) {
-        pointer += _read_tenor_days(pointer, bs, r, counters);
+        pointer += _read_interestRate(pointer, bs, r, counters);
       }
       else if(fieldId == 9) {
-        pointer += _read_interest_rate(pointer, bs, r, counters);
-      }
-      else if(fieldId == 10) {
-        pointer += _read_grace_period(pointer, bs, r, counters);
+        pointer += _read_gracePeriod(pointer, bs, r, counters);
       }
     }
     return (r, sz);
@@ -79,112 +75,101 @@ library SellerParameters {
 
   // field readers
 
-  function _read_seller_address(uint p, bytes memory bs, Data memory r, uint[11] memory counters) internal pure returns (uint) {
+  function _read_collateralTokenAddress(uint p, bytes memory bs, Data memory r, uint[10] memory counters) internal pure returns (uint) {
     (address x, uint sz) = ProtoBufRuntime._decode_sol_address(p, bs);
     if(isNil(r)) {
       counters[1] += 1;
     } else {
-      r.seller_address = x;
+      r.collateralTokenAddress = x;
       if(counters[1] > 0) counters[1] -= 1;
     }
     return sz;
   }
 
-  function _read_start_date(uint p, bytes memory bs, Data memory r, uint[11] memory counters) internal pure returns (uint) {
+  function _read_collateralTokenAmount(uint p, bytes memory bs, Data memory r, uint[10] memory counters) internal pure returns (uint) {
     (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
     if(isNil(r)) {
       counters[2] += 1;
     } else {
-      r.start_date = x;
+      r.collateralTokenAmount = x;
       if(counters[2] > 0) counters[2] -= 1;
     }
     return sz;
   }
 
-  function _read_collateral_token_address(uint p, bytes memory bs, Data memory r, uint[11] memory counters) internal pure returns (uint) {
-    (address x, uint sz) = ProtoBufRuntime._decode_sol_address(p, bs);
+  function _read_borrowAmount(uint p, bytes memory bs, Data memory r, uint[10] memory counters) internal pure returns (uint) {
+    (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
     if(isNil(r)) {
       counters[3] += 1;
     } else {
-      r.collateral_token_address = x;
+      r.borrowAmount = x;
       if(counters[3] > 0) counters[3] -= 1;
     }
     return sz;
   }
 
-  function _read_collateral_token_amount(uint p, bytes memory bs, Data memory r, uint[11] memory counters) internal pure returns (uint) {
-    (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
+  function _read_depositDueDays(uint p, bytes memory bs, Data memory r, uint[10] memory counters) internal pure returns (uint) {
+    (uint32 x, uint sz) = ProtoBufRuntime._decode_sol_uint32(p, bs);
     if(isNil(r)) {
       counters[4] += 1;
     } else {
-      r.collateral_token_amount = x;
+      r.depositDueDays = x;
       if(counters[4] > 0) counters[4] -= 1;
     }
     return sz;
   }
 
-  function _read_borrow_amount(uint p, bytes memory bs, Data memory r, uint[11] memory counters) internal pure returns (uint) {
-    (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
+  function _read_collateralDueDays(uint p, bytes memory bs, Data memory r, uint[10] memory counters) internal pure returns (uint) {
+    (uint32 x, uint sz) = ProtoBufRuntime._decode_sol_uint32(p, bs);
     if(isNil(r)) {
       counters[5] += 1;
     } else {
-      r.borrow_amount = x;
+      r.collateralDueDays = x;
       if(counters[5] > 0) counters[5] -= 1;
     }
     return sz;
   }
 
-  function _read_collateral_due_days(uint p, bytes memory bs, Data memory r, uint[11] memory counters) internal pure returns (uint) {
+  function _read_engagementDueDays(uint p, bytes memory bs, Data memory r, uint[10] memory counters) internal pure returns (uint) {
     (uint32 x, uint sz) = ProtoBufRuntime._decode_sol_uint32(p, bs);
     if(isNil(r)) {
       counters[6] += 1;
     } else {
-      r.collateral_due_days = x;
+      r.engagementDueDays = x;
       if(counters[6] > 0) counters[6] -= 1;
     }
     return sz;
   }
 
-  function _read_engagement_due_days(uint p, bytes memory bs, Data memory r, uint[11] memory counters) internal pure returns (uint) {
+  function _read_tenorDays(uint p, bytes memory bs, Data memory r, uint[10] memory counters) internal pure returns (uint) {
     (uint32 x, uint sz) = ProtoBufRuntime._decode_sol_uint32(p, bs);
     if(isNil(r)) {
       counters[7] += 1;
     } else {
-      r.engagement_due_days = x;
+      r.tenorDays = x;
       if(counters[7] > 0) counters[7] -= 1;
     }
     return sz;
   }
 
-  function _read_tenor_days(uint p, bytes memory bs, Data memory r, uint[11] memory counters) internal pure returns (uint) {
+  function _read_interestRate(uint p, bytes memory bs, Data memory r, uint[10] memory counters) internal pure returns (uint) {
     (uint32 x, uint sz) = ProtoBufRuntime._decode_sol_uint32(p, bs);
     if(isNil(r)) {
       counters[8] += 1;
     } else {
-      r.tenor_days = x;
+      r.interestRate = x;
       if(counters[8] > 0) counters[8] -= 1;
     }
     return sz;
   }
 
-  function _read_interest_rate(uint p, bytes memory bs, Data memory r, uint[11] memory counters) internal pure returns (uint) {
+  function _read_gracePeriod(uint p, bytes memory bs, Data memory r, uint[10] memory counters) internal pure returns (uint) {
     (uint32 x, uint sz) = ProtoBufRuntime._decode_sol_uint32(p, bs);
     if(isNil(r)) {
       counters[9] += 1;
     } else {
-      r.interest_rate = x;
+      r.gracePeriod = x;
       if(counters[9] > 0) counters[9] -= 1;
-    }
-    return sz;
-  }
-
-  function _read_grace_period(uint p, bytes memory bs, Data memory r, uint[11] memory counters) internal pure returns (uint) {
-    (uint32 x, uint sz) = ProtoBufRuntime._decode_sol_uint32(p, bs);
-    if(isNil(r)) {
-      counters[10] += 1;
-    } else {
-      r.grace_period = x;
-      if(counters[10] > 0) counters[10] -= 1;
     }
     return sz;
   }
@@ -207,25 +192,23 @@ library SellerParameters {
     uint offset = p;
     uint pointer = p;
     pointer += ProtoBufRuntime._encode_key(1, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
-    pointer += ProtoBufRuntime._encode_sol_address(r.seller_address, pointer, bs);
+    pointer += ProtoBufRuntime._encode_sol_address(r.collateralTokenAddress, pointer, bs);
     pointer += ProtoBufRuntime._encode_key(2, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
-    pointer += ProtoBufRuntime._encode_sol_uint256(r.start_date, pointer, bs);
+    pointer += ProtoBufRuntime._encode_sol_uint256(r.collateralTokenAmount, pointer, bs);
     pointer += ProtoBufRuntime._encode_key(3, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
-    pointer += ProtoBufRuntime._encode_sol_address(r.collateral_token_address, pointer, bs);
+    pointer += ProtoBufRuntime._encode_sol_uint256(r.borrowAmount, pointer, bs);
     pointer += ProtoBufRuntime._encode_key(4, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
-    pointer += ProtoBufRuntime._encode_sol_uint256(r.collateral_token_amount, pointer, bs);
+    pointer += ProtoBufRuntime._encode_sol_uint32(r.depositDueDays, pointer, bs);
     pointer += ProtoBufRuntime._encode_key(5, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
-    pointer += ProtoBufRuntime._encode_sol_uint256(r.borrow_amount, pointer, bs);
+    pointer += ProtoBufRuntime._encode_sol_uint32(r.collateralDueDays, pointer, bs);
     pointer += ProtoBufRuntime._encode_key(6, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
-    pointer += ProtoBufRuntime._encode_sol_uint32(r.collateral_due_days, pointer, bs);
+    pointer += ProtoBufRuntime._encode_sol_uint32(r.engagementDueDays, pointer, bs);
     pointer += ProtoBufRuntime._encode_key(7, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
-    pointer += ProtoBufRuntime._encode_sol_uint32(r.engagement_due_days, pointer, bs);
+    pointer += ProtoBufRuntime._encode_sol_uint32(r.tenorDays, pointer, bs);
     pointer += ProtoBufRuntime._encode_key(8, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
-    pointer += ProtoBufRuntime._encode_sol_uint32(r.tenor_days, pointer, bs);
+    pointer += ProtoBufRuntime._encode_sol_uint32(r.interestRate, pointer, bs);
     pointer += ProtoBufRuntime._encode_key(9, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
-    pointer += ProtoBufRuntime._encode_sol_uint32(r.interest_rate, pointer, bs);
-    pointer += ProtoBufRuntime._encode_key(10, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
-    pointer += ProtoBufRuntime._encode_sol_uint32(r.grace_period, pointer, bs);
+    pointer += ProtoBufRuntime._encode_sol_uint32(r.gracePeriod, pointer, bs);
     return pointer - offset;
   }
   // nested encoder
@@ -244,9 +227,8 @@ library SellerParameters {
     uint e;
     e += 1 + 23;
     e += 1 + 35;
-    e += 1 + 23;
     e += 1 + 35;
-    e += 1 + 35;
+    e += 1 + 7;
     e += 1 + 7;
     e += 1 + 7;
     e += 1 + 7;
@@ -257,16 +239,15 @@ library SellerParameters {
 
   //store function
   function store(Data memory input, Data storage output) internal {
-    output.seller_address = input.seller_address;
-    output.start_date = input.start_date;
-    output.collateral_token_address = input.collateral_token_address;
-    output.collateral_token_amount = input.collateral_token_amount;
-    output.borrow_amount = input.borrow_amount;
-    output.collateral_due_days = input.collateral_due_days;
-    output.engagement_due_days = input.engagement_due_days;
-    output.tenor_days = input.tenor_days;
-    output.interest_rate = input.interest_rate;
-    output.grace_period = input.grace_period;
+    output.collateralTokenAddress = input.collateralTokenAddress;
+    output.collateralTokenAmount = input.collateralTokenAmount;
+    output.borrowAmount = input.borrowAmount;
+    output.depositDueDays = input.depositDueDays;
+    output.collateralDueDays = input.collateralDueDays;
+    output.engagementDueDays = input.engagementDueDays;
+    output.tenorDays = input.tenorDays;
+    output.interestRate = input.interestRate;
+    output.gracePeriod = input.gracePeriod;
 
   }
 
@@ -292,16 +273,20 @@ library LoanProperties {
 
   //struct definition
   struct Data {
-    address collateral_token_address;
-    uint256 collateral_token_amount;
-    uint256 borrow_amount;
-    uint32 deposit_due_days;
-    uint32 collateral_due_days;
-    uint32 engagement_due_days;
-    uint32 tenor_days;
-    uint32 interest_rate;
-    uint32 grace_period;
-    bool collateral_complete;
+    address sellerAddress;
+    uint256 startDate;
+    address collateralTokenAddress;
+    uint256 collateralTokenAmount;
+    uint256 borrowAmount;
+    uint32 collateralDueDays;
+    uint32 engagementDueDays;
+    uint32 tenorDays;
+    uint32 interestRate;
+    uint32 gracePeriod;
+    bool collateralComplete;
+    uint256 interest;
+    address buyerAddress;
+    uint256 engageDate;
   }
 
   // Decoder section
@@ -320,7 +305,7 @@ library LoanProperties {
   function _decode(uint p, bytes memory bs, uint sz)
       internal pure returns (Data memory, uint) {
     Data memory r;
-    uint[11] memory counters;
+    uint[15] memory counters;
     uint fieldId;
     ProtoBufRuntime.WireType wireType;
     uint bytesRead;
@@ -330,34 +315,46 @@ library LoanProperties {
       (fieldId, wireType, bytesRead) = ProtoBufRuntime._decode_key(pointer, bs);
       pointer += bytesRead;
       if(fieldId == 1) {
-        pointer += _read_collateral_token_address(pointer, bs, r, counters);
+        pointer += _read_sellerAddress(pointer, bs, r, counters);
       }
       else if(fieldId == 2) {
-        pointer += _read_collateral_token_amount(pointer, bs, r, counters);
+        pointer += _read_startDate(pointer, bs, r, counters);
       }
       else if(fieldId == 3) {
-        pointer += _read_borrow_amount(pointer, bs, r, counters);
+        pointer += _read_collateralTokenAddress(pointer, bs, r, counters);
       }
       else if(fieldId == 4) {
-        pointer += _read_deposit_due_days(pointer, bs, r, counters);
+        pointer += _read_collateralTokenAmount(pointer, bs, r, counters);
       }
       else if(fieldId == 5) {
-        pointer += _read_collateral_due_days(pointer, bs, r, counters);
+        pointer += _read_borrowAmount(pointer, bs, r, counters);
       }
       else if(fieldId == 6) {
-        pointer += _read_engagement_due_days(pointer, bs, r, counters);
+        pointer += _read_collateralDueDays(pointer, bs, r, counters);
       }
       else if(fieldId == 7) {
-        pointer += _read_tenor_days(pointer, bs, r, counters);
+        pointer += _read_engagementDueDays(pointer, bs, r, counters);
       }
       else if(fieldId == 8) {
-        pointer += _read_interest_rate(pointer, bs, r, counters);
+        pointer += _read_tenorDays(pointer, bs, r, counters);
       }
       else if(fieldId == 9) {
-        pointer += _read_grace_period(pointer, bs, r, counters);
+        pointer += _read_interestRate(pointer, bs, r, counters);
       }
       else if(fieldId == 10) {
-        pointer += _read_collateral_complete(pointer, bs, r, counters);
+        pointer += _read_gracePeriod(pointer, bs, r, counters);
+      }
+      else if(fieldId == 11) {
+        pointer += _read_collateralComplete(pointer, bs, r, counters);
+      }
+      else if(fieldId == 12) {
+        pointer += _read_interest(pointer, bs, r, counters);
+      }
+      else if(fieldId == 13) {
+        pointer += _read_buyerAddress(pointer, bs, r, counters);
+      }
+      else if(fieldId == 14) {
+        pointer += _read_engageDate(pointer, bs, r, counters);
       }
     }
     return (r, sz);
@@ -365,112 +362,156 @@ library LoanProperties {
 
   // field readers
 
-  function _read_collateral_token_address(uint p, bytes memory bs, Data memory r, uint[11] memory counters) internal pure returns (uint) {
+  function _read_sellerAddress(uint p, bytes memory bs, Data memory r, uint[15] memory counters) internal pure returns (uint) {
     (address x, uint sz) = ProtoBufRuntime._decode_sol_address(p, bs);
     if(isNil(r)) {
       counters[1] += 1;
     } else {
-      r.collateral_token_address = x;
+      r.sellerAddress = x;
       if(counters[1] > 0) counters[1] -= 1;
     }
     return sz;
   }
 
-  function _read_collateral_token_amount(uint p, bytes memory bs, Data memory r, uint[11] memory counters) internal pure returns (uint) {
+  function _read_startDate(uint p, bytes memory bs, Data memory r, uint[15] memory counters) internal pure returns (uint) {
     (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
     if(isNil(r)) {
       counters[2] += 1;
     } else {
-      r.collateral_token_amount = x;
+      r.startDate = x;
       if(counters[2] > 0) counters[2] -= 1;
     }
     return sz;
   }
 
-  function _read_borrow_amount(uint p, bytes memory bs, Data memory r, uint[11] memory counters) internal pure returns (uint) {
-    (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
+  function _read_collateralTokenAddress(uint p, bytes memory bs, Data memory r, uint[15] memory counters) internal pure returns (uint) {
+    (address x, uint sz) = ProtoBufRuntime._decode_sol_address(p, bs);
     if(isNil(r)) {
       counters[3] += 1;
     } else {
-      r.borrow_amount = x;
+      r.collateralTokenAddress = x;
       if(counters[3] > 0) counters[3] -= 1;
     }
     return sz;
   }
 
-  function _read_deposit_due_days(uint p, bytes memory bs, Data memory r, uint[11] memory counters) internal pure returns (uint) {
-    (uint32 x, uint sz) = ProtoBufRuntime._decode_sol_uint32(p, bs);
+  function _read_collateralTokenAmount(uint p, bytes memory bs, Data memory r, uint[15] memory counters) internal pure returns (uint) {
+    (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
     if(isNil(r)) {
       counters[4] += 1;
     } else {
-      r.deposit_due_days = x;
+      r.collateralTokenAmount = x;
       if(counters[4] > 0) counters[4] -= 1;
     }
     return sz;
   }
 
-  function _read_collateral_due_days(uint p, bytes memory bs, Data memory r, uint[11] memory counters) internal pure returns (uint) {
-    (uint32 x, uint sz) = ProtoBufRuntime._decode_sol_uint32(p, bs);
+  function _read_borrowAmount(uint p, bytes memory bs, Data memory r, uint[15] memory counters) internal pure returns (uint) {
+    (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
     if(isNil(r)) {
       counters[5] += 1;
     } else {
-      r.collateral_due_days = x;
+      r.borrowAmount = x;
       if(counters[5] > 0) counters[5] -= 1;
     }
     return sz;
   }
 
-  function _read_engagement_due_days(uint p, bytes memory bs, Data memory r, uint[11] memory counters) internal pure returns (uint) {
+  function _read_collateralDueDays(uint p, bytes memory bs, Data memory r, uint[15] memory counters) internal pure returns (uint) {
     (uint32 x, uint sz) = ProtoBufRuntime._decode_sol_uint32(p, bs);
     if(isNil(r)) {
       counters[6] += 1;
     } else {
-      r.engagement_due_days = x;
+      r.collateralDueDays = x;
       if(counters[6] > 0) counters[6] -= 1;
     }
     return sz;
   }
 
-  function _read_tenor_days(uint p, bytes memory bs, Data memory r, uint[11] memory counters) internal pure returns (uint) {
+  function _read_engagementDueDays(uint p, bytes memory bs, Data memory r, uint[15] memory counters) internal pure returns (uint) {
     (uint32 x, uint sz) = ProtoBufRuntime._decode_sol_uint32(p, bs);
     if(isNil(r)) {
       counters[7] += 1;
     } else {
-      r.tenor_days = x;
+      r.engagementDueDays = x;
       if(counters[7] > 0) counters[7] -= 1;
     }
     return sz;
   }
 
-  function _read_interest_rate(uint p, bytes memory bs, Data memory r, uint[11] memory counters) internal pure returns (uint) {
+  function _read_tenorDays(uint p, bytes memory bs, Data memory r, uint[15] memory counters) internal pure returns (uint) {
     (uint32 x, uint sz) = ProtoBufRuntime._decode_sol_uint32(p, bs);
     if(isNil(r)) {
       counters[8] += 1;
     } else {
-      r.interest_rate = x;
+      r.tenorDays = x;
       if(counters[8] > 0) counters[8] -= 1;
     }
     return sz;
   }
 
-  function _read_grace_period(uint p, bytes memory bs, Data memory r, uint[11] memory counters) internal pure returns (uint) {
+  function _read_interestRate(uint p, bytes memory bs, Data memory r, uint[15] memory counters) internal pure returns (uint) {
     (uint32 x, uint sz) = ProtoBufRuntime._decode_sol_uint32(p, bs);
     if(isNil(r)) {
       counters[9] += 1;
     } else {
-      r.grace_period = x;
+      r.interestRate = x;
       if(counters[9] > 0) counters[9] -= 1;
     }
     return sz;
   }
 
-  function _read_collateral_complete(uint p, bytes memory bs, Data memory r, uint[11] memory counters) internal pure returns (uint) {
-    (bool x, uint sz) = ProtoBufRuntime._decode_bool(p, bs);
+  function _read_gracePeriod(uint p, bytes memory bs, Data memory r, uint[15] memory counters) internal pure returns (uint) {
+    (uint32 x, uint sz) = ProtoBufRuntime._decode_sol_uint32(p, bs);
     if(isNil(r)) {
       counters[10] += 1;
     } else {
-      r.collateral_complete = x;
+      r.gracePeriod = x;
       if(counters[10] > 0) counters[10] -= 1;
+    }
+    return sz;
+  }
+
+  function _read_collateralComplete(uint p, bytes memory bs, Data memory r, uint[15] memory counters) internal pure returns (uint) {
+    (bool x, uint sz) = ProtoBufRuntime._decode_bool(p, bs);
+    if(isNil(r)) {
+      counters[11] += 1;
+    } else {
+      r.collateralComplete = x;
+      if(counters[11] > 0) counters[11] -= 1;
+    }
+    return sz;
+  }
+
+  function _read_interest(uint p, bytes memory bs, Data memory r, uint[15] memory counters) internal pure returns (uint) {
+    (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
+    if(isNil(r)) {
+      counters[12] += 1;
+    } else {
+      r.interest = x;
+      if(counters[12] > 0) counters[12] -= 1;
+    }
+    return sz;
+  }
+
+  function _read_buyerAddress(uint p, bytes memory bs, Data memory r, uint[15] memory counters) internal pure returns (uint) {
+    (address x, uint sz) = ProtoBufRuntime._decode_sol_address(p, bs);
+    if(isNil(r)) {
+      counters[13] += 1;
+    } else {
+      r.buyerAddress = x;
+      if(counters[13] > 0) counters[13] -= 1;
+    }
+    return sz;
+  }
+
+  function _read_engageDate(uint p, bytes memory bs, Data memory r, uint[15] memory counters) internal pure returns (uint) {
+    (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
+    if(isNil(r)) {
+      counters[14] += 1;
+    } else {
+      r.engageDate = x;
+      if(counters[14] > 0) counters[14] -= 1;
     }
     return sz;
   }
@@ -493,25 +534,33 @@ library LoanProperties {
     uint offset = p;
     uint pointer = p;
     pointer += ProtoBufRuntime._encode_key(1, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
-    pointer += ProtoBufRuntime._encode_sol_address(r.collateral_token_address, pointer, bs);
+    pointer += ProtoBufRuntime._encode_sol_address(r.sellerAddress, pointer, bs);
     pointer += ProtoBufRuntime._encode_key(2, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
-    pointer += ProtoBufRuntime._encode_sol_uint256(r.collateral_token_amount, pointer, bs);
+    pointer += ProtoBufRuntime._encode_sol_uint256(r.startDate, pointer, bs);
     pointer += ProtoBufRuntime._encode_key(3, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
-    pointer += ProtoBufRuntime._encode_sol_uint256(r.borrow_amount, pointer, bs);
+    pointer += ProtoBufRuntime._encode_sol_address(r.collateralTokenAddress, pointer, bs);
     pointer += ProtoBufRuntime._encode_key(4, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
-    pointer += ProtoBufRuntime._encode_sol_uint32(r.deposit_due_days, pointer, bs);
+    pointer += ProtoBufRuntime._encode_sol_uint256(r.collateralTokenAmount, pointer, bs);
     pointer += ProtoBufRuntime._encode_key(5, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
-    pointer += ProtoBufRuntime._encode_sol_uint32(r.collateral_due_days, pointer, bs);
+    pointer += ProtoBufRuntime._encode_sol_uint256(r.borrowAmount, pointer, bs);
     pointer += ProtoBufRuntime._encode_key(6, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
-    pointer += ProtoBufRuntime._encode_sol_uint32(r.engagement_due_days, pointer, bs);
+    pointer += ProtoBufRuntime._encode_sol_uint32(r.collateralDueDays, pointer, bs);
     pointer += ProtoBufRuntime._encode_key(7, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
-    pointer += ProtoBufRuntime._encode_sol_uint32(r.tenor_days, pointer, bs);
+    pointer += ProtoBufRuntime._encode_sol_uint32(r.engagementDueDays, pointer, bs);
     pointer += ProtoBufRuntime._encode_key(8, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
-    pointer += ProtoBufRuntime._encode_sol_uint32(r.interest_rate, pointer, bs);
+    pointer += ProtoBufRuntime._encode_sol_uint32(r.tenorDays, pointer, bs);
     pointer += ProtoBufRuntime._encode_key(9, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
-    pointer += ProtoBufRuntime._encode_sol_uint32(r.grace_period, pointer, bs);
-    pointer += ProtoBufRuntime._encode_key(10, ProtoBufRuntime.WireType.Varint, pointer, bs);
-    pointer += ProtoBufRuntime._encode_bool(r.collateral_complete, pointer, bs);
+    pointer += ProtoBufRuntime._encode_sol_uint32(r.interestRate, pointer, bs);
+    pointer += ProtoBufRuntime._encode_key(10, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
+    pointer += ProtoBufRuntime._encode_sol_uint32(r.gracePeriod, pointer, bs);
+    pointer += ProtoBufRuntime._encode_key(11, ProtoBufRuntime.WireType.Varint, pointer, bs);
+    pointer += ProtoBufRuntime._encode_bool(r.collateralComplete, pointer, bs);
+    pointer += ProtoBufRuntime._encode_key(12, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
+    pointer += ProtoBufRuntime._encode_sol_uint256(r.interest, pointer, bs);
+    pointer += ProtoBufRuntime._encode_key(13, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
+    pointer += ProtoBufRuntime._encode_sol_address(r.buyerAddress, pointer, bs);
+    pointer += ProtoBufRuntime._encode_key(14, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
+    pointer += ProtoBufRuntime._encode_sol_uint256(r.engageDate, pointer, bs);
     return pointer - offset;
   }
   // nested encoder
@@ -530,29 +579,37 @@ library LoanProperties {
     uint e;
     e += 1 + 23;
     e += 1 + 35;
+    e += 1 + 23;
+    e += 1 + 35;
     e += 1 + 35;
     e += 1 + 7;
     e += 1 + 7;
     e += 1 + 7;
     e += 1 + 7;
     e += 1 + 7;
-    e += 1 + 7;
     e += 1 + 1;
+    e += 1 + 35;
+    e += 1 + 23;
+    e += 1 + 35;
     return e;
   }
 
   //store function
   function store(Data memory input, Data storage output) internal {
-    output.collateral_token_address = input.collateral_token_address;
-    output.collateral_token_amount = input.collateral_token_amount;
-    output.borrow_amount = input.borrow_amount;
-    output.deposit_due_days = input.deposit_due_days;
-    output.collateral_due_days = input.collateral_due_days;
-    output.engagement_due_days = input.engagement_due_days;
-    output.tenor_days = input.tenor_days;
-    output.interest_rate = input.interest_rate;
-    output.grace_period = input.grace_period;
-    output.collateral_complete = input.collateral_complete;
+    output.sellerAddress = input.sellerAddress;
+    output.startDate = input.startDate;
+    output.collateralTokenAddress = input.collateralTokenAddress;
+    output.collateralTokenAmount = input.collateralTokenAmount;
+    output.borrowAmount = input.borrowAmount;
+    output.collateralDueDays = input.collateralDueDays;
+    output.engagementDueDays = input.engagementDueDays;
+    output.tenorDays = input.tenorDays;
+    output.interestRate = input.interestRate;
+    output.gracePeriod = input.gracePeriod;
+    output.collateralComplete = input.collateralComplete;
+    output.interest = input.interest;
+    output.buyerAddress = input.buyerAddress;
+    output.engageDate = input.engageDate;
 
   }
 

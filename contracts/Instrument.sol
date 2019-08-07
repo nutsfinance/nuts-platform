@@ -1,5 +1,7 @@
 pragma solidity ^0.5.0;
 
+import "./TokenBalance.sol";
+
 /**
  * @title Base contract for financial instrument
  * All instrument contract must extend this contract.
@@ -151,4 +153,33 @@ contract Instrument {
     function processCustomEvent(uint256 issuanceId, IssuanceStates state, string memory properties,
         string memory balances, string memory eventName, string memory eventPayload)
         public returns (IssuanceStates updatedState, string memory updatedProperties, string memory transfers);
+
+    /**********************************************
+     * Utility methods
+     ***********************************************/
+    /**
+     * @dev Get ETH balance. Note that we assume that there is at most one ETH balance entry.
+     */
+    function getEtherBalance(Balances.Data memory balances) internal pure returns (uint256) {
+        for (uint i = 0; i < balances.entries.length; i++) {
+            if (balances.entries[i].isEther) {
+                return balances.entries[i].amount;
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * @dev Get ERC20 token balance. Note that we assume that there is at most one balance entry per token.
+     */
+    function getTokenBalance(Balances.Data memory balances, address tokenAddress) internal pure returns (uint256) {
+        for (uint i = 0; i < balances.entries.length; i++) {
+            if (!balances.entries[i].isEther && balances.entries[i].tokenAddress == tokenAddress) {
+                return balances.entries[i].amount;
+            }
+        }
+
+        return 0;
+    }
 }

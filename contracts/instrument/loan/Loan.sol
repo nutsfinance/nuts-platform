@@ -1,11 +1,11 @@
 pragma solidity ^0.5.0;
 
 import "../../lib/math/SafeMath.sol";
-
+import "../../lib/util/StringUtil.sol";
 import "../../Instrument.sol";
 import "./LoanInfo.sol";
 import "../../TokenBalance.sol";
-import "../../TokenTransfer.sol":
+import "../../TokenTransfer.sol";
 
 /**
  * The loan contract is a contract that buyer borrows in Ethers by
@@ -36,7 +36,7 @@ contract Loan is Instrument {
      * @return transfers The transfers to perform after the invocation
      */
     function createIssuance(uint256 issuanceId, address sellerAddress, string memory sellerParameters)
-        public returns (IssuanceStates updatedState, string memory updatedProperties, string memory transfers) {
+        public returns (IssuanceStates updatedState, string memory updatedProperties, string memory /** transfers */) {
         // Parameter validation
         require(issuanceId > 0, "Issuance id must be set.");
         require(sellerAddress != address(0x0), "Seller address must be set.");
@@ -71,7 +71,9 @@ contract Loan is Instrument {
           interestRate: parameters.interestRate,
           gracePeriod: parameters.gracePeriod,
           collateralComplete: false,
-          interest: 0
+          interest: 0,
+          buyerAddress: address(0x0),
+          engageDate: 0
         });
 
         // Set expiration for deposit
@@ -88,15 +90,13 @@ contract Loan is Instrument {
      * @dev A buyer engages to the issuance
      * @param issuanceId The id of the issuance
      * @param properties The current properties of the issuance
-     * @param balance The current balance of the issuance
      * @param buyerAddress The address of the buyer who engages in the issuance
-     * @param buyerParameters The custom parameters to the new engagement
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
      */
     function engage(uint256 issuanceId, IssuanceStates state, string memory properties,
-        string memory balances, address buyerAddress, string memory buyerParameters)
-        public returns (IssuanceStates updatedState, string memory updatedProperties, string memory transfers) {
+        string memory /** balances */, address buyerAddress, string memory /**buyerParameters */)
+        public returns (IssuanceStates updatedState, string memory updatedProperties, string memory /** transfers */) {
         // Parameter validation
         require(issuanceId > 0, "Issuance id must be set.");
         require(bytes(properties).length > 0, "Properties must be set.");
@@ -104,7 +104,7 @@ contract Loan is Instrument {
         require(state == IssuanceStates.Engageable, "Issuance must be in the Engagable state");
 
         // Load properties
-        LoanProperties.Data memory loanProperties = LoanProperties.decode(properties);
+        LoanProperties.Data memory loanProperties = LoanProperties.decode(bytes(properties));
         loanProperties.buyerAddress = buyerAddress;
         loanProperties.engageDate = now;
 
@@ -128,7 +128,7 @@ contract Loan is Instrument {
      * @dev Buyer/Seller has made an Ether transfer to the issuance
      * @param issuanceId The id of the issuance
      * @param properties The current properties of the issuance
-     * @param balance The current balance of the issuance
+     * @param balances The current balance of the issuance
      * @param fromAddress The address of the Ether sender
      * @param amount The amount of Ether transfered
      * @return updatedProperties The updated issuance properties
@@ -136,7 +136,7 @@ contract Loan is Instrument {
      */
     function processDeposit(uint256 issuanceId, IssuanceStates state, string memory properties,
         string memory balances, address fromAddress, uint256 amount)
-        public returns (IssuanceStates updatedState, string memory updatedProperties, string memory transfers) {
+        public returns (IssuanceStates updatedState, string memory updatedProperties, string memory /** transfers */) {
         // Parameter validation
         require(issuanceId > 0, "Issuance id must be set.");
         require(bytes(properties).length > 0, "Properties must be set.");
@@ -144,14 +144,13 @@ contract Loan is Instrument {
         require(amount > 0, "Transfer amount must be greater than 0.");
 
         // Load properties
-        LoanProperties.Data memory loanProperties = LoanProperties.decode(properties);
+        LoanProperties.Data memory loanProperties = LoanProperties.decode(bytes(properties));
 
         // Load balance
-        Balances.Data memory loanBalances = Balances.decode(balances);
+        Balances.Data memory loanBalances = Balances.decode(bytes(balances));
 
-        uint etherBalance = _balances.getEtherBalance();
-        uint borrowAmount = _properties.getUintValue(BORROW_AMOUNT_KEY);
-        // emit SomthingHappen(etherBalance, borrowAmount, balance, '', fromAddress, _properties.getAddressValue(SELLER_ADDRESS_KEY));
+        uint etherBalance = getEtherBalance(loanBalances);
+        updatedState = state;       // In case there is no state change.
         if (loanProperties.sellerAddress == fromAddress) {
             // The Ether transfer is from seller
             // This must be deposit
@@ -159,11 +158,11 @@ contract Loan is Instrument {
             // 1. Issuance must in Initiated state
             // 2. The Ether balance must not exceed the borrow amount
             require(state == IssuanceStates.Initiated, "Ether deposit must happen in Initiated state.");
-            require(etherBalance <= borrowAmount, "The Ether deposit cannot exceed the borrow amount.");
+            require(etherBalance <= loanProperties.borrowAmount, "The Ether deposit cannot exceed the borrow amount.");
 
             // If the Ether balance is equal to the borrow amount, the issuance
             // becomes Engagable
-            if (etherBalance == borrowAmount) {
+            if (etherBalance == loanProperties.borrowAmount) {
 
                 // Change to Engagable state
                 updatedState = IssuanceStates.Engageable;
@@ -181,7 +180,7 @@ contract Loan is Instrument {
             // 3. The Ether balance must not exceed the borrow amount
             require(state == IssuanceStates.Active, "Ether repay must happen in Active state.");
             require(!loanProperties.collateralComplete, "Ether repay must happen after collateral is deposited.");
-            require(etherBalance <= borrowAmount, "The Ether repay cannot exceed the borrow amount.");
+            require(etherBalance <= loanProperties.borrowAmount, "The Ether repay cannot exceed the borrow amount.");
 
             // Calculate interest
             loanProperties.interest = loanProperties.interest.add(interestByAmountAndDays(amount, loanProperties.interestRate,
@@ -199,7 +198,7 @@ contract Loan is Instrument {
      * @dev Buyer/Seller has made an ERC20 token transfer to the issuance
      * @param issuanceId The id of the issuance
      * @param properties The current properties of the issuance
-     * @param balance The current balance of the issuance
+     * @param balances The current balance of the issuance
      * @param fromAddress The address of the ERC20 token sender
      * @param tokenAddress The address of the ERC20 token
      * @param amount The amount of ERC20 token transfered
@@ -217,10 +216,10 @@ contract Loan is Instrument {
         require(amount > 0, "Transfer amount must be greater than 0.");
 
         // Load properties
-        LoanProperties.Data memory loanProperties = LoanProperties.decode(properties);
+        LoanProperties.Data memory loanProperties = LoanProperties.decode(bytes(properties));
 
         // Load balance
-        Balances.Data memory loanBalances = Balances.decode(balances);
+        Balances.Data memory loanBalances = Balances.decode(bytes(balances));
 
         // Note: Token transfer only occurs in colleteral deposit!
         // Collateral check
@@ -234,18 +233,24 @@ contract Loan is Instrument {
             "Collateral deposit must come from the buyer.");
         require(!loanProperties.collateralComplete,
             "Collateral deposit must occur during the collateral depoit phase.");
-        uint tokenBalance = _balances.getTokenBalance(tokenAddress);
-        require(tokenBalance <= loanProperties.collateralAmount, "Collateral token balance must not exceed the collateral amount");
+        uint tokenBalance = getTokenBalance(loanBalances, tokenAddress);
+        require(tokenBalance <= loanProperties.collateralTokenAmount,
+            "Collateral token balance must not exceed the collateral amount");
 
-        if (tokenBalance == loanProperties.collateralAmount) {
+        updatedState = state;       // In case there is no state change.
+        if (tokenBalance == loanProperties.collateralTokenAmount) {
             // Mark the collateral collection as complete
             loanProperties.collateralComplete = true;
             // Transfer Ether to buyer
-            _transfers.clear();
-            _transfers.addEtherTransfer(_properties.getAddressValue("buyer_address"),
-                _properties.getUintValue(BORROW_AMOUNT_KEY));
-            transfers = string(_transfers.save());
-            _transfers.clear();
+
+            Transfers.Data memory tokenTransfers = Transfers.Data(new Transfer.Data[](1));
+            tokenTransfers.actions[0] = Transfer.Data({
+                isEther: true,
+                tokenAddress: address(0x0),
+                receiverAddress: loanProperties.buyerAddress,
+                amount: loanProperties.borrowAmount
+            });
+            transfers = string(tokenTransfers.encode());
         }
 
         // Persist the propertiess
@@ -256,105 +261,119 @@ contract Loan is Instrument {
      * @dev Process scheduled event
      * @param issuanceId The id of the issuance
      * @param properties The current properties of the issuance
-     * @param balance The current balance of the issuance
+     * @param balances The current balance of the issuance
      * @param eventName Name of the custom event, eventName of EventScheduled event
-     * @param eventPayload Payload of the custom event, eventPayload of EventScheduled event
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
      */
-    function processScheduledEvent(uint256 issuanceId, string memory properties, string memory balance,
-        string memory eventName, string memory eventPayload) public returns (string memory updatedProperties, string memory transfers) {
+    function processScheduledEvent(uint256 issuanceId, IssuanceStates state, string memory properties,
+        string memory balances, string memory eventName, string memory /** eventPayload */)
+        public returns (IssuanceStates updatedState, string memory updatedProperties, string memory transfers) {
         // Parameter validation
         require(issuanceId > 0, "Issuance id must be set.");
         require(bytes(properties).length > 0, "Properties must be set.");
         require(bytes(eventName).length > 0, "Event name must be set.");
 
         // Load properties
-        _properties.clear();
-        _properties.load(bytes(properties));
-        // Load balances
-        _balances.clear();
-        _balances.load(bytes(balance));
-        _transfers.clear();
+        LoanProperties.Data memory loanProperties = LoanProperties.decode(bytes(properties));
 
+        // Load balance
+        Balances.Data memory loanBalances = Balances.decode(bytes(balances));
+
+        updatedState = state;       // In case there is no state change.
         // Check for deposit_expired event
         if (StringUtil.equals(eventName, DEPOSIT_EXPIRED_EVENT)) {
             // Check whether the issuance is still in Initiated state
-            if (isIssuanceInState(INITIATED_STATE)) {
+            if (state == IssuanceStates.Initiated) {
                 // Change to Unfunded state
-                updateIssuanceState(issuanceId, UNFUNDED_STATE);
+                updatedState = IssuanceStates.Unfunded;
                 // If there is any deposit, return to the seller
-                release();
-                transfers = string(_transfers.save());
+                Transfers.Data memory tokenTransfers = release(loanProperties, loanBalances);
+                transfers = string(tokenTransfers.encode());
             }
         } else if (StringUtil.equals(eventName, ENGAGEMENT_EXPIRED_EVENT)) {
             // Check whether the issuance is still in Engagable state
-            if (isIssuanceInState(ENGAGABLE_STATE)) {
+            if (state == IssuanceStates.Engageable) {
                 // Change to Complete Not Engaged state
-                updateIssuanceState(issuanceId, COMPLETE_NOT_ENGAGED_STATE);
+                updatedState = IssuanceStates.CompleteNotEngaged;
                 // Return the Ether depost to seller
-                release();
-                transfers = string(_transfers.save());
+                Transfers.Data memory tokenTransfers = release(loanProperties, loanBalances);
+                transfers = string(tokenTransfers.encode());
             }
         } else if (StringUtil.equals(eventName, COLLATERAL_EXPIRED_EVENT)) {
             // Check whether the issuance is still in Active state
             // and the collateral is not complete
-            if (isIssuanceInState(ACTIVE_STATE)
-                    && !_properties.getBoolOrDefault(COLLATERAL_COMPLETE_KEY, false)) {
-                _properties.setBoolValue(COLLATERAL_COMPLETE_KEY, false);
+            if (state == IssuanceStates.Active
+                    && !loanProperties.collateralComplete) {
                 // Change to Delinquent state
-                updateIssuanceState(issuanceId, DELINQUENT_STATE);
+                updatedState = IssuanceStates.Delinquent;
                 // Return Ethers to seller and collateral to buyer
-                release();
-                transfers = string(_transfers.save());
+                Transfers.Data memory tokenTransfers = release(loanProperties, loanBalances);
+                transfers = string(tokenTransfers.encode());
             }
         } else if (StringUtil.equals(eventName, LOAN_EXPIRED_EVENT)) {
             // If the issuance is already Delinquent(colleteral due), no action
             // Loan due check
             // 1. The issuance is in Active state
             // 2. The Ether balance is equal to the borrow amount
-            if (isIssuanceInState(ACTIVE_STATE)
-                && _balances.getEtherBalance() == _properties.getUintValue(BORROW_AMOUNT_KEY)) {
+            if (state == IssuanceStates.Active
+                && getEtherBalance(loanBalances) == loanProperties.borrowAmount) {
                 // Change to Complete Engaged state
-                updateIssuanceState(issuanceId, COMPLETE_ENGAGED_STATE);
+                updatedState = IssuanceStates.CompleteEngaged;
                 // Also add transfers
-                release();
-                transfers = string(_transfers.save());
+                Transfers.Data memory tokenTransfers = release(loanProperties, loanBalances);
+                transfers = string(tokenTransfers.encode());
             }
         } else if (StringUtil.equals(eventName, GRACE_PERIOD_EXPIRED_EVENT)) {
             // If the issuance is already Delinquent or COMPLETE_ENGAGED_STATE, no action
-            if (isIssuanceInState(ACTIVE_STATE)) {
+            if (state == IssuanceStates.Active) {
                 // Default check
                 // 1. The Ether balance is smaller than the borrow amount
-                if (_balances.getEtherBalance() < _properties.getUintValue(BORROW_AMOUNT_KEY)) {
+                if (getEtherBalance(loanBalances) < loanProperties.borrowAmount) {
                     // Change to Delinquent state
-                    updateIssuanceState(issuanceId, DELINQUENT_STATE);
-                    defaultRelease();
+                    updatedState = IssuanceStates.Delinquent;
+                    Transfers.Data memory tokenTransfers = defaultRelease(loanProperties, loanBalances);
+                    transfers = string(tokenTransfers.encode());
                 } else {
                     // Change to Complete Engaged state
-                    updateIssuanceState(issuanceId, COMPLETE_ENGAGED_STATE);
-                    release();
+                    updatedState = IssuanceStates.CompleteEngaged;
+                    // Also add transfers
+                    Transfers.Data memory tokenTransfers = release(loanProperties, loanBalances);
+                    transfers = string(tokenTransfers.encode());
                 }
-                transfers = string(_transfers.save());
             }
         } else {
             revert("Unknown event");
         }
 
         // Persist the propertiess
-        updatedProperties = string(_properties.save());
+        updatedProperties = string(loanProperties.encode());
+    }
 
-        // Clean up
-        _properties.clear();
-        _balances.clear();
-        _transfers.clear();
+    /**
+     * User-driven ETH withdraw is not supported in loan contract.
+     */
+    function processWithdraw(uint256 /** issuanceId */, IssuanceStates /** state */, string memory /** properties */,
+        string memory /** balances */, address /** fromAddress */, uint256 /** amount */)
+        public returns (IssuanceStates /** updatedState */, string memory /** updatedProperties */, string memory /** transfers */) {
+        revert("User ETH withdraw unsupported");
+    }
+
+    /**
+     * User-driven ERC20 token withdraw is not supported in loan contract.
+     */
+    function processTokenWithdraw(uint256 /** issuanceId */, IssuanceStates /** state */, string memory /** properties */,
+        string memory /** balances */, address /** fromAddress */, address /** tokenAddress */, uint256 /** amount */)
+        public returns (IssuanceStates /** updatedState */, string memory /** updatedProperties */, string memory /** transfers */) {
+        revert("User ERC20 token withdraw unsupported");
     }
 
     /**
      * @dev Custom event is not supported in loan contract.
      */
-    function processCustomEvent(uint256 issuanceId, string memory properties, string memory balance,
-        string memory eventName, string memory eventPayload) public returns (string memory updatedProperties, string memory transfers) {
+    function processCustomEvent(uint256 /** issuanceId */, IssuanceStates /** state */, string memory /** properties */,
+        string memory /** balances */, string memory /** eventName */, string memory /** eventPayload */)
+        public returns (IssuanceStates /** updatedState */, string memory /** updatedProperties */, string memory /** transfers */) {
         revert("Custom evnet unsupported.");
     }
 
@@ -380,85 +399,129 @@ contract Loan is Instrument {
             private pure returns(uint256) {
         // consider the .div(10 ** rateDecimals) part in fixed point multiplying, we have better precision
         // with "amount * (rate * days)" than "amount * rate * days"
-        return interestRate.mul(numDays).mul(amount).div(10 ** RATE_DECIMALS);
+        return interestRate.mul(numDays).mul(amount).div(10 ** INTEREST_RATE_DECIMALS);
     }
 
     /**
      * @dev Return Ether and collateral token
      */
-    function release() private {
-        // uint borrowAmount = _properties.getUintValue(BORROW_AMOUNT_KEY);
-        // uint collateralAmount = _properties.getUintValue(COLLATERAL_AMOUNT_KEY);
+    function release(LoanProperties.Data memory loanProperties, Balances.Data memory loanBalances)
+        private pure returns (Transfers.Data memory transfers) {
 
         // Use Ether balance instead of borrow amount, as the balance might be
         // smaller than the borrow amount(deposit_expired or engagement_expired)
-        uint borrowAmount = _balances.getEtherBalance();
+        uint borrowAmount = getEtherBalance(loanBalances);
         // The only case borrow amount = 0 is, there is no deposit in deposit_expired
         // If the buyer fails to repay any Ether, it's handled by defaultRelease()
-        if (borrowAmount == 0)  return;
+        if (borrowAmount == 0)  {
+            return Transfers.Data(new Transfer.Data[](0));
+        }
 
-        address collateralTokenAddress = _properties.getAddressValue(COLLATERAL_TOKEN_ADDRESS_KEY);
         // Use token balance instead of collateral amount, as the balance might be
         // smaller than the collateral amount(collateral_expired)
-        uint collateralAmount = _balances.getTokenBalance(collateralTokenAddress);
-        uint interest = _properties.getUintValue(INTEREST_KEY);
-
-        // Transfer Ether back to seller
-        // In all case, we want to send all Ether back to seller
-        _transfers.addEtherTransfer(_properties.getAddressValue(SELLER_ADDRESS_KEY),
-            borrowAmount);
+        uint collateralAmount = getTokenBalance(loanBalances, loanProperties.collateralTokenAddress);
 
         // TODO Is this calculation correct?
         // Interest in token = (Interest in Ether / Borrow amount in Ether) * Collateral amount in token
         // In case of deposit_expired or engagement_expired or collateral_expired, interest = 0
         // so there should be no error
-        uint interestTokenAmount = interest * collateralAmount / borrowAmount;
+        uint interestTokenAmount = loanProperties.interest * collateralAmount / borrowAmount;
         uint tokenToSellerAmount = interestTokenAmount > collateralAmount ? collateralAmount : interestTokenAmount;
         uint tokenToBuyerAmount = collateralAmount - tokenToSellerAmount;
+        uint transferCount = 1;
+        uint transferIndex = 0;
+        if (tokenToSellerAmount > 0) {
+            transferCount++;
+        }
+        if (tokenToBuyerAmount > 0) {
+            transferCount++;
+        }
+        transfers = Transfers.Data(new Transfer.Data[](transferCount));
+        // Transfer Ether back to seller
+        // In all case, we want to send all Ether back to seller
+        transfers.actions[transferIndex++] = Transfer.Data({
+            isEther: true,
+            tokenAddress: address(0x0),
+            receiverAddress: loanProperties.sellerAddress,
+            amount: borrowAmount
+        });
 
         // Transfer collateral token to seller as interest if it's greater than 0(interest rate could be 0)
         if (tokenToSellerAmount > 0) {
-            _transfers.addTokenTransfer(collateralTokenAddress,
-                _properties.getAddressValue(SELLER_ADDRESS_KEY), tokenToSellerAmount);
+            transfers.actions[transferIndex++] = Transfer.Data({
+                isEther: false,
+                tokenAddress: loanProperties.collateralTokenAddress,
+                receiverAddress: loanProperties.sellerAddress,
+                amount: tokenToSellerAmount
+            });
         }
 
         // Transfer collateral token back to buyer if it's greater than 0
         if (tokenToBuyerAmount > 0) {
-            _transfers.addTokenTransfer(collateralTokenAddress,
-                _properties.getAddressValue("buyer_address"), tokenToBuyerAmount);
+            transfers.actions[transferIndex++] = Transfer.Data({
+                isEther: false,
+                tokenAddress: loanProperties.collateralTokenAddress,
+                receiverAddress: loanProperties.buyerAddress,
+                amount: tokenToBuyerAmount
+            });
         }
     }
 
-    function defaultRelease() private {
-        uint borrowAmount = _properties.getUintValue(BORROW_AMOUNT_KEY);
-        uint collateralAmount = _properties.getUintValue(COLLATERAL_AMOUNT_KEY);
+    function defaultRelease(LoanProperties.Data memory loanProperties, Balances.Data memory loanBalances)
+        private view returns (Transfers.Data memory transfers) {
         // Full interest on default
-        uint interest = interestByAmountAndDays(borrowAmount, _properties.getUintValue(INTEREST_RATE_KEY),
-                daysBetween(_properties.getUintValue("engage_date"), now));
+        uint interest = interestByAmountAndDays(loanProperties.borrowAmount, loanProperties.interestRate,
+                daysBetween(loanProperties.engageDate, now));
 
         // Transfer whatever Ether the issuance has back to seller
-        uint etherBalance = _balances.getEtherBalance();
-        if (etherBalance > 0) {
-            _transfers.addEtherTransfer(_properties.getAddressValue(SELLER_ADDRESS_KEY),
-                etherBalance);
-        }
+        uint etherBalance = getEtherBalance(loanBalances);
 
         // TODO Is this calculation correct?
         // Interest in token = (Interest in Ether / Borrow amount in Ether) * Collateral amount in token
-        uint interestTokenAmount = interest * collateralAmount / borrowAmount;
-        uint tokenToSellerAmount = interestTokenAmount > collateralAmount ? collateralAmount : interestTokenAmount;
-        uint tokenToBuyerAmount = collateralAmount - tokenToSellerAmount;
+        uint interestTokenAmount = interest * loanProperties.collateralTokenAmount / loanProperties.borrowAmount;
+        uint tokenToSellerAmount = interestTokenAmount > loanProperties.collateralTokenAmount ?
+            loanProperties.collateralTokenAmount : interestTokenAmount;
+        uint tokenToBuyerAmount = loanProperties.collateralTokenAmount - tokenToSellerAmount;
+
+        uint transferCount = 0;
+        uint transferIndex = 0;
+        if (etherBalance > 0) {
+            transferCount++;
+        }
+        if (tokenToSellerAmount > 0) {
+            transferCount++;
+        }
+        if (tokenToBuyerAmount > 0) {
+            transferCount++;
+        }
+        transfers = Transfers.Data(new Transfer.Data[](transferCount));
+        if (etherBalance > 0) {
+            transfers.actions[transferIndex++] = Transfer.Data({
+                isEther: true,
+                tokenAddress: address(0x0),
+                receiverAddress: loanProperties.sellerAddress,
+                amount: etherBalance
+            });
+        }
 
         // Transfer collateral token to seller as interest if it's greater than 0(interest rate could be 0)
         if (tokenToSellerAmount > 0) {
-            _transfers.addTokenTransfer(_properties.getAddressValue(COLLATERAL_TOKEN_ADDRESS_KEY),
-                _properties.getAddressValue(SELLER_ADDRESS_KEY), tokenToSellerAmount);
+            transfers.actions[transferIndex++] = Transfer.Data({
+                isEther: false,
+                tokenAddress: loanProperties.collateralTokenAddress,
+                receiverAddress: loanProperties.sellerAddress,
+                amount: tokenToSellerAmount
+            });
         }
 
         // Transfer collateral token back to buyer if it's greater than 0
         if (tokenToBuyerAmount > 0) {
-            _transfers.addTokenTransfer(_properties.getAddressValue(COLLATERAL_TOKEN_ADDRESS_KEY),
-                _properties.getAddressValue("buyer_address"), tokenToBuyerAmount);
+            transfers.actions[transferIndex++] = Transfer.Data({
+                isEther: false,
+                tokenAddress: loanProperties.collateralTokenAddress,
+                receiverAddress: loanProperties.buyerAddress,
+                amount: tokenToBuyerAmount
+            });
         }
     }
 }
