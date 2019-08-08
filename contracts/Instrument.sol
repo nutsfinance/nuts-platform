@@ -8,8 +8,11 @@ import "./TokenBalance.sol";
  */
 contract Instrument {
 
+    // The states of an instrument.
+    // The default value of Unchanged, which means that instrument will keep its original state.
+    // This is useful if the instrument developers forget to return updated state.
     enum IssuanceStates {
-        Initiated, Engageable, Active, Unfunded, CompleteNotEngaged, CompleteEngaged, Delinquent
+        Unchanged, Initiated, Engageable, Active, Unfunded, CompleteNotEngaged, CompleteEngaged, Delinquent
     }
 
     /**
@@ -95,14 +98,14 @@ contract Instrument {
      * @param state The current state of the issuance
      * @param properties The current properties of the issuance
      * @param balances The current balance of the issuance (after the withdraw)
-     * @param fromAddress The address of the Ether sender
+     * @param toAddress The address of the Ether receiver
      * @param amount The amount of Ether transfered
      * @return updatedState The new state of the issuance.
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
      */
     function processWithdraw(uint256 issuanceId, IssuanceStates state, string memory properties,
-        string memory balances, address fromAddress, uint256 amount)
+        string memory balances, address toAddress, uint256 amount)
         public returns (IssuanceStates updatedState, string memory updatedProperties, string memory transfers);
 
     /**
@@ -111,7 +114,7 @@ contract Instrument {
      * @param state The current state of the issuance
      * @param properties The current properties of the issuance
      * @param balances The current balance of the issuance (after the withdraw)
-     * @param fromAddress The address of the ERC20 token sender
+     * @param toAddress The address of the ERC20 token receiver
      * @param tokenAddress The address of the ERC20 token
      * @param amount The amount of ERC20 token transfered
      * @return updatedState The new state of the issuance.
@@ -119,7 +122,7 @@ contract Instrument {
      * @return transfers The transfers to perform after the invocation
      */
     function processTokenWithdraw(uint256 issuanceId, IssuanceStates state, string memory properties,
-        string memory balances, address fromAddress, address tokenAddress, uint256 amount)
+        string memory balances, address toAddress, address tokenAddress, uint256 amount)
         public returns (IssuanceStates updatedState, string memory updatedProperties, string memory transfers);
 
     /**

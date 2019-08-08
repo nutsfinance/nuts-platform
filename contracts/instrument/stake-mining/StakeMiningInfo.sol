@@ -14,7 +14,7 @@ library StakeMiningParameters {
     uint256 tokensPerBlock;
     uint256 minimumDeposit;
     address teamWallet;
-    address teamPercentage;
+    uint256 teamPercentage;
     address priceOracle;
   }
 
@@ -205,7 +205,7 @@ library StakeMiningParameters {
   }
 
   function _read_teamPercentage(uint p, bytes memory bs, Data memory r, uint[11] memory counters) internal pure returns (uint) {
-    (address x, uint sz) = ProtoBufRuntime._decode_sol_address(p, bs);
+    (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
     if(isNil(r)) {
       counters[9] += 1;
     } else {
@@ -262,7 +262,7 @@ library StakeMiningParameters {
     pointer += ProtoBufRuntime._encode_key(8, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
     pointer += ProtoBufRuntime._encode_sol_address(r.teamWallet, pointer, bs);
     pointer += ProtoBufRuntime._encode_key(9, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
-    pointer += ProtoBufRuntime._encode_sol_address(r.teamPercentage, pointer, bs);
+    pointer += ProtoBufRuntime._encode_sol_uint256(r.teamPercentage, pointer, bs);
     pointer += ProtoBufRuntime._encode_key(10, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
     pointer += ProtoBufRuntime._encode_sol_address(r.priceOracle, pointer, bs);
     return pointer - offset;
@@ -291,7 +291,7 @@ library StakeMiningParameters {
     e += 1 + 35;
     e += 1 + 35;
     e += 1 + 23;
-    e += 1 + 23;
+    e += 1 + 35;
     e += 1 + 23;
     return e;
   }
@@ -351,10 +351,13 @@ library StakeMiningProperties {
     uint256 tokensPerBlock;
     uint256 minimumDeposit;
     address teamWallet;
-    address teamPercentage;
+    uint256 teamPercentage;
     address priceOracle;
     uint256[] tokenTotals;
     TokenBalances.Data[] tokenBalances;
+    address[] accounts;
+    uint256 accountCount;
+    uint256 lastMintBlock;
   }
 
   // Decoder section
@@ -373,7 +376,7 @@ library StakeMiningProperties {
   function _decode(uint p, bytes memory bs, uint sz)
       internal pure returns (Data memory, uint) {
     Data memory r;
-    uint[13] memory counters;
+    uint[16] memory counters;
     uint fieldId;
     ProtoBufRuntime.WireType wireType;
     uint bytesRead;
@@ -418,12 +421,22 @@ library StakeMiningProperties {
       else if(fieldId == 12) {
         pointer += _read_tokenBalances(pointer, bs, nil(), counters);
       }
+      else if(fieldId == 13) {
+        pointer += _read_accounts(pointer, bs, nil(), counters);
+      }
+      else if(fieldId == 14) {
+        pointer += _read_accountCount(pointer, bs, r, counters);
+      }
+      else if(fieldId == 15) {
+        pointer += _read_lastMintBlock(pointer, bs, r, counters);
+      }
     }
     pointer = offset;
     r.tokens = new address[](counters[1]);
     r.tokenSupported = new bool[](counters[2]);
     r.tokenTotals = new uint256[](counters[11]);
     r.tokenBalances = new TokenBalances.Data[](counters[12]);
+    r.accounts = new address[](counters[13]);
 
     while(pointer < offset+sz) {
       (fieldId, wireType, bytesRead) = ProtoBufRuntime._decode_key(pointer, bs);
@@ -464,13 +477,22 @@ library StakeMiningProperties {
       else if(fieldId == 12) {
         pointer += _read_tokenBalances(pointer, bs, r, counters);
       }
+      else if(fieldId == 13) {
+        pointer += _read_accounts(pointer, bs, r, counters);
+      }
+      else if(fieldId == 14) {
+        pointer += _read_accountCount(pointer, bs, nil(), counters);
+      }
+      else if(fieldId == 15) {
+        pointer += _read_lastMintBlock(pointer, bs, nil(), counters);
+      }
     }
     return (r, sz);
   }
 
   // field readers
 
-  function _read_tokens(uint p, bytes memory bs, Data memory r, uint[13] memory counters) internal pure returns (uint) {
+  function _read_tokens(uint p, bytes memory bs, Data memory r, uint[16] memory counters) internal pure returns (uint) {
     (address x, uint sz) = ProtoBufRuntime._decode_sol_address(p, bs);
     if(isNil(r)) {
       counters[1] += 1;
@@ -481,7 +503,7 @@ library StakeMiningProperties {
     return sz;
   }
 
-  function _read_tokenSupported(uint p, bytes memory bs, Data memory r, uint[13] memory counters) internal pure returns (uint) {
+  function _read_tokenSupported(uint p, bytes memory bs, Data memory r, uint[16] memory counters) internal pure returns (uint) {
     (bool x, uint sz) = ProtoBufRuntime._decode_bool(p, bs);
     if(isNil(r)) {
       counters[2] += 1;
@@ -492,7 +514,7 @@ library StakeMiningProperties {
     return sz;
   }
 
-  function _read_mintedToken(uint p, bytes memory bs, Data memory r, uint[13] memory counters) internal pure returns (uint) {
+  function _read_mintedToken(uint p, bytes memory bs, Data memory r, uint[16] memory counters) internal pure returns (uint) {
     (address x, uint sz) = ProtoBufRuntime._decode_sol_address(p, bs);
     if(isNil(r)) {
       counters[3] += 1;
@@ -503,7 +525,7 @@ library StakeMiningProperties {
     return sz;
   }
 
-  function _read_startBlock(uint p, bytes memory bs, Data memory r, uint[13] memory counters) internal pure returns (uint) {
+  function _read_startBlock(uint p, bytes memory bs, Data memory r, uint[16] memory counters) internal pure returns (uint) {
     (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
     if(isNil(r)) {
       counters[4] += 1;
@@ -514,7 +536,7 @@ library StakeMiningProperties {
     return sz;
   }
 
-  function _read_endBlock(uint p, bytes memory bs, Data memory r, uint[13] memory counters) internal pure returns (uint) {
+  function _read_endBlock(uint p, bytes memory bs, Data memory r, uint[16] memory counters) internal pure returns (uint) {
     (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
     if(isNil(r)) {
       counters[5] += 1;
@@ -525,7 +547,7 @@ library StakeMiningProperties {
     return sz;
   }
 
-  function _read_tokensPerBlock(uint p, bytes memory bs, Data memory r, uint[13] memory counters) internal pure returns (uint) {
+  function _read_tokensPerBlock(uint p, bytes memory bs, Data memory r, uint[16] memory counters) internal pure returns (uint) {
     (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
     if(isNil(r)) {
       counters[6] += 1;
@@ -536,7 +558,7 @@ library StakeMiningProperties {
     return sz;
   }
 
-  function _read_minimumDeposit(uint p, bytes memory bs, Data memory r, uint[13] memory counters) internal pure returns (uint) {
+  function _read_minimumDeposit(uint p, bytes memory bs, Data memory r, uint[16] memory counters) internal pure returns (uint) {
     (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
     if(isNil(r)) {
       counters[7] += 1;
@@ -547,7 +569,7 @@ library StakeMiningProperties {
     return sz;
   }
 
-  function _read_teamWallet(uint p, bytes memory bs, Data memory r, uint[13] memory counters) internal pure returns (uint) {
+  function _read_teamWallet(uint p, bytes memory bs, Data memory r, uint[16] memory counters) internal pure returns (uint) {
     (address x, uint sz) = ProtoBufRuntime._decode_sol_address(p, bs);
     if(isNil(r)) {
       counters[8] += 1;
@@ -558,8 +580,8 @@ library StakeMiningProperties {
     return sz;
   }
 
-  function _read_teamPercentage(uint p, bytes memory bs, Data memory r, uint[13] memory counters) internal pure returns (uint) {
-    (address x, uint sz) = ProtoBufRuntime._decode_sol_address(p, bs);
+  function _read_teamPercentage(uint p, bytes memory bs, Data memory r, uint[16] memory counters) internal pure returns (uint) {
+    (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
     if(isNil(r)) {
       counters[9] += 1;
     } else {
@@ -569,7 +591,7 @@ library StakeMiningProperties {
     return sz;
   }
 
-  function _read_priceOracle(uint p, bytes memory bs, Data memory r, uint[13] memory counters) internal pure returns (uint) {
+  function _read_priceOracle(uint p, bytes memory bs, Data memory r, uint[16] memory counters) internal pure returns (uint) {
     (address x, uint sz) = ProtoBufRuntime._decode_sol_address(p, bs);
     if(isNil(r)) {
       counters[10] += 1;
@@ -580,7 +602,7 @@ library StakeMiningProperties {
     return sz;
   }
 
-  function _read_tokenTotals(uint p, bytes memory bs, Data memory r, uint[13] memory counters) internal pure returns (uint) {
+  function _read_tokenTotals(uint p, bytes memory bs, Data memory r, uint[16] memory counters) internal pure returns (uint) {
     (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
     if(isNil(r)) {
       counters[11] += 1;
@@ -591,13 +613,46 @@ library StakeMiningProperties {
     return sz;
   }
 
-  function _read_tokenBalances(uint p, bytes memory bs, Data memory r, uint[13] memory counters) internal pure returns (uint) {
+  function _read_tokenBalances(uint p, bytes memory bs, Data memory r, uint[16] memory counters) internal pure returns (uint) {
     (TokenBalances.Data memory x, uint sz) = _decode_TokenBalances(p, bs);
     if(isNil(r)) {
       counters[12] += 1;
     } else {
       r.tokenBalances[r.tokenBalances.length - counters[12]] = x;
       if(counters[12] > 0) counters[12] -= 1;
+    }
+    return sz;
+  }
+
+  function _read_accounts(uint p, bytes memory bs, Data memory r, uint[16] memory counters) internal pure returns (uint) {
+    (address x, uint sz) = ProtoBufRuntime._decode_sol_address(p, bs);
+    if(isNil(r)) {
+      counters[13] += 1;
+    } else {
+      r.accounts[r.accounts.length - counters[13]] = x;
+      if(counters[13] > 0) counters[13] -= 1;
+    }
+    return sz;
+  }
+
+  function _read_accountCount(uint p, bytes memory bs, Data memory r, uint[16] memory counters) internal pure returns (uint) {
+    (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
+    if(isNil(r)) {
+      counters[14] += 1;
+    } else {
+      r.accountCount = x;
+      if(counters[14] > 0) counters[14] -= 1;
+    }
+    return sz;
+  }
+
+  function _read_lastMintBlock(uint p, bytes memory bs, Data memory r, uint[16] memory counters) internal pure returns (uint) {
+    (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
+    if(isNil(r)) {
+      counters[15] += 1;
+    } else {
+      r.lastMintBlock = x;
+      if(counters[15] > 0) counters[15] -= 1;
     }
     return sz;
   }
@@ -650,7 +705,7 @@ library StakeMiningProperties {
     pointer += ProtoBufRuntime._encode_key(8, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
     pointer += ProtoBufRuntime._encode_sol_address(r.teamWallet, pointer, bs);
     pointer += ProtoBufRuntime._encode_key(9, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
-    pointer += ProtoBufRuntime._encode_sol_address(r.teamPercentage, pointer, bs);
+    pointer += ProtoBufRuntime._encode_sol_uint256(r.teamPercentage, pointer, bs);
     pointer += ProtoBufRuntime._encode_key(10, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
     pointer += ProtoBufRuntime._encode_sol_address(r.priceOracle, pointer, bs);
     for(i = 0; i < r.tokenTotals.length; i++) {
@@ -661,6 +716,14 @@ library StakeMiningProperties {
       pointer += ProtoBufRuntime._encode_key(12, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
       pointer += TokenBalances._encode_nested(r.tokenBalances[i], pointer, bs);
     }
+    for(i = 0; i < r.accounts.length; i++) {
+      pointer += ProtoBufRuntime._encode_key(13, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
+      pointer += ProtoBufRuntime._encode_sol_address(r.accounts[i], pointer, bs);
+    }
+    pointer += ProtoBufRuntime._encode_key(14, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
+    pointer += ProtoBufRuntime._encode_sol_uint256(r.accountCount, pointer, bs);
+    pointer += ProtoBufRuntime._encode_key(15, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
+    pointer += ProtoBufRuntime._encode_sol_uint256(r.lastMintBlock, pointer, bs);
     return pointer - offset;
   }
   // nested encoder
@@ -689,7 +752,7 @@ library StakeMiningProperties {
     e += 1 + 35;
     e += 1 + 35;
     e += 1 + 23;
-    e += 1 + 23;
+    e += 1 + 35;
     e += 1 + 23;
     for(i = 0; i < r.tokenTotals.length; i++) {
       e += 1 + 35;
@@ -697,6 +760,11 @@ library StakeMiningProperties {
     for(i = 0; i < r.tokenBalances.length; i++) {
       e += 1 + ProtoBufRuntime._sz_lendelim(TokenBalances._estimate(r.tokenBalances[i]));
     }
+    for(i = 0; i < r.accounts.length; i++) {
+      e += 1 + 23;
+    }
+    e += 1 + 35;
+    e += 1 + 35;
     return e;
   }
 
@@ -719,6 +787,9 @@ library StakeMiningProperties {
       TokenBalances.store(input.tokenBalances[i12], output.tokenBalances[i12]);
     }
     
+    output.accounts = input.accounts;
+    output.accountCount = input.accountCount;
+    output.lastMintBlock = input.lastMintBlock;
 
   }
 
@@ -763,6 +834,16 @@ library StakeMiningProperties {
     self.tokenBalances = tmp;
   }
 
+  //array helpers for Accounts
+  function addAccounts(Data memory self, address  value) internal pure {
+    address[] memory tmp = new address[](self.accounts.length + 1);
+    for (uint i = 0; i < self.accounts.length; i++) {
+      tmp[i] = self.accounts[i];
+    }
+    tmp[self.accounts.length] = value;
+    self.accounts = tmp;
+  }
+
 
   //utility functions
   function nil() internal pure returns (Data memory r) {
@@ -784,7 +865,7 @@ library TokenBalances {
 
   //struct definition
   struct Data {
-    TokenBalance.Data[] balances;
+    uint256[] balances;
   }
 
   // Decoder section
@@ -817,7 +898,7 @@ library TokenBalances {
       }
     }
     pointer = offset;
-    r.balances = new TokenBalance.Data[](counters[1]);
+    r.balances = new uint256[](counters[1]);
 
     while(pointer < offset+sz) {
       (fieldId, wireType, bytesRead) = ProtoBufRuntime._decode_key(pointer, bs);
@@ -832,7 +913,7 @@ library TokenBalances {
   // field readers
 
   function _read_balances(uint p, bytes memory bs, Data memory r, uint[2] memory counters) internal pure returns (uint) {
-    (TokenBalance.Data memory x, uint sz) = _decode_TokenBalance(p, bs);
+    (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
     if(isNil(r)) {
       counters[1] += 1;
     } else {
@@ -840,16 +921,6 @@ library TokenBalances {
       if(counters[1] > 0) counters[1] -= 1;
     }
     return sz;
-  }
-
-  // struct decoder
-  function _decode_TokenBalance(uint p, bytes memory bs)
-      internal pure returns (TokenBalance.Data memory, uint) {
-    uint pointer = p;
-    (uint sz, uint bytesRead) = ProtoBufRuntime._decode_varint(pointer, bs);
-    pointer += bytesRead;
-    (TokenBalance.Data memory r,) = TokenBalance._decode(pointer, bs, sz);
-    return (r, sz + bytesRead);
   }
 
 
@@ -871,7 +942,7 @@ library TokenBalances {
     uint pointer = p;uint i;
     for(i = 0; i < r.balances.length; i++) {
       pointer += ProtoBufRuntime._encode_key(1, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
-      pointer += TokenBalance._encode_nested(r.balances[i], pointer, bs);
+      pointer += ProtoBufRuntime._encode_sol_uint256(r.balances[i], pointer, bs);
     }
     return pointer - offset;
   }
@@ -890,26 +961,21 @@ library TokenBalances {
   function _estimate(Data memory r) internal pure returns (uint) {
     uint e;uint i;
     for(i = 0; i < r.balances.length; i++) {
-      e += 1 + ProtoBufRuntime._sz_lendelim(TokenBalance._estimate(r.balances[i]));
+      e += 1 + 35;
     }
     return e;
   }
 
   //store function
   function store(Data memory input, Data storage output) internal {
-
-    output.balances.length = input.balances.length;
-    for(uint i1 = 0; i1 < input.balances.length; i1++) {
-      TokenBalance.store(input.balances[i1], output.balances[i1]);
-    }
-    
+    output.balances = input.balances;
 
   }
 
 
   //array helpers for Balances
-  function addBalances(Data memory self, TokenBalance.Data memory value) internal pure {
-    TokenBalance.Data[] memory tmp = new TokenBalance.Data[](self.balances.length + 1);
+  function addBalances(Data memory self, uint256  value) internal pure {
+    uint256[] memory tmp = new uint256[](self.balances.length + 1);
     for (uint i = 0; i < self.balances.length; i++) {
       tmp[i] = self.balances[i];
     }
@@ -932,137 +998,3 @@ library TokenBalances {
   }
 }
 //library TokenBalances
-
-library TokenBalance {
-
-
-  //struct definition
-  struct Data {
-    address account;
-    uint256 balance;
-  }
-
-  // Decoder section
-
-  function decode(bytes memory bs) internal pure returns (Data memory) {
-    (Data memory x,) = _decode(32, bs, bs.length);
-    return x;
-  }
-
-  function decode(Data storage self, bytes memory bs) internal {
-    (Data memory x,) = _decode(32, bs, bs.length);
-    store(x, self);
-  }
-  // inner decoder
-
-  function _decode(uint p, bytes memory bs, uint sz)
-      internal pure returns (Data memory, uint) {
-    Data memory r;
-    uint[3] memory counters;
-    uint fieldId;
-    ProtoBufRuntime.WireType wireType;
-    uint bytesRead;
-    uint offset = p;
-    uint pointer = p;
-    while(pointer < offset+sz) {
-      (fieldId, wireType, bytesRead) = ProtoBufRuntime._decode_key(pointer, bs);
-      pointer += bytesRead;
-      if(fieldId == 1) {
-        pointer += _read_account(pointer, bs, r, counters);
-      }
-      else if(fieldId == 2) {
-        pointer += _read_balance(pointer, bs, r, counters);
-      }
-    }
-    return (r, sz);
-  }
-
-  // field readers
-
-  function _read_account(uint p, bytes memory bs, Data memory r, uint[3] memory counters) internal pure returns (uint) {
-    (address x, uint sz) = ProtoBufRuntime._decode_sol_address(p, bs);
-    if(isNil(r)) {
-      counters[1] += 1;
-    } else {
-      r.account = x;
-      if(counters[1] > 0) counters[1] -= 1;
-    }
-    return sz;
-  }
-
-  function _read_balance(uint p, bytes memory bs, Data memory r, uint[3] memory counters) internal pure returns (uint) {
-    (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
-    if(isNil(r)) {
-      counters[2] += 1;
-    } else {
-      r.balance = x;
-      if(counters[2] > 0) counters[2] -= 1;
-    }
-    return sz;
-  }
-
-
-  // Encoder section
-
-  function encode(Data memory r) internal pure returns (bytes memory) {
-    bytes memory bs = new bytes(_estimate(r));
-    uint sz = _encode(r, 32, bs);
-    assembly {
-      mstore(bs, sz)
-    }
-    return bs;
-  }
-  // inner encoder
-
-  function _encode(Data memory r, uint p, bytes memory bs)
-      internal pure returns (uint) {
-    uint offset = p;
-    uint pointer = p;
-    pointer += ProtoBufRuntime._encode_key(1, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
-    pointer += ProtoBufRuntime._encode_sol_address(r.account, pointer, bs);
-    pointer += ProtoBufRuntime._encode_key(2, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
-    pointer += ProtoBufRuntime._encode_sol_uint256(r.balance, pointer, bs);
-    return pointer - offset;
-  }
-  // nested encoder
-
-  function _encode_nested(Data memory r, uint p, bytes memory bs)
-      internal pure returns (uint) {
-    uint offset = p;
-    uint pointer = p;
-    pointer += ProtoBufRuntime._encode_varint(_estimate(r), pointer, bs);
-    pointer += _encode(r, pointer, bs);
-    return pointer - offset;
-  }
-  // estimator
-
-  function _estimate(Data memory /* r */) internal pure returns (uint) {
-    uint e;
-    e += 1 + 23;
-    e += 1 + 35;
-    return e;
-  }
-
-  //store function
-  function store(Data memory input, Data storage output) internal {
-    output.account = input.account;
-    output.balance = input.balance;
-
-  }
-
-
-
-  //utility functions
-  function nil() internal pure returns (Data memory r) {
-    assembly {
-      r := 0
-    }
-  }
-
-  function isNil(Data memory x) internal pure returns (bool r) {
-    assembly {
-      r := iszero(x)
-    }
-  }
-}
-//library TokenBalance

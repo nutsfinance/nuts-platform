@@ -85,7 +85,7 @@ contract NutsPlatform is FspRole, TimerOracleRole {
             msg.sender, now, uint256(updatedState));
 
         // Persist common and custom properties
-        saveIssuanceData(issuanceId, commonProperties, updatedProperties);
+        saveIssuanceData(issuanceId, commonProperties, updatedState, updatedProperties);
 
         // Post-transferss
         processTransfers(issuanceId, transfers);
@@ -116,8 +116,7 @@ contract NutsPlatform is FspRole, TimerOracleRole {
             customPropertiesData, balances, msg.sender, buyerParameters);
 
         // Update issuance properties
-        commonProperties.state = uint256(updatedState);
-        saveIssuanceData(issuanceId, commonProperties, updatedProperties);
+        saveIssuanceData(issuanceId, commonProperties, updatedState, updatedProperties);
 
         // Post transferss
         processTransfers(issuanceId, transfers);
@@ -156,7 +155,7 @@ contract NutsPlatform is FspRole, TimerOracleRole {
 
         // Update issuance properties
         commonProperties.state = uint256(updatedState);
-        saveIssuanceData(issuanceId, commonProperties, updatedProperties);
+        saveIssuanceData(issuanceId, commonProperties, updatedState, updatedProperties);
 
         // Post-transferss
         processTransfers(issuanceId, transfers);
@@ -195,7 +194,7 @@ contract NutsPlatform is FspRole, TimerOracleRole {
 
         // Update issuance properties
         commonProperties.state = uint256(updatedState);
-        saveIssuanceData(issuanceId, commonProperties, updatedProperties);
+        saveIssuanceData(issuanceId, commonProperties, updatedState, updatedProperties);
 
         // Post-transferss
         processTransfers(issuanceId, transfers);
@@ -231,7 +230,7 @@ contract NutsPlatform is FspRole, TimerOracleRole {
 
         // Update issuance properties
         commonProperties.state = uint256(updatedState);
-        saveIssuanceData(issuanceId, commonProperties, updatedProperties);
+        saveIssuanceData(issuanceId, commonProperties, updatedState, updatedProperties);
 
         // Post-transferss
         processTransfers(issuanceId, transfers);
@@ -269,7 +268,7 @@ contract NutsPlatform is FspRole, TimerOracleRole {
 
         // Update issuance properties
         commonProperties.state = uint256(updatedState);
-        saveIssuanceData(issuanceId, commonProperties, updatedProperties);
+        saveIssuanceData(issuanceId, commonProperties, updatedState, updatedProperties);
 
         // Post-transferss
         processTransfers(issuanceId, transfers);
@@ -303,7 +302,7 @@ contract NutsPlatform is FspRole, TimerOracleRole {
 
         // Update issuance properties
         commonProperties.state = uint256(updatedState);
-        saveIssuanceData(issuanceId, commonProperties, updatedProperties);
+        saveIssuanceData(issuanceId, commonProperties, updatedState, updatedProperties);
 
         // Post transfers
         processTransfers(issuanceId, transfers);
@@ -333,7 +332,7 @@ contract NutsPlatform is FspRole, TimerOracleRole {
 
         // Update the issuance data
         commonProperties.state = uint256(updatedState);
-        saveIssuanceData(issuanceId, commonProperties, updatedProperties);
+        saveIssuanceData(issuanceId, commonProperties, updatedState, updatedProperties);
 
         // Post transfers
         processTransfers(issuanceId, transfers);
@@ -350,8 +349,11 @@ contract NutsPlatform is FspRole, TimerOracleRole {
     }
 
     function saveIssuanceData(uint256 issuanceId, CommonProperties.Data memory commonProperties,
-        string memory customPropertiesData) private {
-                // Update issuance properties
+        Instrument.IssuanceStates updatedState, string memory customPropertiesData) private {
+        // Update issuance properties
+        if (updatedState != Instrument.IssuanceStates.Unchanged) {
+            commonProperties.state = uint(updatedState);
+        }
         _storage.setValue(getIssuanceCommonDataKey(issuanceId), string(commonProperties.encode()));
         _storage.setValue(getIssuanceCustomDataKey(issuanceId), customPropertiesData);
     }

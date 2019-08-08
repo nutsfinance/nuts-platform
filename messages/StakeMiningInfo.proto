@@ -11,7 +11,7 @@ message StakeMiningParameters {
     .solidity.uint256 tokensPerBlock = 6;
     .solidity.uint256 minimumDeposit = 7;
     .solidity.address teamWallet = 8;
-    .solidity.address teamPercentage = 9;
+    .solidity.uint256 teamPercentage = 9;
     .solidity.address priceOracle = 10;
 }
 
@@ -24,12 +24,13 @@ message StakeMiningProperties {
     .solidity.uint256 tokensPerBlock = 6;
     .solidity.uint256 minimumDeposit = 7;
     .solidity.address teamWallet = 8;
-    .solidity.address teamPercentage = 9;
+    .solidity.uint256 teamPercentage = 9;
     .solidity.address priceOracle = 10;
     repeated .solidity.uint256 tokenTotals = 11;
-    repeated .solidity.address accounts = 12;
-    repeated TokenBalances accountBalances = 13;
-    .solidity.uint256 lastMintBlock = 14;
+    repeated TokenBalances tokenBalances = 12;
+    repeated .solidity.address accounts = 13;
+    .solidity.uint256 accountCount = 14;
+    .solidity.uint256 lastMintBlock = 15;
 }
 
 message TokenBalances {

@@ -354,7 +354,7 @@ contract Loan is Instrument {
      * User-driven ETH withdraw is not supported in loan contract.
      */
     function processWithdraw(uint256 /** issuanceId */, IssuanceStates /** state */, string memory /** properties */,
-        string memory /** balances */, address /** fromAddress */, uint256 /** amount */)
+        string memory /** balances */, address /** toAddress */, uint256 /** amount */)
         public returns (IssuanceStates /** updatedState */, string memory /** updatedProperties */, string memory /** transfers */) {
         revert("User ETH withdraw unsupported");
     }
@@ -363,7 +363,7 @@ contract Loan is Instrument {
      * User-driven ERC20 token withdraw is not supported in loan contract.
      */
     function processTokenWithdraw(uint256 /** issuanceId */, IssuanceStates /** state */, string memory /** properties */,
-        string memory /** balances */, address /** fromAddress */, address /** tokenAddress */, uint256 /** amount */)
+        string memory /** balances */, address /** toAddress */, address /** tokenAddress */, uint256 /** amount */)
         public returns (IssuanceStates /** updatedState */, string memory /** updatedProperties */, string memory /** transfers */) {
         revert("User ERC20 token withdraw unsupported");
     }
