@@ -22,7 +22,7 @@ library Balance {
     (Data memory x,) = _decode(32, bs, bs.length);
     store(x, self);
   }
-  // innter decoder
+  // inner decoder
 
   function _decode(uint p, bytes memory bs, uint sz)
       internal pure returns (Data memory, uint) {
@@ -61,6 +61,7 @@ library Balance {
     }
     return sz;
   }
+
   function _read_tokenAddress(uint p, bytes memory bs, Data memory r, uint[5] memory counters) internal pure returns (uint) {
     (address x, uint sz) = ProtoBufRuntime._decode_sol_address(p, bs);
     if(isNil(r)) {
@@ -71,6 +72,7 @@ library Balance {
     }
     return sz;
   }
+
   function _read_amount(uint p, bytes memory bs, Data memory r, uint[5] memory counters) internal pure returns (uint) {
     (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
     if(isNil(r)) {
@@ -81,7 +83,6 @@ library Balance {
     }
     return sz;
   }
-  // struct decoder
 
 
   // Encoder section
@@ -128,7 +129,7 @@ library Balance {
     return e;
   }
 
-    //store function
+  //store function
   function store(Data memory input, Data storage output) internal {
     output.isEther = input.isEther;
     output.tokenAddress = input.tokenAddress;
@@ -144,6 +145,7 @@ library Balance {
       r := 0
     }
   }
+
   function isNil(Data memory x) internal pure returns (bool r) {
     assembly {
       r := iszero(x)
@@ -171,7 +173,7 @@ library Balances {
     (Data memory x,) = _decode(32, bs, bs.length);
     store(x, self);
   }
-  // innter decoder
+  // inner decoder
 
   function _decode(uint p, bytes memory bs, uint sz)
       internal pure returns (Data memory, uint) {
@@ -214,8 +216,8 @@ library Balances {
     }
     return sz;
   }
-  // struct decoder
 
+  // struct decoder
   function _decode_Balance(uint p, bytes memory bs)
       internal pure returns (Balance.Data memory, uint) {
     uint pointer = p;
@@ -224,6 +226,7 @@ library Balances {
     (Balance.Data memory r,) = Balance._decode(pointer, bs, sz);
     return (r, sz + bytesRead);
   }
+
 
   // Encoder section
 
@@ -267,7 +270,7 @@ library Balances {
     return e;
   }
 
-    //store function
+  //store function
   function store(Data memory input, Data storage output) internal {
 
     output.entries.length = input.entries.length;
@@ -279,8 +282,8 @@ library Balances {
   }
 
 
-  //array helpers for entries
-  function add_entries(Data memory self, Balance.Data memory value) internal pure {
+  //array helpers for Entries
+  function addEntries(Data memory self, Balance.Data memory value) internal pure {
     Balance.Data[] memory tmp = new Balance.Data[](self.entries.length + 1);
     for (uint i = 0; i < self.entries.length; i++) {
       tmp[i] = self.entries[i];
@@ -296,6 +299,7 @@ library Balances {
       r := 0
     }
   }
+
   function isNil(Data memory x) internal pure returns (bool r) {
     assembly {
       r := iszero(x)

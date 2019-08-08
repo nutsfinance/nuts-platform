@@ -23,7 +23,7 @@ library Transfer {
     (Data memory x,) = _decode(32, bs, bs.length);
     store(x, self);
   }
-  // innter decoder
+  // inner decoder
 
   function _decode(uint p, bytes memory bs, uint sz)
       internal pure returns (Data memory, uint) {
@@ -65,6 +65,7 @@ library Transfer {
     }
     return sz;
   }
+
   function _read_tokenAddress(uint p, bytes memory bs, Data memory r, uint[5] memory counters) internal pure returns (uint) {
     (address x, uint sz) = ProtoBufRuntime._decode_sol_address(p, bs);
     if(isNil(r)) {
@@ -75,6 +76,7 @@ library Transfer {
     }
     return sz;
   }
+
   function _read_receiverAddress(uint p, bytes memory bs, Data memory r, uint[5] memory counters) internal pure returns (uint) {
     (address x, uint sz) = ProtoBufRuntime._decode_sol_address(p, bs);
     if(isNil(r)) {
@@ -85,6 +87,7 @@ library Transfer {
     }
     return sz;
   }
+
   function _read_amount(uint p, bytes memory bs, Data memory r, uint[5] memory counters) internal pure returns (uint) {
     (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
     if(isNil(r)) {
@@ -95,7 +98,6 @@ library Transfer {
     }
     return sz;
   }
-  // struct decoder
 
 
   // Encoder section
@@ -145,7 +147,7 @@ library Transfer {
     return e;
   }
 
-    //store function
+  //store function
   function store(Data memory input, Data storage output) internal {
     output.isEther = input.isEther;
     output.tokenAddress = input.tokenAddress;
@@ -162,6 +164,7 @@ library Transfer {
       r := 0
     }
   }
+
   function isNil(Data memory x) internal pure returns (bool r) {
     assembly {
       r := iszero(x)
@@ -189,7 +192,7 @@ library Transfers {
     (Data memory x,) = _decode(32, bs, bs.length);
     store(x, self);
   }
-  // innter decoder
+  // inner decoder
 
   function _decode(uint p, bytes memory bs, uint sz)
       internal pure returns (Data memory, uint) {
@@ -232,8 +235,8 @@ library Transfers {
     }
     return sz;
   }
-  // struct decoder
 
+  // struct decoder
   function _decode_Transfer(uint p, bytes memory bs)
       internal pure returns (Transfer.Data memory, uint) {
     uint pointer = p;
@@ -242,6 +245,7 @@ library Transfers {
     (Transfer.Data memory r,) = Transfer._decode(pointer, bs, sz);
     return (r, sz + bytesRead);
   }
+
 
   // Encoder section
 
@@ -285,7 +289,7 @@ library Transfers {
     return e;
   }
 
-    //store function
+  //store function
   function store(Data memory input, Data storage output) internal {
 
     output.actions.length = input.actions.length;
@@ -297,8 +301,8 @@ library Transfers {
   }
 
 
-  //array helpers for actions
-  function add_actions(Data memory self, Transfer.Data memory value) internal pure {
+  //array helpers for Actions
+  function addActions(Data memory self, Transfer.Data memory value) internal pure {
     Transfer.Data[] memory tmp = new Transfer.Data[](self.actions.length + 1);
     for (uint i = 0; i < self.actions.length; i++) {
       tmp[i] = self.actions[i];
@@ -314,6 +318,7 @@ library Transfers {
       r := 0
     }
   }
+
   function isNil(Data memory x) internal pure returns (bool r) {
     assembly {
       r := iszero(x)
