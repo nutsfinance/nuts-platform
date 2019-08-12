@@ -9,6 +9,7 @@ library CommonProperties {
     uint256 issuanceId;
     address instrumentAddress;
     address sellerAddress;
+    address storageAddress;
     uint256 created;
     uint256 state;
   }
@@ -29,7 +30,7 @@ library CommonProperties {
   function _decode(uint p, bytes memory bs, uint sz)
       internal pure returns (Data memory, uint) {
     Data memory r;
-    uint[6] memory counters;
+    uint[7] memory counters;
     uint fieldId;
     ProtoBufRuntime.WireType wireType;
     uint bytesRead;
@@ -48,9 +49,12 @@ library CommonProperties {
         pointer += _read_sellerAddress(pointer, bs, r, counters);
       }
       else if(fieldId == 4) {
-        pointer += _read_created(pointer, bs, r, counters);
+        pointer += _read_storageAddress(pointer, bs, r, counters);
       }
       else if(fieldId == 5) {
+        pointer += _read_created(pointer, bs, r, counters);
+      }
+      else if(fieldId == 6) {
         pointer += _read_state(pointer, bs, r, counters);
       }
     }
@@ -59,7 +63,7 @@ library CommonProperties {
 
   // field readers
 
-  function _read_issuanceId(uint p, bytes memory bs, Data memory r, uint[6] memory counters) internal pure returns (uint) {
+  function _read_issuanceId(uint p, bytes memory bs, Data memory r, uint[7] memory counters) internal pure returns (uint) {
     (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
     if(isNil(r)) {
       counters[1] += 1;
@@ -70,7 +74,7 @@ library CommonProperties {
     return sz;
   }
 
-  function _read_instrumentAddress(uint p, bytes memory bs, Data memory r, uint[6] memory counters) internal pure returns (uint) {
+  function _read_instrumentAddress(uint p, bytes memory bs, Data memory r, uint[7] memory counters) internal pure returns (uint) {
     (address x, uint sz) = ProtoBufRuntime._decode_sol_address(p, bs);
     if(isNil(r)) {
       counters[2] += 1;
@@ -81,7 +85,7 @@ library CommonProperties {
     return sz;
   }
 
-  function _read_sellerAddress(uint p, bytes memory bs, Data memory r, uint[6] memory counters) internal pure returns (uint) {
+  function _read_sellerAddress(uint p, bytes memory bs, Data memory r, uint[7] memory counters) internal pure returns (uint) {
     (address x, uint sz) = ProtoBufRuntime._decode_sol_address(p, bs);
     if(isNil(r)) {
       counters[3] += 1;
@@ -92,24 +96,35 @@ library CommonProperties {
     return sz;
   }
 
-  function _read_created(uint p, bytes memory bs, Data memory r, uint[6] memory counters) internal pure returns (uint) {
-    (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
+  function _read_storageAddress(uint p, bytes memory bs, Data memory r, uint[7] memory counters) internal pure returns (uint) {
+    (address x, uint sz) = ProtoBufRuntime._decode_sol_address(p, bs);
     if(isNil(r)) {
       counters[4] += 1;
     } else {
-      r.created = x;
+      r.storageAddress = x;
       if(counters[4] > 0) counters[4] -= 1;
     }
     return sz;
   }
 
-  function _read_state(uint p, bytes memory bs, Data memory r, uint[6] memory counters) internal pure returns (uint) {
+  function _read_created(uint p, bytes memory bs, Data memory r, uint[7] memory counters) internal pure returns (uint) {
     (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
     if(isNil(r)) {
       counters[5] += 1;
     } else {
-      r.state = x;
+      r.created = x;
       if(counters[5] > 0) counters[5] -= 1;
+    }
+    return sz;
+  }
+
+  function _read_state(uint p, bytes memory bs, Data memory r, uint[7] memory counters) internal pure returns (uint) {
+    (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
+    if(isNil(r)) {
+      counters[6] += 1;
+    } else {
+      r.state = x;
+      if(counters[6] > 0) counters[6] -= 1;
     }
     return sz;
   }
@@ -138,8 +153,10 @@ library CommonProperties {
     pointer += ProtoBufRuntime._encode_key(3, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
     pointer += ProtoBufRuntime._encode_sol_address(r.sellerAddress, pointer, bs);
     pointer += ProtoBufRuntime._encode_key(4, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
-    pointer += ProtoBufRuntime._encode_sol_uint256(r.created, pointer, bs);
+    pointer += ProtoBufRuntime._encode_sol_address(r.storageAddress, pointer, bs);
     pointer += ProtoBufRuntime._encode_key(5, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
+    pointer += ProtoBufRuntime._encode_sol_uint256(r.created, pointer, bs);
+    pointer += ProtoBufRuntime._encode_key(6, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
     pointer += ProtoBufRuntime._encode_sol_uint256(r.state, pointer, bs);
     return pointer - offset;
   }
@@ -160,6 +177,7 @@ library CommonProperties {
     e += 1 + 35;
     e += 1 + 23;
     e += 1 + 23;
+    e += 1 + 23;
     e += 1 + 35;
     e += 1 + 35;
     return e;
@@ -170,6 +188,7 @@ library CommonProperties {
     output.issuanceId = input.issuanceId;
     output.instrumentAddress = input.instrumentAddress;
     output.sellerAddress = input.sellerAddress;
+    output.storageAddress = input.storageAddress;
     output.created = input.created;
     output.state = input.state;
 

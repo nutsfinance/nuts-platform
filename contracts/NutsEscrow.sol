@@ -23,9 +23,6 @@ contract NutsEscrow is WhitelistAdminRole {
     event TokenDeposited(address indexed payee, address indexed token, uint256 amount);
     event TokenWithdrawn(address indexed payee, address indexed token, uint256 amount);
 
-    // The balance information about a user are kept in mapping instead of TokenBalance.Balances.
-    // This is because there is no requirement to iterate balance of a user.
-    // Might review this requirement later.
     mapping(address => Balances.Data) private _userBalances;                // Balance of user
     mapping(uint256 => Balances.Data) private _issuanceBalances;            // Balance of issuance
 
@@ -239,6 +236,34 @@ contract NutsEscrow is WhitelistAdminRole {
      */
     function getIssuanceBalances(uint256 issuanceId) public view onlyWhitelistAdmin returns (string memory) {
         return string(_issuanceBalances[issuanceId].encode());
+    }
+
+    /**
+     * @dev Migrate the balances of one issuance to another
+     * Note: The balances should not have duplicate entries for the same token.
+     * @param oldIssuanceId The id of the issuance from where the balance is migrated
+     * @param newIssuanceId The id of the issuance to where the balance is migrated
+     */
+    function migrateIssuanceBalances(uint256 oldIssuanceId, uint256 newIssuanceId) public onlyWhitelistAdmin {
+      Balances.Data storage oldBalances = _issuanceBalances[oldIssuanceId];
+      Balances.Data storage newBalances = _issuanceBalances[newIssuanceId];
+
+      // For each token in the old issuance
+      for (uint i = 0; i < oldBalances.entries.length; i++) {
+        bool found = false;
+        // Check the token in the new balance
+        for (uint j = 0; j < newBalances.entries.length; j++) {
+          if ((oldBalances.entries[i].isEther && newBalances.entries[j].isEther)
+            || (!oldBalances.entries[i].isEther && !newBalances.entries[j].isEther && oldBalances.entries[i].tokenAddress == newBalances.entries[j].tokenAddress)) {
+              found = true;
+              newBalances.entries[j].amount = newBalances.entries[j].amount.add(oldBalances.entries[i].amount);
+              break;
+            }
+        }
+        if (!found) {
+          newBalances.entries.push(oldBalances.entries[i]);
+        }
+      }
     }
 
     function getUserEtherBalance(address payee) private returns (Balance.Data storage) {

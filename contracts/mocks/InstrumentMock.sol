@@ -1,6 +1,7 @@
 pragma solidity ^0.5.0;
 
 import "../Instrument.sol";
+import "../UnifiedStorage.sol";
 
 contract InstrumentMock is Instrument {
     uint256 private var1;
@@ -15,107 +16,101 @@ contract InstrumentMock is Instrument {
     uint256 private var10;
     uint256 private var11;
     uint256 private var12;
+    UnifiedStorage private _storage;
 
-    function createIssuance(uint256 issuanceId, address sellerAddress, string memory sellerParameters)
-        public returns (IssuanceStates updatedState, string memory updatedProperties, string memory transfers) {
+    function createIssuance(uint256 issuanceId, UnifiedStorage unifiedStorage, address sellerAddress, string memory sellerParameters)
+        public returns (IssuanceStates updatedState, string memory transfers) {
         var1 = issuanceId;
         var4 = sellerAddress;
         var7 = sellerParameters;
         updatedState = IssuanceStates.Active;
-        updatedProperties = var7;
+        _storage = unifiedStorage;
         transfers = var8;
     }
 
-    function engage(uint256 issuanceId, IssuanceStates state, string memory properties,
+    function engage(uint256 issuanceId, IssuanceStates state, UnifiedStorage unifiedStorage,
         string memory balances, address buyerAddress, string memory buyerParameters)
-        public returns (IssuanceStates updatedState, string memory updatedProperties, string memory transfers) {
+        public returns (IssuanceStates updatedState, string memory transfers) {
         var1 = issuanceId;
         var4 = buyerAddress;
-        var7 = properties;
         var8 = balances;
         var9 = buyerParameters;
         updatedState = state;
-        updatedProperties = var7;
+        _storage = unifiedStorage;
         transfers = var8;
     }
 
-    function processDeposit(uint256 issuanceId, IssuanceStates state, string memory properties,
+    function processDeposit(uint256 issuanceId, IssuanceStates state, UnifiedStorage unifiedStorage,
         string memory balances, address fromAddress, uint256 amount)
-        public returns (IssuanceStates updatedState, string memory updatedProperties, string memory transfers) {
+        public returns (IssuanceStates updatedState, string memory transfers) {
         var1 = issuanceId;
         var4 = fromAddress;
-        var7 = properties;
         var8 = balances;
         var10 = amount;
         updatedState = state;
-        updatedProperties = var7;
+        _storage = unifiedStorage;
         transfers = var8;
     }
 
-    function processTokenDeposit(uint256 issuanceId, IssuanceStates state, string memory properties,
+    function processTokenDeposit(uint256 issuanceId, IssuanceStates state, UnifiedStorage unifiedStorage,
         string memory balances, address fromAddress, address tokenAddress, uint256 amount)
-        public returns (IssuanceStates updatedState, string memory updatedProperties, string memory transfers) {
+        public returns (IssuanceStates updatedState, string memory transfers) {
         var1 = issuanceId;
         var4 = fromAddress;
         var5 = tokenAddress;
-        var7 = properties;
         var8 = balances;
         var10 = amount;
         updatedState = state;
-        updatedProperties = var7;
+        _storage = unifiedStorage;
         transfers = var8;
     }
 
-    function processWithdraw(uint256 issuanceId, IssuanceStates state, string memory properties,
+    function processWithdraw(uint256 issuanceId, IssuanceStates state, UnifiedStorage unifiedStorage,
         string memory balances, address fromAddress, uint256 amount)
-        public returns (IssuanceStates updatedState, string memory updatedProperties, string memory transfers) {
+        public returns (IssuanceStates updatedState, string memory transfers) {
         var1 = issuanceId;
         var4 = fromAddress;
-        var7 = properties;
         var8 = balances;
         var10 = amount;
         updatedState = state;
-        updatedProperties = var7;
+        _storage = unifiedStorage;
         transfers = var8;
     }
 
-    function processTokenWithdraw(uint256 issuanceId, IssuanceStates state, string memory properties,
+    function processTokenWithdraw(uint256 issuanceId, IssuanceStates state, UnifiedStorage unifiedStorage,
         string memory balances, address fromAddress, address tokenAddress, uint256 amount)
-        public returns (IssuanceStates updatedState, string memory updatedProperties, string memory transfers) {
+        public returns (IssuanceStates updatedState, string memory transfers) {
         var1 = issuanceId;
         var4 = fromAddress;
         var5 = tokenAddress;
-        var7 = properties;
         var8 = balances;
         var10 = amount;
         updatedState = state;
-        updatedProperties = var7;
+        _storage = unifiedStorage;
         transfers = var8;
     }
 
-    function processScheduledEvent(uint256 issuanceId, IssuanceStates state, string memory properties,
+    function processScheduledEvent(uint256 issuanceId, IssuanceStates state, UnifiedStorage unifiedStorage,
         string memory balances, string memory eventName, string memory eventPayload)
-        public returns (IssuanceStates updatedState, string memory updatedProperties, string memory transfers) {
+        public returns (IssuanceStates updatedState, string memory transfers) {
         var1 = issuanceId;
-        var7 = properties;
         var8 = balances;
         var9 = eventName;
         var9 = eventPayload;
         updatedState = state;
-        updatedProperties = var7;
+        _storage = unifiedStorage;
         transfers = var8;
     }
 
-    function processCustomEvent(uint256 issuanceId, IssuanceStates state, string memory properties,
+    function processCustomEvent(uint256 issuanceId, IssuanceStates state, UnifiedStorage unifiedStorage,
         string memory balances, string memory eventName, string memory eventPayload)
-        public returns (IssuanceStates updatedState, string memory updatedProperties, string memory transfers) {
+        public returns (IssuanceStates updatedState, string memory transfers) {
         var1 = issuanceId;
-        var7 = properties;
         var8 = balances;
         var9 = eventName;
         var9 = eventPayload;
         updatedState = state;
-        updatedProperties = var7;
+        _storage = unifiedStorage;
         transfers = var8;
     }
 
