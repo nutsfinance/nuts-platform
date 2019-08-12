@@ -31,14 +31,14 @@ contract StakeMining is Instrument {
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
      */
-    function createIssuance(uint256 issuanceId, address sellerAddress, string memory sellerParameters)
-        public returns (IssuanceStates updatedState, string memory updatedProperties, string memory /** transfers */) {
+    function createIssuance(uint256 issuanceId, address sellerAddress, bytes memory sellerParameters)
+        public returns (IssuanceStates updatedState, bytes memory updatedProperties, bytes memory /** transfers */) {
         // Parameter validation
         require(issuanceId > 0, "Issuance id must be set.");
         require(sellerAddress != address(0x0), "Seller address must be set.");
 
         // Parse parameters
-        StakeMiningParameters.Data memory parameters = StakeMiningParameters.decode(bytes(sellerParameters));
+        StakeMiningParameters.Data memory parameters = StakeMiningParameters.decode(sellerParameters);
 
         // Validate parameters
         require(parameters.supportedTokens.length > 0 || parameters.supportETH, "Must support at least one token");
@@ -82,15 +82,15 @@ contract StakeMining is Instrument {
         updatedState = IssuanceStates.Initiated;
 
         // Persist the propertiess
-        updatedProperties = string(stakeMiningProperties.encode());
+        updatedProperties = StakeMiningProperties.encode(stakeMiningProperties);
     }
 
     /**
      * @dev Engage is not supported in stake mining.
      */
-    function engage(uint256 /** issuanceId */, IssuanceStates /** state */, string memory /** properties */,
-        string memory /** balances */, address /** buyerAddress */ , string memory /**buyerParameters */)
-        public returns (IssuanceStates /** updatedState */ , string memory /** updatedProperties */, string memory /** transfers */) {
+    function engage(uint256 /** issuanceId */, IssuanceStates /** state */, bytes memory /** properties */,
+        bytes memory /** balances */, address /** buyerAddress */ , bytes memory /**buyerParameters */)
+        public returns (IssuanceStates /** updatedState */ , bytes memory /** updatedProperties */, bytes memory /** transfers */) {
         revert('Engagement is not supported in stake mining.');
     }
 
@@ -102,9 +102,9 @@ contract StakeMining is Instrument {
      * @param amount The amount of Ether transfered
      * @return updatedProperties The updated issuance properties
      */
-    function processDeposit(uint256 issuanceId, IssuanceStates /** state */, string memory properties,
-        string memory /** balances */, address fromAddress, uint256 amount)
-        public returns (IssuanceStates /** updatedState */, string memory updatedProperties, string memory /** transfers */) {
+    function processDeposit(uint256 issuanceId, IssuanceStates /** state */, bytes memory properties,
+        bytes memory /** balances */, address fromAddress, uint256 amount)
+        public returns (IssuanceStates /** updatedState */, bytes memory updatedProperties, bytes memory /** transfers */) {
         // Parameter validation
         require(issuanceId > 0, "Issuance id must be set.");
         require(bytes(properties).length > 0, "Properties must be set.");
@@ -112,7 +112,7 @@ contract StakeMining is Instrument {
         require(amount > 0, "Transfer amount must be greater than 0.");
 
         // Load properties
-        StakeMiningProperties.Data memory stakeMiningProperties = StakeMiningProperties.decode(bytes(properties));
+        StakeMiningProperties.Data memory stakeMiningProperties = StakeMiningProperties.decode(properties);
         // Validate whether ETH is supported
         require(stakeMiningProperties.tokenSupported[0], "ETH is not supported");
 
@@ -134,7 +134,7 @@ contract StakeMining is Instrument {
         }
 
         // Update the properties
-        updatedProperties = string(stakeMiningProperties.encode());
+        updatedProperties = StakeMiningProperties.encode(stakeMiningProperties);
     }
 
     /**
@@ -146,9 +146,9 @@ contract StakeMining is Instrument {
      * @param amount The amount of ERC20 token transfered
      * @return updatedProperties The updated issuance properties
      */
-    function processTokenDeposit(uint256 issuanceId, IssuanceStates /** state */, string memory properties,
-        string memory /** balances */, address fromAddress, address tokenAddress, uint256 amount)
-        public returns (IssuanceStates /** updatedState */, string memory updatedProperties, string memory /** transfers */) {
+    function processTokenDeposit(uint256 issuanceId, IssuanceStates /** state */, bytes memory properties,
+        bytes memory /** balances */, address fromAddress, address tokenAddress, uint256 amount)
+        public returns (IssuanceStates /** updatedState */, bytes memory updatedProperties, bytes memory /** transfers */) {
         // Parameter validation
         require(issuanceId > 0, "Issuance id must be set.");
         require(bytes(properties).length > 0, "Properties must be set.");
@@ -157,7 +157,7 @@ contract StakeMining is Instrument {
         require(amount > 0, "Transfer amount must be greater than 0.");
 
         // Load properties
-        StakeMiningProperties.Data memory stakeMiningProperties = StakeMiningProperties.decode(bytes(properties));
+        StakeMiningProperties.Data memory stakeMiningProperties = StakeMiningProperties.decode(properties);
         // Validate whether the token is supported
         uint256 tokenIndex = getTokenIndex(stakeMiningProperties.tokens, tokenAddress);
         require(tokenIndex != INDEX_NOT_FOUND, "ERC20 token is not supported.");
@@ -180,7 +180,7 @@ contract StakeMining is Instrument {
         }
 
         // Update the properties
-        updatedProperties = string(stakeMiningProperties.encode());
+        updatedProperties = StakeMiningProperties.encode(stakeMiningProperties);
     }
 
     /**
@@ -191,9 +191,9 @@ contract StakeMining is Instrument {
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
      */
-    function processScheduledEvent(uint256 issuanceId, IssuanceStates /** state */, string memory properties,
-        string memory /** balances */, string memory eventName, string memory /** eventPayload */)
-        public returns (IssuanceStates /** updatedState */, string memory /** updatedProperties */, string memory /** transfers */) {
+    function processScheduledEvent(uint256 issuanceId, IssuanceStates /** state */, bytes memory properties,
+        bytes memory /** balances */, string memory eventName, bytes memory /** eventPayload */)
+        public returns (IssuanceStates /** updatedState */, bytes memory /** updatedProperties */, bytes memory /** transfers */) {
         // Parameter validation
         require(issuanceId > 0, "Issuance id must be set.");
         require(bytes(properties).length > 0, "Properties must be set.");
@@ -209,9 +209,9 @@ contract StakeMining is Instrument {
      * @return updatedState The new state of the issuance.
      * @return updatedProperties The updated issuance properties
      */
-   function processWithdraw(uint256 issuanceId, IssuanceStates /** state*/, string memory properties,
-        string memory /** balances */, address toAddress, uint256 amount)
-        public returns (IssuanceStates /** updatedState */, string memory updatedProperties, string memory /** transers */) {
+   function processWithdraw(uint256 issuanceId, IssuanceStates /** state*/, bytes memory properties,
+        bytes memory /** balances */, address toAddress, uint256 amount)
+        public returns (IssuanceStates /** updatedState */, bytes memory updatedProperties, bytes memory /** transers */) {
         // Parameter validation
         require(issuanceId > 0, "Issuance id must be set.");
         require(bytes(properties).length > 0, "Properties must be set.");
@@ -219,7 +219,7 @@ contract StakeMining is Instrument {
         require(amount > 0, "Withdraw amount must be greater than 0.");
 
         // Load properties
-        StakeMiningProperties.Data memory stakeMiningProperties = StakeMiningProperties.decode(bytes(properties));
+        StakeMiningProperties.Data memory stakeMiningProperties = StakeMiningProperties.decode(properties);
         // Validate whether ETH is supported
         require(stakeMiningProperties.tokenSupported[0], "ETH is not supported");
         uint256 accountIndex = getAccountIndex(stakeMiningProperties.accounts, stakeMiningProperties.accountCount, toAddress);
@@ -233,7 +233,7 @@ contract StakeMining is Instrument {
             .balances[accountIndex].sub(amount);
 
         // Update the properties
-        updatedProperties = string(stakeMiningProperties.encode());
+        updatedProperties = StakeMiningProperties.encode(stakeMiningProperties);
     }
 
     /**
@@ -247,9 +247,9 @@ contract StakeMining is Instrument {
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
      */
-    function processTokenWithdraw(uint256 issuanceId, IssuanceStates /** state */, string memory properties,
-        string memory /** balances */, address toAddress, address tokenAddress, uint256 amount)
-        public returns (IssuanceStates /** updatedState */, string memory updatedProperties, string memory /** transfers */) {
+    function processTokenWithdraw(uint256 issuanceId, IssuanceStates /** state */, bytes memory properties,
+        bytes memory /** balances */, address toAddress, address tokenAddress, uint256 amount)
+        public returns (IssuanceStates /** updatedState */, bytes memory updatedProperties, bytes memory /** transfers */) {
         // Parameter validation
         require(issuanceId > 0, "Issuance id must be set.");
         require(bytes(properties).length > 0, "Properties must be set.");
@@ -258,7 +258,7 @@ contract StakeMining is Instrument {
         require(amount > 0, "Withdraw amount must be greater than 0.");
 
         // Load properties
-        StakeMiningProperties.Data memory stakeMiningProperties = StakeMiningProperties.decode(bytes(properties));
+        StakeMiningProperties.Data memory stakeMiningProperties = StakeMiningProperties.decode(properties);
         // Validate whether the token is supported
         uint256 tokenIndex = getTokenIndex(stakeMiningProperties.tokens, tokenAddress);
         require(tokenIndex != INDEX_NOT_FOUND, "ERC20 token is not supported.");
@@ -273,15 +273,15 @@ contract StakeMining is Instrument {
             .balances[accountIndex].sub(amount);
 
         // Update the properties
-        updatedProperties = string(stakeMiningProperties.encode());
+        updatedProperties = StakeMiningProperties.encode(stakeMiningProperties);
     }
 
     /**
      * @dev Custom event is not supported in loan contract.
      */
-    function processCustomEvent(uint256 /** issuanceId */, IssuanceStates /** state */, string memory /** properties */,
-        string memory /** balances */, string memory /** eventName */, string memory /** eventPayload */)
-        public returns (IssuanceStates /** updatedState */, string memory /** updatedProperties */, string memory /** transfers */) {
+    function processCustomEvent(uint256 /** issuanceId */, IssuanceStates /** state */, bytes memory /** properties */,
+        bytes memory /** balances */, string memory /** eventName */, bytes memory /** eventPayload */)
+        public returns (IssuanceStates /** updatedState */, bytes memory /** updatedProperties */, bytes memory /** transfers */) {
         revert("Custom evnet unsupported.");
     }
 

@@ -131,6 +131,7 @@ library InstrumentStatus {
       internal pure returns (uint) {
     uint offset = p;
     uint pointer = p;
+    
     pointer += ProtoBufRuntime._encode_key(1, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
     pointer += ProtoBufRuntime._encode_sol_address(r.instrumentAddress, pointer, bs);
     pointer += ProtoBufRuntime._encode_key(2, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
@@ -149,8 +150,14 @@ library InstrumentStatus {
       internal pure returns (uint) {
     uint offset = p;
     uint pointer = p;
-    pointer += ProtoBufRuntime._encode_varint(_estimate(r), pointer, bs);
-    pointer += _encode(r, pointer, bs);
+    bytes memory tmp = new bytes(_estimate(r));
+    uint tmpAddr = ProtoBufRuntime.getMemoryAddress(tmp);
+    uint bsAddr = ProtoBufRuntime.getMemoryAddress(bs);
+    uint size = _encode(r, 32, tmp);
+    pointer += ProtoBufRuntime._encode_varint(size, pointer, bs);
+    ProtoBufRuntime.copyBytes(tmpAddr + 32, bsAddr + pointer, size);
+    pointer += size;
+    delete tmp;
     return pointer - offset;
   }
   // estimator
@@ -289,7 +296,8 @@ library FSPStatus {
   function _encode(Data memory r, uint p, bytes memory bs)
       internal pure returns (uint) {
     uint offset = p;
-    uint pointer = p;uint i;
+    uint pointer = p;
+    uint i;
     pointer += ProtoBufRuntime._encode_key(1, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
     pointer += ProtoBufRuntime._encode_sol_address(r.fspAddress, pointer, bs);
     for(i = 0; i < r.instrumentAddresses.length; i++) {
@@ -304,8 +312,14 @@ library FSPStatus {
       internal pure returns (uint) {
     uint offset = p;
     uint pointer = p;
-    pointer += ProtoBufRuntime._encode_varint(_estimate(r), pointer, bs);
-    pointer += _encode(r, pointer, bs);
+    bytes memory tmp = new bytes(_estimate(r));
+    uint tmpAddr = ProtoBufRuntime.getMemoryAddress(tmp);
+    uint bsAddr = ProtoBufRuntime.getMemoryAddress(bs);
+    uint size = _encode(r, 32, tmp);
+    pointer += ProtoBufRuntime._encode_varint(size, pointer, bs);
+    ProtoBufRuntime.copyBytes(tmpAddr + 32, bsAddr + pointer, size);
+    pointer += size;
+    delete tmp;
     return pointer - offset;
   }
   // estimator

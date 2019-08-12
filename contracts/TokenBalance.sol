@@ -101,6 +101,7 @@ library Balance {
       internal pure returns (uint) {
     uint offset = p;
     uint pointer = p;
+    
     pointer += ProtoBufRuntime._encode_key(1, ProtoBufRuntime.WireType.Varint, pointer, bs);
     pointer += ProtoBufRuntime._encode_bool(r.isEther, pointer, bs);
     pointer += ProtoBufRuntime._encode_key(2, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
@@ -115,8 +116,14 @@ library Balance {
       internal pure returns (uint) {
     uint offset = p;
     uint pointer = p;
-    pointer += ProtoBufRuntime._encode_varint(_estimate(r), pointer, bs);
-    pointer += _encode(r, pointer, bs);
+    bytes memory tmp = new bytes(_estimate(r));
+    uint tmpAddr = ProtoBufRuntime.getMemoryAddress(tmp);
+    uint bsAddr = ProtoBufRuntime.getMemoryAddress(bs);
+    uint size = _encode(r, 32, tmp);
+    pointer += ProtoBufRuntime._encode_varint(size, pointer, bs);
+    ProtoBufRuntime.copyBytes(tmpAddr + 32, bsAddr + pointer, size);
+    pointer += size;
+    delete tmp;
     return pointer - offset;
   }
   // estimator
@@ -243,7 +250,8 @@ library Balances {
   function _encode(Data memory r, uint p, bytes memory bs)
       internal pure returns (uint) {
     uint offset = p;
-    uint pointer = p;uint i;
+    uint pointer = p;
+    uint i;
     for(i = 0; i < r.entries.length; i++) {
       pointer += ProtoBufRuntime._encode_key(1, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
       pointer += Balance._encode_nested(r.entries[i], pointer, bs);
@@ -256,8 +264,14 @@ library Balances {
       internal pure returns (uint) {
     uint offset = p;
     uint pointer = p;
-    pointer += ProtoBufRuntime._encode_varint(_estimate(r), pointer, bs);
-    pointer += _encode(r, pointer, bs);
+    bytes memory tmp = new bytes(_estimate(r));
+    uint tmpAddr = ProtoBufRuntime.getMemoryAddress(tmp);
+    uint bsAddr = ProtoBufRuntime.getMemoryAddress(bs);
+    uint size = _encode(r, 32, tmp);
+    pointer += ProtoBufRuntime._encode_varint(size, pointer, bs);
+    ProtoBufRuntime.copyBytes(tmpAddr + 32, bsAddr + pointer, size);
+    pointer += size;
+    delete tmp;
     return pointer - offset;
   }
   // estimator

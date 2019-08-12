@@ -242,7 +242,8 @@ library StakeMiningParameters {
   function _encode(Data memory r, uint p, bytes memory bs)
       internal pure returns (uint) {
     uint offset = p;
-    uint pointer = p;uint i;
+    uint pointer = p;
+    uint i;
     for(i = 0; i < r.supportedTokens.length; i++) {
       pointer += ProtoBufRuntime._encode_key(1, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
       pointer += ProtoBufRuntime._encode_sol_address(r.supportedTokens[i], pointer, bs);
@@ -273,8 +274,14 @@ library StakeMiningParameters {
       internal pure returns (uint) {
     uint offset = p;
     uint pointer = p;
-    pointer += ProtoBufRuntime._encode_varint(_estimate(r), pointer, bs);
-    pointer += _encode(r, pointer, bs);
+    bytes memory tmp = new bytes(_estimate(r));
+    uint tmpAddr = ProtoBufRuntime.getMemoryAddress(tmp);
+    uint bsAddr = ProtoBufRuntime.getMemoryAddress(bs);
+    uint size = _encode(r, 32, tmp);
+    pointer += ProtoBufRuntime._encode_varint(size, pointer, bs);
+    ProtoBufRuntime.copyBytes(tmpAddr + 32, bsAddr + pointer, size);
+    pointer += size;
+    delete tmp;
     return pointer - offset;
   }
   // estimator
@@ -683,7 +690,8 @@ library StakeMiningProperties {
   function _encode(Data memory r, uint p, bytes memory bs)
       internal pure returns (uint) {
     uint offset = p;
-    uint pointer = p;uint i;
+    uint pointer = p;
+    uint i;
     for(i = 0; i < r.tokens.length; i++) {
       pointer += ProtoBufRuntime._encode_key(1, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
       pointer += ProtoBufRuntime._encode_sol_address(r.tokens[i], pointer, bs);
@@ -732,8 +740,14 @@ library StakeMiningProperties {
       internal pure returns (uint) {
     uint offset = p;
     uint pointer = p;
-    pointer += ProtoBufRuntime._encode_varint(_estimate(r), pointer, bs);
-    pointer += _encode(r, pointer, bs);
+    bytes memory tmp = new bytes(_estimate(r));
+    uint tmpAddr = ProtoBufRuntime.getMemoryAddress(tmp);
+    uint bsAddr = ProtoBufRuntime.getMemoryAddress(bs);
+    uint size = _encode(r, 32, tmp);
+    pointer += ProtoBufRuntime._encode_varint(size, pointer, bs);
+    ProtoBufRuntime.copyBytes(tmpAddr + 32, bsAddr + pointer, size);
+    pointer += size;
+    delete tmp;
     return pointer - offset;
   }
   // estimator
@@ -786,7 +800,7 @@ library StakeMiningProperties {
     for(uint i12 = 0; i12 < input.tokenBalances.length; i12++) {
       TokenBalances.store(input.tokenBalances[i12], output.tokenBalances[i12]);
     }
-    
+
     output.accounts = input.accounts;
     output.accountCount = input.accountCount;
     output.lastMintBlock = input.lastMintBlock;
@@ -939,7 +953,8 @@ library TokenBalances {
   function _encode(Data memory r, uint p, bytes memory bs)
       internal pure returns (uint) {
     uint offset = p;
-    uint pointer = p;uint i;
+    uint pointer = p;
+    uint i;
     for(i = 0; i < r.balances.length; i++) {
       pointer += ProtoBufRuntime._encode_key(1, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
       pointer += ProtoBufRuntime._encode_sol_uint256(r.balances[i], pointer, bs);
@@ -952,8 +967,14 @@ library TokenBalances {
       internal pure returns (uint) {
     uint offset = p;
     uint pointer = p;
-    pointer += ProtoBufRuntime._encode_varint(_estimate(r), pointer, bs);
-    pointer += _encode(r, pointer, bs);
+    bytes memory tmp = new bytes(_estimate(r));
+    uint tmpAddr = ProtoBufRuntime.getMemoryAddress(tmp);
+    uint bsAddr = ProtoBufRuntime.getMemoryAddress(bs);
+    uint size = _encode(r, 32, tmp);
+    pointer += ProtoBufRuntime._encode_varint(size, pointer, bs);
+    ProtoBufRuntime.copyBytes(tmpAddr + 32, bsAddr + pointer, size);
+    pointer += size;
+    delete tmp;
     return pointer - offset;
   }
   // estimator

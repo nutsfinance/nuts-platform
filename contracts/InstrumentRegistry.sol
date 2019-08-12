@@ -33,7 +33,7 @@ contract InstrumentRegistry is WhitelistAdminRole {
 
         // Save new instrument
         InstrumentStatus.Data memory instrumentStatus = InstrumentStatus.Data(instrumentAddress, fspAddress, true, now, now + expiration);
-        _storage.setValue(getInstrumentStatusKey(instrumentAddress), string(instrumentStatus.encode()));
+        _storage.setValue(getInstrumentStatusKey(instrumentAddress), InstrumentStatus.encode(instrumentStatus));
 
         // Update FSP status
         bytes memory fspStatusData = bytes(_storage.getValue(getFSPStatusKey(fspAddress)));
@@ -46,7 +46,7 @@ contract InstrumentRegistry is WhitelistAdminRole {
             fspStatus = FSPStatus.decode(fspStatusData);
             fspStatus.addInstrumentAddresses(instrumentAddress);
         }
-        _storage.setValue(getFSPStatusKey(fspAddress), string(fspStatus.encode()));
+        _storage.setValue(getFSPStatusKey(fspAddress), FSPStatus.encode(fspStatus));
     }
 
     /**
@@ -64,7 +64,7 @@ contract InstrumentRegistry is WhitelistAdminRole {
             "Only admin or creator can deactivate an instrument");
 
         instrumentStatus.active = false;
-        _storage.setValue(getInstrumentStatusKey(instrumentAddress), string(instrumentStatus.encode()));
+        _storage.setValue(getInstrumentStatusKey(instrumentAddress), InstrumentStatus.encode(instrumentStatus));
     }
 
     /**

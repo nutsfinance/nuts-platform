@@ -27,8 +27,8 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, minter]) => {
                 instrumentAddress: this.mockInstrument.address,
                 fspAddress: fsp
             });
-            tx = await this.nutsPlatform.createIssuance(this.mockInstrument.address, 
-                "", {from: seller});
+            tx = await this.nutsPlatform.createIssuance(this.mockInstrument.address,
+                [], {from: seller});
             expectEvent.inLogs(tx.logs, 'IssuanceCreated', {
                 issuanceId: new BN(1),
                 instrumentAddress: this.mockInstrument.address,
@@ -37,46 +37,46 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, minter]) => {
         }),
         it("should fail to create issuance on expired instrument", async function() {
             await this.nutsPlatform.createInstrument(this.mockInstrument.address, 200, {from: fsp});
-            await this.nutsPlatform.createIssuance(this.mockInstrument.address, 
-                "", {from: seller});
+            await this.nutsPlatform.createIssuance(this.mockInstrument.address,
+                [], {from: seller});
             await time.increase(250);
-            await shouldFail.reverting.withMessage(this.nutsPlatform.createIssuance(this.mockInstrument.address, 
-                "", {from: seller}), "Invalid instrument");
+            await shouldFail.reverting.withMessage(this.nutsPlatform.createIssuance(this.mockInstrument.address,
+                [], {from: seller}), "Invalid instrument");
         }),
         it("should fail to create issuance on deactivated instrument", async function() {
             await this.nutsPlatform.createInstrument(this.mockInstrument.address, 200, {from: fsp});
-            await this.nutsPlatform.createIssuance(this.mockInstrument.address, 
-                "", {from: seller});
+            await this.nutsPlatform.createIssuance(this.mockInstrument.address,
+                [], {from: seller});
             await this.nutsPlatform.deactivateInstrument(this.mockInstrument.address, {from: fsp});
-            await shouldFail.reverting.withMessage(this.nutsPlatform.createIssuance(this.mockInstrument.address, 
-                "", {from: seller}), "Invalid instrument");
+            await shouldFail.reverting.withMessage(this.nutsPlatform.createIssuance(this.mockInstrument.address,
+                [], {from: seller}), "Invalid instrument");
         }),
         it("should fail to deactivate an instrument", async function() {
             await this.nutsPlatform.createInstrument(this.mockInstrument.address, 200, {from: fsp});
             await this.nutsPlatform.addFsp(seller, {from: owner});
-            await shouldFail.reverting.withMessage(this.nutsPlatform.deactivateInstrument(this.mockInstrument.address, 
+            await shouldFail.reverting.withMessage(this.nutsPlatform.deactivateInstrument(this.mockInstrument.address,
                 {from: seller}), "Only admin or creator can deactivate an instrument");
-            await this.nutsPlatform.deactivateInstrument(this.mockInstrument.address, 
+            await this.nutsPlatform.deactivateInstrument(this.mockInstrument.address,
                 {from: owner});
             await this.nutsPlatform.renounceFsp({from: seller});
         }),
         it("should be able to update issuance from an expired instrument", async function() {
             await this.nutsPlatform.createInstrument(this.mockInstrument.address, 200, {from: fsp});
-            const {logs} = await this.nutsPlatform.createIssuance(this.mockInstrument.address, 
-                "", {from: seller});
+            const {logs} = await this.nutsPlatform.createIssuance(this.mockInstrument.address,
+                [], {from: seller});
             const event = logs.find(e => e.event == "IssuanceCreated");
             const issuanceId = event.args.issuanceId.toNumber();
             await time.increase(250);
-            await this.nutsPlatform.engageIssuance(issuanceId, "");
+            await this.nutsPlatform.engageIssuance(issuanceId, []);
         }),
         it("should be able to update issuance from an deactivated instrument", async function() {
             await this.nutsPlatform.createInstrument(this.mockInstrument.address, 200, {from: fsp});
-            const {logs} = await this.nutsPlatform.createIssuance(this.mockInstrument.address, 
-                "", {from: seller});
+            const {logs} = await this.nutsPlatform.createIssuance(this.mockInstrument.address,
+                [], {from: seller});
             const event = logs.find(e => e.event == "IssuanceCreated");
             const issuanceId = event.args.issuanceId.toNumber();
             await this.nutsPlatform.deactivateInstrument(this.mockInstrument.address, {from: fsp});
-            await this.nutsPlatform.engageIssuance(issuanceId, "");
+            await this.nutsPlatform.engageIssuance(issuanceId, []);
         }),
         it("should fail to create the same instrument multiple times", async function() {
             await this.nutsPlatform.createInstrument(this.mockInstrument.address, 200, {from: fsp});
@@ -95,5 +95,3 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, minter]) => {
         })
     })
 });
-
-

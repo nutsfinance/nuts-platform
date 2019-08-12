@@ -35,14 +35,14 @@ contract Loan is Instrument {
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
      */
-    function createIssuance(uint256 issuanceId, address sellerAddress, string memory sellerParameters)
-        public returns (IssuanceStates updatedState, string memory updatedProperties, string memory /** transfers */) {
+    function createIssuance(uint256 issuanceId, address sellerAddress, bytes memory sellerParameters)
+        public returns (IssuanceStates updatedState, bytes memory updatedProperties, bytes memory /** transfers */) {
         // Parameter validation
         require(issuanceId > 0, "Issuance id must be set.");
         require(sellerAddress != address(0x0), "Seller address must be set.");
 
         // Parse parameters
-        SellerParameters.Data memory parameters = SellerParameters.decode(bytes(sellerParameters));
+        SellerParameters.Data memory parameters = SellerParameters.decode(sellerParameters);
 
         // Validate parameters
         require(parameters.collateralTokenAddress != address(0x0), "Collateral token address must not be 0");
@@ -81,9 +81,9 @@ contract Loan is Instrument {
 
         // Change to Initiated state
         updatedState = IssuanceStates.Initiated;
-
+        emit IssuanceStateUpdated(issuanceId, IssuanceStates.Initiated);
         // Persist the propertiess
-        updatedProperties = string(loanProperties.encode());
+        updatedProperties = LoanProperties.encode(loanProperties);
     }
 
     /**
@@ -94,9 +94,9 @@ contract Loan is Instrument {
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
      */
-    function engage(uint256 issuanceId, IssuanceStates state, string memory properties,
-        string memory /** balances */, address buyerAddress, string memory /**buyerParameters */)
-        public returns (IssuanceStates updatedState, string memory updatedProperties, string memory /** transfers */) {
+    function engage(uint256 issuanceId, IssuanceStates state, bytes memory properties,
+        bytes memory /** balances */, address buyerAddress, bytes memory /**buyerParameters */)
+        public returns (IssuanceStates updatedState, bytes memory updatedProperties, bytes memory /** transfers */) {
         // Parameter validation
         require(issuanceId > 0, "Issuance id must be set.");
         require(bytes(properties).length > 0, "Properties must be set.");
@@ -104,7 +104,7 @@ contract Loan is Instrument {
         require(state == IssuanceStates.Engageable, "Issuance must be in the Engagable state");
 
         // Load properties
-        LoanProperties.Data memory loanProperties = LoanProperties.decode(bytes(properties));
+        LoanProperties.Data memory loanProperties = LoanProperties.decode(properties);
         loanProperties.buyerAddress = buyerAddress;
         loanProperties.engageDate = now;
 
@@ -119,9 +119,9 @@ contract Loan is Instrument {
 
         // Change to Active state
         updatedState = IssuanceStates.Active;
-
+        emit IssuanceStateUpdated(issuanceId, IssuanceStates.Active);
         // Persist the propertiess
-        updatedProperties = string(loanProperties.encode());
+        updatedProperties = LoanProperties.encode(loanProperties);
     }
 
     /**
@@ -134,9 +134,9 @@ contract Loan is Instrument {
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
      */
-    function processDeposit(uint256 issuanceId, IssuanceStates state, string memory properties,
-        string memory balances, address fromAddress, uint256 amount)
-        public returns (IssuanceStates updatedState, string memory updatedProperties, string memory /** transfers */) {
+    function processDeposit(uint256 issuanceId, IssuanceStates state, bytes memory properties,
+        bytes memory balances, address fromAddress, uint256 amount)
+        public returns (IssuanceStates updatedState, bytes memory updatedProperties, bytes memory /** transfers */) {
         // Parameter validation
         require(issuanceId > 0, "Issuance id must be set.");
         require(bytes(properties).length > 0, "Properties must be set.");
@@ -144,10 +144,10 @@ contract Loan is Instrument {
         require(amount > 0, "Transfer amount must be greater than 0.");
 
         // Load properties
-        LoanProperties.Data memory loanProperties = LoanProperties.decode(bytes(properties));
+        LoanProperties.Data memory loanProperties = LoanProperties.decode(properties);
 
         // Load balance
-        Balances.Data memory loanBalances = Balances.decode(bytes(balances));
+        Balances.Data memory loanBalances = Balances.decode(balances);
 
         uint etherBalance = getEtherBalance(loanBalances);
         updatedState = state;       // In case there is no state change.
@@ -166,7 +166,7 @@ contract Loan is Instrument {
 
                 // Change to Engagable state
                 updatedState = IssuanceStates.Engageable;
-
+                emit IssuanceStateUpdated(issuanceId, IssuanceStates.Engageable);
                 // Schedule engagement expiration
                 emit EventScheduled(issuanceId, now + loanProperties.engagementDueDays * 1 days, ENGAGEMENT_EXPIRED_EVENT, "");
             }
@@ -179,7 +179,7 @@ contract Loan is Instrument {
             // 2. Collateral deposit must be done
             // 3. The Ether balance must not exceed the borrow amount
             require(state == IssuanceStates.Active, "Ether repay must happen in Active state.");
-            require(!loanProperties.collateralComplete, "Ether repay must happen after collateral is deposited.");
+            require(loanProperties.collateralComplete, "Ether repay must happen after collateral is deposited.");
             require(etherBalance <= loanProperties.borrowAmount, "The Ether repay cannot exceed the borrow amount.");
 
             // Calculate interest
@@ -191,7 +191,7 @@ contract Loan is Instrument {
         }
 
         // Persist the propertiess
-        updatedProperties = string(loanProperties.encode());
+        updatedProperties = LoanProperties.encode(loanProperties);
     }
 
     /**
@@ -205,9 +205,9 @@ contract Loan is Instrument {
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
      */
-    function processTokenDeposit(uint256 issuanceId, IssuanceStates state, string memory properties,
-        string memory balances, address fromAddress, address tokenAddress, uint256 amount)
-        public returns (IssuanceStates updatedState, string memory updatedProperties, string memory transfers) {
+    function processTokenDeposit(uint256 issuanceId, IssuanceStates state, bytes memory properties,
+        bytes memory balances, address fromAddress, address tokenAddress, uint256 amount)
+        public returns (IssuanceStates updatedState, bytes memory updatedProperties, bytes memory transfers) {
         // Parameter validation
         require(issuanceId > 0, "Issuance id must be set.");
         require(bytes(properties).length > 0, "Properties must be set.");
@@ -216,10 +216,10 @@ contract Loan is Instrument {
         require(amount > 0, "Transfer amount must be greater than 0.");
 
         // Load properties
-        LoanProperties.Data memory loanProperties = LoanProperties.decode(bytes(properties));
+        LoanProperties.Data memory loanProperties = LoanProperties.decode(properties);
 
         // Load balance
-        Balances.Data memory loanBalances = Balances.decode(bytes(balances));
+        Balances.Data memory loanBalances = Balances.decode(balances);
 
         // Note: Token transfer only occurs in colleteral deposit!
         // Collateral check
@@ -250,11 +250,11 @@ contract Loan is Instrument {
                 receiverAddress: loanProperties.buyerAddress,
                 amount: loanProperties.borrowAmount
             });
-            transfers = string(tokenTransfers.encode());
+            transfers = Transfers.encode(tokenTransfers);
         }
 
         // Persist the propertiess
-        updatedProperties = string(loanProperties.encode());
+        updatedProperties = LoanProperties.encode(loanProperties);
     }
 
     /**
@@ -266,19 +266,19 @@ contract Loan is Instrument {
      * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
      */
-    function processScheduledEvent(uint256 issuanceId, IssuanceStates state, string memory properties,
-        string memory balances, string memory eventName, string memory /** eventPayload */)
-        public returns (IssuanceStates updatedState, string memory updatedProperties, string memory transfers) {
+    function processScheduledEvent(uint256 issuanceId, IssuanceStates state, bytes memory properties,
+        bytes memory balances, string memory eventName, bytes memory /** eventPayload */)
+        public returns (IssuanceStates updatedState, bytes memory updatedProperties, bytes memory transfers) {
         // Parameter validation
         require(issuanceId > 0, "Issuance id must be set.");
         require(bytes(properties).length > 0, "Properties must be set.");
         require(bytes(eventName).length > 0, "Event name must be set.");
 
         // Load properties
-        LoanProperties.Data memory loanProperties = LoanProperties.decode(bytes(properties));
+        LoanProperties.Data memory loanProperties = LoanProperties.decode(properties);
 
         // Load balance
-        Balances.Data memory loanBalances = Balances.decode(bytes(balances));
+        Balances.Data memory loanBalances = Balances.decode(balances);
 
         updatedState = state;       // In case there is no state change.
         // Check for deposit_expired event
@@ -287,18 +287,20 @@ contract Loan is Instrument {
             if (state == IssuanceStates.Initiated) {
                 // Change to Unfunded state
                 updatedState = IssuanceStates.Unfunded;
+                emit IssuanceStateUpdated(issuanceId, IssuanceStates.Unfunded);
                 // If there is any deposit, return to the seller
                 Transfers.Data memory tokenTransfers = release(loanProperties, loanBalances);
-                transfers = string(tokenTransfers.encode());
+                transfers = Transfers.encode(tokenTransfers);
             }
         } else if (StringUtil.equals(eventName, ENGAGEMENT_EXPIRED_EVENT)) {
             // Check whether the issuance is still in Engagable state
             if (state == IssuanceStates.Engageable) {
                 // Change to Complete Not Engaged state
                 updatedState = IssuanceStates.CompleteNotEngaged;
+                emit IssuanceStateUpdated(issuanceId, IssuanceStates.CompleteNotEngaged);
                 // Return the Ether depost to seller
                 Transfers.Data memory tokenTransfers = release(loanProperties, loanBalances);
-                transfers = string(tokenTransfers.encode());
+                transfers = Transfers.encode(tokenTransfers);
             }
         } else if (StringUtil.equals(eventName, COLLATERAL_EXPIRED_EVENT)) {
             // Check whether the issuance is still in Active state
@@ -307,9 +309,10 @@ contract Loan is Instrument {
                     && !loanProperties.collateralComplete) {
                 // Change to Delinquent state
                 updatedState = IssuanceStates.Delinquent;
+                emit IssuanceStateUpdated(issuanceId, IssuanceStates.Delinquent);
                 // Return Ethers to seller and collateral to buyer
                 Transfers.Data memory tokenTransfers = release(loanProperties, loanBalances);
-                transfers = string(tokenTransfers.encode());
+                transfers = Transfers.encode(tokenTransfers);
             }
         } else if (StringUtil.equals(eventName, LOAN_EXPIRED_EVENT)) {
             // If the issuance is already Delinquent(colleteral due), no action
@@ -320,9 +323,10 @@ contract Loan is Instrument {
                 && getEtherBalance(loanBalances) == loanProperties.borrowAmount) {
                 // Change to Complete Engaged state
                 updatedState = IssuanceStates.CompleteEngaged;
+                emit IssuanceStateUpdated(issuanceId, IssuanceStates.CompleteEngaged);
                 // Also add transfers
                 Transfers.Data memory tokenTransfers = release(loanProperties, loanBalances);
-                transfers = string(tokenTransfers.encode());
+                transfers = Transfers.encode(tokenTransfers);
             }
         } else if (StringUtil.equals(eventName, GRACE_PERIOD_EXPIRED_EVENT)) {
             // If the issuance is already Delinquent or COMPLETE_ENGAGED_STATE, no action
@@ -332,14 +336,16 @@ contract Loan is Instrument {
                 if (getEtherBalance(loanBalances) < loanProperties.borrowAmount) {
                     // Change to Delinquent state
                     updatedState = IssuanceStates.Delinquent;
+                    emit IssuanceStateUpdated(issuanceId, IssuanceStates.Delinquent);
                     Transfers.Data memory tokenTransfers = defaultRelease(loanProperties, loanBalances);
-                    transfers = string(tokenTransfers.encode());
+                    transfers = Transfers.encode(tokenTransfers);
                 } else {
                     // Change to Complete Engaged state
                     updatedState = IssuanceStates.CompleteEngaged;
+                    emit IssuanceStateUpdated(issuanceId, IssuanceStates.CompleteEngaged);
                     // Also add transfers
                     Transfers.Data memory tokenTransfers = release(loanProperties, loanBalances);
-                    transfers = string(tokenTransfers.encode());
+                    transfers = Transfers.encode(tokenTransfers);
                 }
             }
         } else {
@@ -347,33 +353,33 @@ contract Loan is Instrument {
         }
 
         // Persist the propertiess
-        updatedProperties = string(loanProperties.encode());
+        updatedProperties = LoanProperties.encode(loanProperties);
     }
 
     /**
      * User-driven ETH withdraw is not supported in loan contract.
      */
-    function processWithdraw(uint256 /** issuanceId */, IssuanceStates /** state */, string memory /** properties */,
-        string memory /** balances */, address /** toAddress */, uint256 /** amount */)
-        public returns (IssuanceStates /** updatedState */, string memory /** updatedProperties */, string memory /** transfers */) {
+    function processWithdraw(uint256 /** issuanceId */, IssuanceStates /** state */, bytes memory /** properties */,
+        bytes memory /** balances */, address /** toAddress */, uint256 /** amount */)
+        public returns (IssuanceStates /** updatedState */, bytes memory /** updatedProperties */, bytes memory /** transfers */) {
         revert("User ETH withdraw unsupported");
     }
 
     /**
      * User-driven ERC20 token withdraw is not supported in loan contract.
      */
-    function processTokenWithdraw(uint256 /** issuanceId */, IssuanceStates /** state */, string memory /** properties */,
-        string memory /** balances */, address /** toAddress */, address /** tokenAddress */, uint256 /** amount */)
-        public returns (IssuanceStates /** updatedState */, string memory /** updatedProperties */, string memory /** transfers */) {
+    function processTokenWithdraw(uint256 /** issuanceId */, IssuanceStates /** state */, bytes memory /** properties */,
+        bytes memory /** balances */, address /** toAddress */, address /** tokenAddress */, uint256 /** amount */)
+        public returns (IssuanceStates /** updatedState */, bytes memory /** updatedProperties */, bytes memory /** transfers */) {
         revert("User ERC20 token withdraw unsupported");
     }
 
     /**
      * @dev Custom event is not supported in loan contract.
      */
-    function processCustomEvent(uint256 /** issuanceId */, IssuanceStates /** state */, string memory /** properties */,
-        string memory /** balances */, string memory /** eventName */, string memory /** eventPayload */)
-        public returns (IssuanceStates /** updatedState */, string memory /** updatedProperties */, string memory /** transfers */) {
+    function processCustomEvent(uint256 /** issuanceId */, IssuanceStates /** state */, bytes memory /** properties */,
+        bytes memory /** balances */, string memory /** eventName */, bytes memory /** eventPayload */)
+        public returns (IssuanceStates /** updatedState */, bytes memory /** updatedProperties */, bytes memory /** transfers */) {
         revert("Custom evnet unsupported.");
     }
 

@@ -191,6 +191,7 @@ library SellerParameters {
       internal pure returns (uint) {
     uint offset = p;
     uint pointer = p;
+
     pointer += ProtoBufRuntime._encode_key(1, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
     pointer += ProtoBufRuntime._encode_sol_address(r.collateralTokenAddress, pointer, bs);
     pointer += ProtoBufRuntime._encode_key(2, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
@@ -217,8 +218,14 @@ library SellerParameters {
       internal pure returns (uint) {
     uint offset = p;
     uint pointer = p;
-    pointer += ProtoBufRuntime._encode_varint(_estimate(r), pointer, bs);
-    pointer += _encode(r, pointer, bs);
+    bytes memory tmp = new bytes(_estimate(r));
+    uint tmpAddr = ProtoBufRuntime.getMemoryAddress(tmp);
+    uint bsAddr = ProtoBufRuntime.getMemoryAddress(bs);
+    uint size = _encode(r, 32, tmp);
+    pointer += ProtoBufRuntime._encode_varint(size, pointer, bs);
+    ProtoBufRuntime.copyBytes(tmpAddr + 32, bsAddr + pointer, size);
+    pointer += size;
+    delete tmp;
     return pointer - offset;
   }
   // estimator
@@ -533,6 +540,7 @@ library LoanProperties {
       internal pure returns (uint) {
     uint offset = p;
     uint pointer = p;
+
     pointer += ProtoBufRuntime._encode_key(1, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
     pointer += ProtoBufRuntime._encode_sol_address(r.sellerAddress, pointer, bs);
     pointer += ProtoBufRuntime._encode_key(2, ProtoBufRuntime.WireType.LengthDelim, pointer, bs);
@@ -569,8 +577,14 @@ library LoanProperties {
       internal pure returns (uint) {
     uint offset = p;
     uint pointer = p;
-    pointer += ProtoBufRuntime._encode_varint(_estimate(r), pointer, bs);
-    pointer += _encode(r, pointer, bs);
+    bytes memory tmp = new bytes(_estimate(r));
+    uint tmpAddr = ProtoBufRuntime.getMemoryAddress(tmp);
+    uint bsAddr = ProtoBufRuntime.getMemoryAddress(bs);
+    uint size = _encode(r, 32, tmp);
+    pointer += ProtoBufRuntime._encode_varint(size, pointer, bs);
+    ProtoBufRuntime.copyBytes(tmpAddr + 32, bsAddr + pointer, size);
+    pointer += size;
+    delete tmp;
     return pointer - offset;
   }
   // estimator

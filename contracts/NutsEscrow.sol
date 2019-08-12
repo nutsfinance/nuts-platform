@@ -237,8 +237,8 @@ contract NutsEscrow is WhitelistAdminRole {
      * @param issuanceId The issuance id
      * @return The balance of all tokens about this issuance.
      */
-    function getIssuanceBalances(uint256 issuanceId) public view onlyWhitelistAdmin returns (string memory) {
-        return string(_issuanceBalances[issuanceId].encode());
+    function getIssuanceBalances(uint256 issuanceId) public view onlyWhitelistAdmin returns (bytes memory) {
+        return Balances.encode(_issuanceBalances[issuanceId]);
     }
 
     function getUserEtherBalance(address payee) private returns (Balance.Data storage) {

@@ -70,14 +70,14 @@ contract NutsPlatform is FspRole, TimerOracleRole {
      * @param sellerParameters The custom parameter of seller
      * @return issuanceId The id of the newly created issuance
      */
-    function createIssuance(address instrumentAddress, string memory sellerParameters) public returns (uint256) {
+    function createIssuance(address instrumentAddress, bytes memory sellerParameters) public returns (uint256) {
         require(instrumentAddress != address(0x0), "Instrument address must be set.");
         require(_instrumentRegistry.validate(instrumentAddress), "Invalid instrument");
         lastIssuanceId = lastIssuanceId + 1;
         uint issuanceId = lastIssuanceId;
         Instrument instrument = Instrument(instrumentAddress);
-        (Instrument.IssuanceStates updatedState, string memory updatedProperties,
-            string memory transfers) = instrument.createIssuance(issuanceId,
+        (Instrument.IssuanceStates updatedState, bytes memory updatedProperties,
+            bytes memory transfers) = instrument.createIssuance(issuanceId,
             msg.sender, sellerParameters);
 
         // Create a new property map for the issuance
@@ -99,19 +99,19 @@ contract NutsPlatform is FspRole, TimerOracleRole {
      * @param issuanceId The id of the issuance
      * @param buyerParameters The custom parameters of the engagement
      */
-    function engageIssuance(uint256 issuanceId, string memory buyerParameters) public {
+    function engageIssuance(uint256 issuanceId, bytes memory buyerParameters) public {
         // Validation
         require(issuanceId > 0, "Issuance id must be set.");
 
         // Retrieve common and custom properties
         (CommonProperties.Data memory commonProperties,
-            string memory customPropertiesData) = loadIssuanceData(issuanceId);
+            bytes memory customPropertiesData) = loadIssuanceData(issuanceId);
 
         // Retrieve the issuance balance
-        string memory balances = _escrow.getIssuanceBalances(issuanceId);
+        bytes memory balances = _escrow.getIssuanceBalances(issuanceId);
         Instrument instrument = Instrument(commonProperties.instrumentAddress);
-        (Instrument.IssuanceStates updatedState, string memory updatedProperties,
-            string memory transfers) = instrument.engage(issuanceId,
+        (Instrument.IssuanceStates updatedState, bytes memory updatedProperties,
+            bytes memory transfers) = instrument.engage(issuanceId,
             Instrument.IssuanceStates(commonProperties.state),
             customPropertiesData, balances, msg.sender, buyerParameters);
 
@@ -140,16 +140,16 @@ contract NutsPlatform is FspRole, TimerOracleRole {
 
         // Retrieve common and custom properties
         (CommonProperties.Data memory commonProperties,
-            string memory customPropertiesData) = loadIssuanceData(issuanceId);
+            bytes memory customPropertiesData) = loadIssuanceData(issuanceId);
 
         // Complete Ether transfer
         _escrow.transferToIssuance(msg.sender, issuanceId, amount);
 
         // Process the transfer event
-        string memory balances = _escrow.getIssuanceBalances(issuanceId);
+        bytes memory balances = _escrow.getIssuanceBalances(issuanceId);
         Instrument instrument = Instrument(commonProperties.instrumentAddress);
-        (Instrument.IssuanceStates updatedState, string memory updatedProperties,
-            string memory transfers) = instrument.processDeposit(issuanceId,
+        (Instrument.IssuanceStates updatedState, bytes memory updatedProperties,
+            bytes memory transfers) = instrument.processDeposit(issuanceId,
             Instrument.IssuanceStates(commonProperties.state), customPropertiesData,
             balances, msg.sender, amount);
 
@@ -179,16 +179,16 @@ contract NutsPlatform is FspRole, TimerOracleRole {
 
         // Retrieve common and custom properties
         (CommonProperties.Data memory commonProperties,
-            string memory customPropertiesData) = loadIssuanceData(issuanceId);
+            bytes memory customPropertiesData) = loadIssuanceData(issuanceId);
 
         // Complete the token transfer
         _escrow.transferTokenToIssuance(msg.sender, issuanceId, ERC20(tokenAddress), amount);
 
         // Process the transfer event
-        string memory balances = _escrow.getIssuanceBalances(issuanceId);
+        bytes memory balances = _escrow.getIssuanceBalances(issuanceId);
         Instrument instrument = Instrument(commonProperties.instrumentAddress);
-        (Instrument.IssuanceStates updatedState, string memory updatedProperties,
-            string memory transfers) = instrument.processTokenDeposit(issuanceId,
+        (Instrument.IssuanceStates updatedState, bytes memory updatedProperties,
+            bytes memory transfers) = instrument.processTokenDeposit(issuanceId,
             Instrument.IssuanceStates(commonProperties.state), customPropertiesData,
             balances, msg.sender, tokenAddress, amount);
 
@@ -215,16 +215,16 @@ contract NutsPlatform is FspRole, TimerOracleRole {
 
         // Retrieve common and custom properties
         (CommonProperties.Data memory commonProperties,
-            string memory customPropertiesData) = loadIssuanceData(issuanceId);
+            bytes memory customPropertiesData) = loadIssuanceData(issuanceId);
 
         // Complete Ether transfer
         _escrow.transferFromIssuance(msg.sender, issuanceId, amount);
 
         // Process the transfer event
-        string memory balances = _escrow.getIssuanceBalances(issuanceId);
+        bytes memory balances = _escrow.getIssuanceBalances(issuanceId);
         Instrument instrument = Instrument(commonProperties.instrumentAddress);
-        (Instrument.IssuanceStates updatedState, string memory updatedProperties,
-            string memory transfers) = instrument.processWithdraw(issuanceId,
+        (Instrument.IssuanceStates updatedState, bytes memory updatedProperties,
+            bytes memory transfers) = instrument.processWithdraw(issuanceId,
             Instrument.IssuanceStates(commonProperties.state), customPropertiesData,
             balances, msg.sender, amount);
 
@@ -253,16 +253,16 @@ contract NutsPlatform is FspRole, TimerOracleRole {
 
         // Retrieve common and custom properties
         (CommonProperties.Data memory commonProperties,
-            string memory customPropertiesData) = loadIssuanceData(issuanceId);
+            bytes memory customPropertiesData) = loadIssuanceData(issuanceId);
 
         // Complete the token transfer
         _escrow.transferTokenFromIssuance(msg.sender, issuanceId, ERC20(tokenAddress), amount);
 
         // Process the transfer event
-        string memory balances = _escrow.getIssuanceBalances(issuanceId);
+        bytes memory balances = _escrow.getIssuanceBalances(issuanceId);
         Instrument instrument = Instrument(commonProperties.instrumentAddress);
-        (Instrument.IssuanceStates updatedState, string memory updatedProperties,
-            string memory transfers) = instrument.processTokenWithdraw(issuanceId,
+        (Instrument.IssuanceStates updatedState, bytes memory updatedProperties,
+            bytes memory transfers) = instrument.processTokenWithdraw(issuanceId,
             Instrument.IssuanceStates(commonProperties.state), customPropertiesData,
             balances, msg.sender, tokenAddress, amount);
 
@@ -282,7 +282,7 @@ contract NutsPlatform is FspRole, TimerOracleRole {
      * @param eventPayload Payload of custom event, eventPayload of EventScheduled event
      */
     function processScheduledEvent(uint256 issuanceId, uint256 timestamp, string memory eventName,
-        string memory eventPayload) public onlyTimerOracle {
+        bytes memory eventPayload) public onlyTimerOracle {
         // Validation
         require(issuanceId > 0, "Issuance id must be set.");
         require(bytes(eventName).length > 0, "Event name must be set.");
@@ -290,13 +290,13 @@ contract NutsPlatform is FspRole, TimerOracleRole {
 
         // Retrieve common and custom properties
         (CommonProperties.Data memory commonProperties,
-            string memory customPropertiesData) = loadIssuanceData(issuanceId);
+            bytes memory customPropertiesData) = loadIssuanceData(issuanceId);
 
         // Retrieve the issuance balance
-        string memory balances = _escrow.getIssuanceBalances(issuanceId);
+        bytes memory balances = _escrow.getIssuanceBalances(issuanceId);
         Instrument instrument = Instrument(commonProperties.instrumentAddress);
-        (Instrument.IssuanceStates updatedState, string memory updatedProperties,
-            string memory transfers) = instrument.processScheduledEvent(issuanceId,
+        (Instrument.IssuanceStates updatedState, bytes memory updatedProperties,
+            bytes memory transfers) = instrument.processScheduledEvent(issuanceId,
             Instrument.IssuanceStates(commonProperties.state), customPropertiesData,
             balances, eventName, eventPayload);
 
@@ -314,19 +314,19 @@ contract NutsPlatform is FspRole, TimerOracleRole {
      * @param eventName Name of custom event, eventName of EventScheduled event
      * @param eventPayload Payload of custom event, eventPayload of EventScheduled event
      */
-    function processCustomEvent(uint256 issuanceId, string memory eventName, string memory eventPayload) public {
+    function processCustomEvent(uint256 issuanceId, string memory eventName, bytes memory eventPayload) public {
         // Validation
         require(issuanceId > 0, "Issuance id must be set.");
         require(bytes(eventName).length > 0, "Event name must be set.");
 
         (CommonProperties.Data memory commonProperties,
-            string memory customPropertiesData) = loadIssuanceData(issuanceId);
+            bytes memory customPropertiesData) = loadIssuanceData(issuanceId);
 
         // Retrieve the issuance balance
-        string memory balances = _escrow.getIssuanceBalances(issuanceId);
+        bytes memory balances = _escrow.getIssuanceBalances(issuanceId);
         Instrument instrument = Instrument(commonProperties.instrumentAddress);
-        (Instrument.IssuanceStates updatedState, string memory updatedProperties,
-            string memory transfers) = instrument.processCustomEvent(issuanceId,
+        (Instrument.IssuanceStates updatedState, bytes memory updatedProperties,
+            bytes memory transfers) = instrument.processCustomEvent(issuanceId,
             Instrument.IssuanceStates(commonProperties.state), customPropertiesData,
             balances, eventName, eventPayload);
 
@@ -339,22 +339,22 @@ contract NutsPlatform is FspRole, TimerOracleRole {
     }
 
     function loadIssuanceData(uint256 issuanceId) private view returns (CommonProperties.Data memory commonProperties,
-        string memory customPropertiesData) {
+        bytes memory customPropertiesData) {
         // Retrieve common and custom properties
-        string memory commonPropertiesData = _storage.getValue(getIssuanceCommonDataKey(issuanceId));
+        bytes memory commonPropertiesData = _storage.getValue(getIssuanceCommonDataKey(issuanceId));
         // Validate whether the issuance exists
         require(bytes(commonPropertiesData).length > 0, "Issuance does not exist.");
-        commonProperties = CommonProperties.decode(bytes(commonPropertiesData));
+        commonProperties = CommonProperties.decode(commonPropertiesData);
         customPropertiesData = _storage.getValue(getIssuanceCustomDataKey(issuanceId));
     }
 
     function saveIssuanceData(uint256 issuanceId, CommonProperties.Data memory commonProperties,
-        Instrument.IssuanceStates updatedState, string memory customPropertiesData) private {
+        Instrument.IssuanceStates updatedState, bytes memory customPropertiesData) private {
         // Update issuance properties
         if (updatedState != Instrument.IssuanceStates.Unchanged) {
             commonProperties.state = uint(updatedState);
         }
-        _storage.setValue(getIssuanceCommonDataKey(issuanceId), string(commonProperties.encode()));
+        _storage.setValue(getIssuanceCommonDataKey(issuanceId), CommonProperties.encode(commonProperties));
         _storage.setValue(getIssuanceCustomDataKey(issuanceId), customPropertiesData);
     }
 
@@ -371,8 +371,8 @@ contract NutsPlatform is FspRole, TimerOracleRole {
      * @param issuanceId The id of the issuance which owns the Ether/token
      * @param transfers The transfer actions
      */
-    function processTransfers(uint issuanceId, string memory transfers) private {
-      Transfers.Data memory transferData = Transfers.decode(bytes(transfers));
+    function processTransfers(uint issuanceId, bytes memory transfers) private {
+      Transfers.Data memory transferData = Transfers.decode(transfers);
       // Note: The Escrow performs validation of transfer against the balance,
       // so there is no need to do the validation here.
       for (uint i = 0; i < transferData.actions.length; i++) {
