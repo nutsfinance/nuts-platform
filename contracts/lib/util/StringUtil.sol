@@ -9,6 +9,14 @@ library StringUtil {
         return string(abi.encodePacked(a, b));
     }
 
+    function concat(string memory a, uint256 b) internal pure returns (string memory) {
+        return string(abi.encodePacked(a, b));
+    }
+
+    function concat(string memory a, address b) internal pure returns (string memory) {
+        return string(abi.encodePacked(a, b));
+    }
+
     function concat(uint256 a, string memory b) internal pure returns (string memory) {
         return string(abi.encodePacked(a, b));
     }

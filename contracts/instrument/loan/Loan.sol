@@ -6,6 +6,7 @@ import "../../Instrument.sol";
 import "./LoanInfo.sol";
 import "../../TokenBalance.sol";
 import "../../TokenTransfer.sol";
+import "../../UnifiedStorage.sol";
 
 /**
  * The loan contract is a contract that buyer borrows in Ethers by
@@ -26,17 +27,18 @@ contract Loan is Instrument {
     string constant GRACE_PERIOD_EXPIRED_EVENT = "grace_period_expired";
 
     uint constant INTEREST_RATE_DECIMALS = 8;
+    string constant PROPERTIES_KEY = "properties";
 
     /**
      * @dev Create a new issuance of the financial instrument
      * @param issuanceId The id of the issuance
+     * @param unifiedStorage The storage contract created for this issuance
      * @param sellerAddress The address of the seller who creates this issuance
      * @param sellerParameters The custom parameters to the newly created issuance
-     * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
      */
-    function createIssuance(uint256 issuanceId, address sellerAddress, bytes memory sellerParameters)
-        public returns (IssuanceStates updatedState, bytes memory updatedProperties, bytes memory /** transfers */) {
+    function createIssuance(uint256 issuanceId, UnifiedStorage unifiedStorage, address sellerAddress, bytes memory sellerParameters)
+        public returns (IssuanceStates updatedState, bytes memory /** transfers */) {
         // Parameter validation
         require(issuanceId > 0, "Issuance id must be set.");
         require(sellerAddress != address(0x0), "Seller address must be set.");
@@ -77,31 +79,31 @@ contract Loan is Instrument {
         });
 
         // Set expiration for deposit
-        emit EventScheduled(issuanceId, now + parameters.depositDueDays * 1 days, DEPOSIT_EXPIRED_EVENT, "");
+        emit EventTimeScheduled(issuanceId, now + parameters.depositDueDays * 1 days, DEPOSIT_EXPIRED_EVENT, "");
 
         // Change to Initiated state
         updatedState = IssuanceStates.Initiated;
         emit IssuanceStateUpdated(issuanceId, IssuanceStates.Initiated);
         // Persist the propertiess
-        updatedProperties = LoanProperties.encode(loanProperties);
+        unifiedStorage.setBytes(PROPERTIES_KEY, LoanProperties.encode(loanProperties));
     }
 
     /**
      * @dev A buyer engages to the issuance
      * @param issuanceId The id of the issuance
-     * @param properties The current properties of the issuance
+     * @param unifiedStorage The storage contract created for this issuance
      * @param buyerAddress The address of the buyer who engages in the issuance
-     * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
      */
-    function engage(uint256 issuanceId, IssuanceStates state, bytes memory properties,
+    function engage(uint256 issuanceId, IssuanceStates state, UnifiedStorage unifiedStorage,
         bytes memory /** balances */, address buyerAddress, bytes memory /**buyerParameters */)
-        public returns (IssuanceStates updatedState, bytes memory updatedProperties, bytes memory /** transfers */) {
+        public returns (IssuanceStates updatedState, bytes memory /** transfers */) {
         // Parameter validation
         require(issuanceId > 0, "Issuance id must be set.");
-        require(bytes(properties).length > 0, "Properties must be set.");
         require(buyerAddress != address(0x0), "Buyer address must be set.");
         require(state == IssuanceStates.Engageable, "Issuance must be in the Engagable state");
+        bytes memory properties = unifiedStorage.getBytes(PROPERTIES_KEY);
+        require(bytes(properties).length > 0, "Properties must be set.");
 
         // Load properties
         LoanProperties.Data memory loanProperties = LoanProperties.decode(properties);
@@ -109,39 +111,42 @@ contract Loan is Instrument {
         loanProperties.engageDate = now;
 
         // Set expiration for collateral
-        emit EventScheduled(issuanceId, now + loanProperties.collateralDueDays * 1 days, COLLATERAL_EXPIRED_EVENT, "");
+        emit EventTimeScheduled(issuanceId,
+            now + loanProperties.collateralDueDays * 1 days, COLLATERAL_EXPIRED_EVENT, "");
 
         // Set expiration for loan
-        emit EventScheduled(issuanceId, now + loanProperties.tenorDays * 1 days, LOAN_EXPIRED_EVENT, "");
+        emit EventTimeScheduled(issuanceId,
+            now + loanProperties.tenorDays * 1 days, LOAN_EXPIRED_EVENT, "");
 
         // Set expiration for grace period
-        emit EventScheduled(issuanceId, now + (loanProperties.tenorDays + loanProperties.gracePeriod) * 1 days, GRACE_PERIOD_EXPIRED_EVENT, "");
+        emit EventTimeScheduled(issuanceId,
+            now + (loanProperties.tenorDays + loanProperties.gracePeriod) * 1 days, GRACE_PERIOD_EXPIRED_EVENT, "");
 
         // Change to Active state
         updatedState = IssuanceStates.Active;
         emit IssuanceStateUpdated(issuanceId, IssuanceStates.Active);
         // Persist the propertiess
-        updatedProperties = LoanProperties.encode(loanProperties);
+        unifiedStorage.setBytes(PROPERTIES_KEY, LoanProperties.encode(loanProperties));
     }
 
     /**
      * @dev Buyer/Seller has made an Ether transfer to the issuance
      * @param issuanceId The id of the issuance
-     * @param properties The current properties of the issuance
+     * @param unifiedStorage The storage contract created for this issuance
      * @param balances The current balance of the issuance
      * @param fromAddress The address of the Ether sender
      * @param amount The amount of Ether transfered
-     * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
      */
-    function processDeposit(uint256 issuanceId, IssuanceStates state, bytes memory properties,
+    function processDeposit(uint256 issuanceId, IssuanceStates state, UnifiedStorage unifiedStorage,
         bytes memory balances, address fromAddress, uint256 amount)
-        public returns (IssuanceStates updatedState, bytes memory updatedProperties, bytes memory /** transfers */) {
+        public returns (IssuanceStates updatedState, bytes memory /** transfers */) {
         // Parameter validation
         require(issuanceId > 0, "Issuance id must be set.");
-        require(bytes(properties).length > 0, "Properties must be set.");
         require(fromAddress != address(0x0), "Transferer address must be set.");
         require(amount > 0, "Transfer amount must be greater than 0.");
+        bytes memory properties = unifiedStorage.getBytes(PROPERTIES_KEY);
+        require(bytes(properties).length > 0, "Properties must be set.");
 
         // Load properties
         LoanProperties.Data memory loanProperties = LoanProperties.decode(properties);
@@ -168,7 +173,7 @@ contract Loan is Instrument {
                 updatedState = IssuanceStates.Engageable;
                 emit IssuanceStateUpdated(issuanceId, IssuanceStates.Engageable);
                 // Schedule engagement expiration
-                emit EventScheduled(issuanceId, now + loanProperties.engagementDueDays * 1 days, ENGAGEMENT_EXPIRED_EVENT, "");
+                emit EventTimeScheduled(issuanceId, now + loanProperties.engagementDueDays * 1 days, ENGAGEMENT_EXPIRED_EVENT, "");
             }
 
         } else if (loanProperties.buyerAddress == fromAddress) {
@@ -186,34 +191,34 @@ contract Loan is Instrument {
             loanProperties.interest = loanProperties.interest.add(interestByAmountAndDays(amount, loanProperties.interestRate,
                 daysBetween(loanProperties.engageDate, now)));
 
+            // Persist the properties
+            unifiedStorage.setBytes(PROPERTIES_KEY, LoanProperties.encode(loanProperties));
+
         } else {
             revert("Unknown transferer. Only seller or buyer can send Ether to issuance.");
         }
-
-        // Persist the propertiess
-        updatedProperties = LoanProperties.encode(loanProperties);
     }
 
     /**
      * @dev Buyer/Seller has made an ERC20 token transfer to the issuance
      * @param issuanceId The id of the issuance
-     * @param properties The current properties of the issuance
+     * @param unifiedStorage The storage contract created for this issuance
      * @param balances The current balance of the issuance
      * @param fromAddress The address of the ERC20 token sender
      * @param tokenAddress The address of the ERC20 token
      * @param amount The amount of ERC20 token transfered
-     * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
      */
-    function processTokenDeposit(uint256 issuanceId, IssuanceStates state, bytes memory properties,
+    function processTokenDeposit(uint256 issuanceId, IssuanceStates state, UnifiedStorage unifiedStorage,
         bytes memory balances, address fromAddress, address tokenAddress, uint256 amount)
-        public returns (IssuanceStates updatedState, bytes memory updatedProperties, bytes memory transfers) {
+        public returns (IssuanceStates updatedState, bytes memory transfers) {
         // Parameter validation
         require(issuanceId > 0, "Issuance id must be set.");
-        require(bytes(properties).length > 0, "Properties must be set.");
         require(fromAddress != address(0x0), "Transferer address must be set.");
         require(tokenAddress != address(0x0), "Transferred token address must be set.");
         require(amount > 0, "Transfer amount must be greater than 0.");
+        bytes memory properties = unifiedStorage.getBytes(PROPERTIES_KEY);
+        require(bytes(properties).length > 0, "Properties must be set.");
 
         // Load properties
         LoanProperties.Data memory loanProperties = LoanProperties.decode(properties);
@@ -251,28 +256,28 @@ contract Loan is Instrument {
                 amount: loanProperties.borrowAmount
             });
             transfers = Transfers.encode(tokenTransfers);
-        }
 
-        // Persist the propertiess
-        updatedProperties = LoanProperties.encode(loanProperties);
+            // Persist the properties
+            unifiedStorage.setBytes(PROPERTIES_KEY, LoanProperties.encode(loanProperties));
+        }
     }
 
     /**
      * @dev Process scheduled event
      * @param issuanceId The id of the issuance
-     * @param properties The current properties of the issuance
+     * @param unifiedStorage The storage contract created for this issuance
      * @param balances The current balance of the issuance
      * @param eventName Name of the custom event, eventName of EventScheduled event
-     * @return updatedProperties The updated issuance properties
      * @return transfers The transfers to perform after the invocation
      */
-    function processScheduledEvent(uint256 issuanceId, IssuanceStates state, bytes memory properties,
+    function processScheduledEvent(uint256 issuanceId, IssuanceStates state, UnifiedStorage unifiedStorage,
         bytes memory balances, string memory eventName, bytes memory /** eventPayload */)
-        public returns (IssuanceStates updatedState, bytes memory updatedProperties, bytes memory transfers) {
+        public returns (IssuanceStates updatedState, bytes memory transfers) {
         // Parameter validation
         require(issuanceId > 0, "Issuance id must be set.");
-        require(bytes(properties).length > 0, "Properties must be set.");
         require(bytes(eventName).length > 0, "Event name must be set.");
+        bytes memory properties = unifiedStorage.getBytes(PROPERTIES_KEY);
+        require(properties.length > 0, "Properties must be set.");
 
         // Load properties
         LoanProperties.Data memory loanProperties = LoanProperties.decode(properties);
@@ -352,34 +357,33 @@ contract Loan is Instrument {
             revert("Unknown event");
         }
 
-        // Persist the propertiess
-        updatedProperties = LoanProperties.encode(loanProperties);
+        // There is no update in the loan properties
     }
 
     /**
      * User-driven ETH withdraw is not supported in loan contract.
      */
-    function processWithdraw(uint256 /** issuanceId */, IssuanceStates /** state */, bytes memory /** properties */,
+    function processWithdraw(uint256 /** issuanceId */, IssuanceStates /** state */, UnifiedStorage /** unifiedStorage */,
         bytes memory /** balances */, address /** toAddress */, uint256 /** amount */)
-        public returns (IssuanceStates /** updatedState */, bytes memory /** updatedProperties */, bytes memory /** transfers */) {
+        public returns (IssuanceStates /** updatedState */, bytes memory /** transfers */) {
         revert("User ETH withdraw unsupported");
     }
 
     /**
      * User-driven ERC20 token withdraw is not supported in loan contract.
      */
-    function processTokenWithdraw(uint256 /** issuanceId */, IssuanceStates /** state */, bytes memory /** properties */,
+    function processTokenWithdraw(uint256 /** issuanceId */, IssuanceStates /** state */, UnifiedStorage /** unifiedStorage */,
         bytes memory /** balances */, address /** toAddress */, address /** tokenAddress */, uint256 /** amount */)
-        public returns (IssuanceStates /** updatedState */, bytes memory /** updatedProperties */, bytes memory /** transfers */) {
+        public returns (IssuanceStates /** updatedState */, bytes memory /** transfers */) {
         revert("User ERC20 token withdraw unsupported");
     }
 
     /**
      * @dev Custom event is not supported in loan contract.
      */
-    function processCustomEvent(uint256 /** issuanceId */, IssuanceStates /** state */, bytes memory /** properties */,
+    function processCustomEvent(uint256 /** issuanceId */, IssuanceStates /** state */, UnifiedStorage /** unifiedStorage */,
         bytes memory /** balances */, string memory /** eventName */, bytes memory /** eventPayload */)
-        public returns (IssuanceStates /** updatedState */, bytes memory /** updatedProperties */, bytes memory /** transfers */) {
+        public returns (IssuanceStates /** updatedState */, bytes memory /** transfers */) {
         revert("Custom evnet unsupported.");
     }
 
@@ -529,5 +533,34 @@ contract Loan is Instrument {
                 amount: tokenToBuyerAmount
             });
         }
+    }
+
+    /**********************************************
+     * Utility methods
+     ***********************************************/
+    /**
+     * @dev Get ETH balance. Note that we assume that there is at most one ETH balance entry.
+     */
+    function getEtherBalance(Balances.Data memory balances) internal pure returns (uint256) {
+        for (uint i = 0; i < balances.entries.length; i++) {
+            if (balances.entries[i].isEther) {
+                return balances.entries[i].amount;
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * @dev Get ERC20 token balance. Note that we assume that there is at most one balance entry per token.
+     */
+    function getTokenBalance(Balances.Data memory balances, address tokenAddress) internal pure returns (uint256) {
+        for (uint i = 0; i < balances.entries.length; i++) {
+            if (!balances.entries[i].isEther && balances.entries[i].tokenAddress == tokenAddress) {
+                return balances.entries[i].amount;
+            }
+        }
+
+        return 0;
     }
 }

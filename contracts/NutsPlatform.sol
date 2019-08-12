@@ -27,20 +27,34 @@ contract NutsPlatform is FspRole, TimerOracleRole {
     event IssuanceEngaged(uint indexed issuanceId, address indexed instrumentAddress,
         address indexed buyerAddress);
 
+    /**
+     * @dev The event reporting the issuance properties change
+     * @param issuanceId The id of the issuance
+     * @param oldState The previous issuance state
+     * @param newState The current issuance state
+     */
+    event IssuanceStateUpdated(uint256 indexed issuanceId, Instrument.IssuanceStates oldState,
+        Instrument.IssuanceStates newState);
+
     // The sequence used to generate issuance id
-    uint256 private lastIssuanceId = 0;
     UnifiedStorage private _storage;
     InstrumentRegistry private _instrumentRegistry;
     NutsToken private _token;
     NutsEscrow private _escrow;
     uint256 constant TOKEN_AMOUNT = 10;
+    string constant LAST_ISSUANCE_ID_KEY = "lastIssuanceId";
 
-    constructor(address unifiedStorageAddress, address instrumentRegistry,
+    constructor(address unifiedStorageAddress, address instrumentRegistryAddress,
         address nutsTokenAddress, address nutsEscrowAddress) public {
         _storage = UnifiedStorage(unifiedStorageAddress);
-        _instrumentRegistry = InstrumentRegistry(instrumentRegistry);
+        _instrumentRegistry = InstrumentRegistry(instrumentRegistryAddress);
         _token = NutsToken(nutsTokenAddress);
         _escrow = NutsEscrow(nutsEscrowAddress);
+
+        // Validations
+        // require(_storage.isWhitelistAdmin(address(this)), "NutsPlatform: Not admin of UnifiedStorage.");
+        // require(_instrumentRegistry.isWhitelistAdmin(address(this)), "NutsPlatform: Not admin of InstrumentRegistry.");
+        // require(_escrow.isWhitelistAdmin(address(this)), "NutsPlatform: Not admin of NutsEscrow.");
     }
 
     /**
@@ -49,6 +63,9 @@ contract NutsPlatform is FspRole, TimerOracleRole {
      * @param expiration The lifetime of the issuance in days. 0 means never expires.
      */
     function createInstrument(address instrumentAddress, uint256 expiration) external onlyFsp {
+        // Validations
+        require(instrumentAddress != address(0x0), "NutsPlatform: Instrument address must be set.");
+
         _token.transferFrom(msg.sender, address(this), TOKEN_AMOUNT);
         _instrumentRegistry.create(msg.sender, instrumentAddress, expiration);
 
@@ -60,6 +77,9 @@ contract NutsPlatform is FspRole, TimerOracleRole {
      * @param instrumentAddress The address of the instrument contract
      */
     function deactivateInstrument(address instrumentAddress) public onlyFsp {
+        // Validations
+        require(instrumentAddress != address(0x0), "NutsPlatform: Instrument address must be set.");
+
         _token.transfer(msg.sender, TOKEN_AMOUNT);
         _instrumentRegistry.deactivate(msg.sender, instrumentAddress);
     }
@@ -71,26 +91,36 @@ contract NutsPlatform is FspRole, TimerOracleRole {
      * @return issuanceId The id of the newly created issuance
      */
     function createIssuance(address instrumentAddress, bytes memory sellerParameters) public returns (uint256) {
-        require(instrumentAddress != address(0x0), "Instrument address must be set.");
-        require(_instrumentRegistry.validate(instrumentAddress), "Invalid instrument");
-        lastIssuanceId = lastIssuanceId + 1;
-        uint issuanceId = lastIssuanceId;
+        // Validations
+        require(instrumentAddress != address(0x0), "NutsPlatform: Instrument address must be set.");
+        require(_instrumentRegistry.validate(instrumentAddress), "NutsPlatform: Invalid instrument");
+
+        // Get the issuance id
+        uint issuanceId = _storage.getUint(LAST_ISSUANCE_ID_KEY);
+        _storage.setUint(LAST_ISSUANCE_ID_KEY, issuanceId + 1);
         Instrument instrument = Instrument(instrumentAddress);
-        (Instrument.IssuanceStates updatedState, bytes memory updatedProperties,
-            bytes memory transfers) = instrument.createIssuance(issuanceId,
-            msg.sender, sellerParameters);
+        // Create a new UnifiedStorage instance for this issuance.
+        // Nuts Platform has admin role by default.
+        UnifiedStorage issuanceStorage = new UnifiedStorage();
+        // Grant a temporary writer role to the instrument.
+        issuanceStorage.addWriter(instrumentAddress);
+        (Instrument.IssuanceStates updatedState, bytes memory transfers) = instrument.createIssuance(issuanceId,
+            issuanceStorage, msg.sender, sellerParameters);
+        // Revoke writer role afterward
+        issuanceStorage.removeWriter(instrumentAddress);
 
         // Create a new property map for the issuance
         CommonProperties.Data memory commonProperties = CommonProperties.Data(issuanceId, instrumentAddress,
-            msg.sender, now, uint256(updatedState));
+            msg.sender, address(issuanceStorage), now, uint256(updatedState));
 
-        // Persist common and custom properties
-        saveIssuanceData(issuanceId, commonProperties, updatedState, updatedProperties);
+        // Persist common  properties
+        saveIssuanceProperties(issuanceId, commonProperties, updatedState);
 
         // Post-transferss
         processTransfers(issuanceId, transfers);
 
         emit IssuanceCreated(issuanceId, instrumentAddress, msg.sender);
+
         return issuanceId;
     }
 
@@ -101,27 +131,29 @@ contract NutsPlatform is FspRole, TimerOracleRole {
      */
     function engageIssuance(uint256 issuanceId, bytes memory buyerParameters) public {
         // Validation
-        require(issuanceId > 0, "Issuance id must be set.");
+        require(issuanceId > 0, "NutsPlatform: Issuance id must be set.");
 
-        // Retrieve common and custom properties
-        (CommonProperties.Data memory commonProperties,
-            bytes memory customPropertiesData) = loadIssuanceData(issuanceId);
-
+        // Retrieve issuance common properties
+        CommonProperties.Data memory commonProperties = getIssuanceProperties(issuanceId);
         // Retrieve the issuance balance
         bytes memory balances = _escrow.getIssuanceBalances(issuanceId);
         Instrument instrument = Instrument(commonProperties.instrumentAddress);
-        (Instrument.IssuanceStates updatedState, bytes memory updatedProperties,
-            bytes memory transfers) = instrument.engage(issuanceId,
-            Instrument.IssuanceStates(commonProperties.state),
-            customPropertiesData, balances, msg.sender, buyerParameters);
+        UnifiedStorage issuanceStorage = UnifiedStorage(commonProperties.storageAddress);
+        // Grant a temporary writer role to the instrument.
+        issuanceStorage.addWriter(commonProperties.instrumentAddress);
+        (Instrument.IssuanceStates updatedState, bytes memory transfers) = instrument.engage(issuanceId,
+            Instrument.IssuanceStates(commonProperties.state), issuanceStorage,
+            balances, msg.sender, buyerParameters);
+        // Revoke writer role afterward
+        issuanceStorage.removeWriter(commonProperties.instrumentAddress);
 
-        // Update issuance properties
-        saveIssuanceData(issuanceId, commonProperties, updatedState, updatedProperties);
+        // Persist common  properties
+        saveIssuanceProperties(issuanceId, commonProperties, updatedState);
 
         // Post transferss
         processTransfers(issuanceId, transfers);
 
-        emit IssuanceEngaged(issuanceId, address(commonProperties.instrumentAddress), msg.sender);
+        emit IssuanceEngaged(issuanceId, commonProperties.instrumentAddress, msg.sender);
     }
 
     /**
@@ -135,12 +167,11 @@ contract NutsPlatform is FspRole, TimerOracleRole {
      */
     function deposit(uint256 issuanceId, uint256 amount) public {
         // Validation
-        require(issuanceId > 0, "Issuance id must be set.");
-        require(amount > 0, "Deposit amount must be larger than 0.");
+        require(issuanceId > 0, "NutsPlatform: Issuance id must be set.");
+        require(amount > 0, "NutsPlatform: Deposit amount must be larger than 0.");
 
-        // Retrieve common and custom properties
-        (CommonProperties.Data memory commonProperties,
-            bytes memory customPropertiesData) = loadIssuanceData(issuanceId);
+        // Retrieve issuance common properties
+        CommonProperties.Data memory commonProperties = getIssuanceProperties(issuanceId);
 
         // Complete Ether transfer
         _escrow.transferToIssuance(msg.sender, issuanceId, amount);
@@ -148,14 +179,17 @@ contract NutsPlatform is FspRole, TimerOracleRole {
         // Process the transfer event
         bytes memory balances = _escrow.getIssuanceBalances(issuanceId);
         Instrument instrument = Instrument(commonProperties.instrumentAddress);
-        (Instrument.IssuanceStates updatedState, bytes memory updatedProperties,
-            bytes memory transfers) = instrument.processDeposit(issuanceId,
-            Instrument.IssuanceStates(commonProperties.state), customPropertiesData,
+        UnifiedStorage issuanceStorage = UnifiedStorage(commonProperties.storageAddress);
+        // Grant a temporary writer role to the instrument.
+        issuanceStorage.addWriter(commonProperties.instrumentAddress);
+        (Instrument.IssuanceStates updatedState, bytes memory transfers) = instrument.processDeposit(issuanceId,
+            Instrument.IssuanceStates(commonProperties.state), issuanceStorage,
             balances, msg.sender, amount);
+        // Revoke writer role afterward
+        issuanceStorage.removeWriter(commonProperties.instrumentAddress);
 
-        // Update issuance properties
-        commonProperties.state = uint256(updatedState);
-        saveIssuanceData(issuanceId, commonProperties, updatedState, updatedProperties);
+        // Persist common  properties
+        saveIssuanceProperties(issuanceId, commonProperties, updatedState);
 
         // Post-transferss
         processTransfers(issuanceId, transfers);
@@ -173,13 +207,12 @@ contract NutsPlatform is FspRole, TimerOracleRole {
      */
     function depositToken(uint256 issuanceId, address tokenAddress, uint256 amount) public {
         // Validation
-        require(issuanceId > 0, "Issuance id must be set.");
-        require(tokenAddress != address(0x0), "Token address must be set.");
-        require(amount > 0, "Deposit amount must be larger than 0.");
+        require(issuanceId > 0, "NutsPlatform: Issuance id must be set.");
+        require(tokenAddress != address(0x0), "NutsPlatform: Token address must be set.");
+        require(amount > 0, "NutsPlatform: Deposit amount must be larger than 0.");
 
-        // Retrieve common and custom properties
-        (CommonProperties.Data memory commonProperties,
-            bytes memory customPropertiesData) = loadIssuanceData(issuanceId);
+        // Retrieve issuance common properties
+        CommonProperties.Data memory commonProperties = getIssuanceProperties(issuanceId);
 
         // Complete the token transfer
         _escrow.transferTokenToIssuance(msg.sender, issuanceId, ERC20(tokenAddress), amount);
@@ -187,14 +220,17 @@ contract NutsPlatform is FspRole, TimerOracleRole {
         // Process the transfer event
         bytes memory balances = _escrow.getIssuanceBalances(issuanceId);
         Instrument instrument = Instrument(commonProperties.instrumentAddress);
-        (Instrument.IssuanceStates updatedState, bytes memory updatedProperties,
-            bytes memory transfers) = instrument.processTokenDeposit(issuanceId,
-            Instrument.IssuanceStates(commonProperties.state), customPropertiesData,
+        UnifiedStorage issuanceStorage = UnifiedStorage(commonProperties.storageAddress);
+        // Grant a temporary writer role to the instrument.
+        issuanceStorage.addWriter(commonProperties.instrumentAddress);
+        (Instrument.IssuanceStates updatedState, bytes memory transfers) = instrument.processTokenDeposit(issuanceId,
+            Instrument.IssuanceStates(commonProperties.state), issuanceStorage,
             balances, msg.sender, tokenAddress, amount);
+        // Revoke writer role afterward
+        issuanceStorage.removeWriter(commonProperties.instrumentAddress);
 
-        // Update issuance properties
-        commonProperties.state = uint256(updatedState);
-        saveIssuanceData(issuanceId, commonProperties, updatedState, updatedProperties);
+        // Persist common  properties
+        saveIssuanceProperties(issuanceId, commonProperties, updatedState);
 
         // Post-transferss
         processTransfers(issuanceId, transfers);
@@ -210,12 +246,11 @@ contract NutsPlatform is FspRole, TimerOracleRole {
      */
     function withdraw(uint256 issuanceId, uint256 amount) public {
         // Validation
-        require(issuanceId > 0, "Issuance id must be set.");
-        require(amount > 0, "Deposit amount must be larger than 0.");
+        require(issuanceId > 0, "NutsPlatform: Issuance id must be set.");
+        require(amount > 0, "NutsPlatform: Deposit amount must be larger than 0.");
 
-        // Retrieve common and custom properties
-        (CommonProperties.Data memory commonProperties,
-            bytes memory customPropertiesData) = loadIssuanceData(issuanceId);
+        // Retrieve issuance common properties
+        CommonProperties.Data memory commonProperties = getIssuanceProperties(issuanceId);
 
         // Complete Ether transfer
         _escrow.transferFromIssuance(msg.sender, issuanceId, amount);
@@ -223,14 +258,17 @@ contract NutsPlatform is FspRole, TimerOracleRole {
         // Process the transfer event
         bytes memory balances = _escrow.getIssuanceBalances(issuanceId);
         Instrument instrument = Instrument(commonProperties.instrumentAddress);
-        (Instrument.IssuanceStates updatedState, bytes memory updatedProperties,
-            bytes memory transfers) = instrument.processWithdraw(issuanceId,
-            Instrument.IssuanceStates(commonProperties.state), customPropertiesData,
+        UnifiedStorage issuanceStorage = UnifiedStorage(commonProperties.storageAddress);
+        // Grant a temporary writer role to the instrument.
+        issuanceStorage.addWriter(commonProperties.instrumentAddress);
+        (Instrument.IssuanceStates updatedState, bytes memory transfers) = instrument.processWithdraw(issuanceId,
+            Instrument.IssuanceStates(commonProperties.state), issuanceStorage,
             balances, msg.sender, amount);
+        // Revoke writer role afterward
+        issuanceStorage.removeWriter(commonProperties.instrumentAddress);
 
-        // Update issuance properties
-        commonProperties.state = uint256(updatedState);
-        saveIssuanceData(issuanceId, commonProperties, updatedState, updatedProperties);
+        // Persist common  properties
+        saveIssuanceProperties(issuanceId, commonProperties, updatedState);
 
         // Post-transferss
         processTransfers(issuanceId, transfers);
@@ -247,13 +285,12 @@ contract NutsPlatform is FspRole, TimerOracleRole {
      */
     function withdrawToken(uint256 issuanceId, address tokenAddress, uint256 amount) public {
         // Validation
-        require(issuanceId > 0, "Issuance id must be set.");
-        require(tokenAddress != address(0x0), "Token address must be set.");
-        require(amount > 0, "Deposit amount must be larger than 0.");
+        require(issuanceId > 0, "NutsPlatform: Issuance id must be set.");
+        require(tokenAddress != address(0x0), "NutsPlatform: Token address must be set.");
+        require(amount > 0, "NutsPlatform: Deposit amount must be larger than 0.");
 
-        // Retrieve common and custom properties
-        (CommonProperties.Data memory commonProperties,
-            bytes memory customPropertiesData) = loadIssuanceData(issuanceId);
+        // Retrieve issuance common properties
+        CommonProperties.Data memory commonProperties = getIssuanceProperties(issuanceId);
 
         // Complete the token transfer
         _escrow.transferTokenFromIssuance(msg.sender, issuanceId, ERC20(tokenAddress), amount);
@@ -261,14 +298,17 @@ contract NutsPlatform is FspRole, TimerOracleRole {
         // Process the transfer event
         bytes memory balances = _escrow.getIssuanceBalances(issuanceId);
         Instrument instrument = Instrument(commonProperties.instrumentAddress);
-        (Instrument.IssuanceStates updatedState, bytes memory updatedProperties,
-            bytes memory transfers) = instrument.processTokenWithdraw(issuanceId,
-            Instrument.IssuanceStates(commonProperties.state), customPropertiesData,
+        UnifiedStorage issuanceStorage = UnifiedStorage(commonProperties.storageAddress);
+        // Grant a temporary writer role to the instrument.
+        issuanceStorage.addWriter(commonProperties.instrumentAddress);
+        (Instrument.IssuanceStates updatedState, bytes memory transfers) = instrument.processTokenWithdraw(issuanceId,
+            Instrument.IssuanceStates(commonProperties.state), issuanceStorage,
             balances, msg.sender, tokenAddress, amount);
+        // Revoke writer role afterward
+        issuanceStorage.removeWriter(commonProperties.instrumentAddress);
 
-        // Update issuance properties
-        commonProperties.state = uint256(updatedState);
-        saveIssuanceData(issuanceId, commonProperties, updatedState, updatedProperties);
+        // Persist common  properties
+        saveIssuanceProperties(issuanceId, commonProperties, updatedState);
 
         // Post-transferss
         processTransfers(issuanceId, transfers);
@@ -284,25 +324,27 @@ contract NutsPlatform is FspRole, TimerOracleRole {
     function processScheduledEvent(uint256 issuanceId, uint256 timestamp, string memory eventName,
         bytes memory eventPayload) public onlyTimerOracle {
         // Validation
-        require(issuanceId > 0, "Issuance id must be set.");
-        require(bytes(eventName).length > 0, "Event name must be set.");
-        require(timestamp <= now, "The scheduled event is not due now.");
+        require(issuanceId > 0, "NutsPlatform: Issuance id must be set.");
+        require(bytes(eventName).length > 0, "NutsPlatform: Event name must be set.");
+        require(timestamp <= now, "NutsPlatform: The scheduled event is not due now.");
 
-        // Retrieve common and custom properties
-        (CommonProperties.Data memory commonProperties,
-            bytes memory customPropertiesData) = loadIssuanceData(issuanceId);
+        // Retrieve issuance common properties
+        CommonProperties.Data memory commonProperties = getIssuanceProperties(issuanceId);
 
         // Retrieve the issuance balance
         bytes memory balances = _escrow.getIssuanceBalances(issuanceId);
         Instrument instrument = Instrument(commonProperties.instrumentAddress);
-        (Instrument.IssuanceStates updatedState, bytes memory updatedProperties,
-            bytes memory transfers) = instrument.processScheduledEvent(issuanceId,
-            Instrument.IssuanceStates(commonProperties.state), customPropertiesData,
+        UnifiedStorage issuanceStorage = UnifiedStorage(commonProperties.storageAddress);
+        // Grant a temporary writer role to the instrument.
+        issuanceStorage.addWriter(commonProperties.instrumentAddress);
+        (Instrument.IssuanceStates updatedState, bytes memory transfers) = instrument.processScheduledEvent(issuanceId,
+            Instrument.IssuanceStates(commonProperties.state), issuanceStorage,
             balances, eventName, eventPayload);
+        // Revoke writer role afterward
+        issuanceStorage.removeWriter(commonProperties.instrumentAddress);
 
-        // Update issuance properties
-        commonProperties.state = uint256(updatedState);
-        saveIssuanceData(issuanceId, commonProperties, updatedState, updatedProperties);
+        // Persist common  properties
+        saveIssuanceProperties(issuanceId, commonProperties, updatedState);
 
         // Post transfers
         processTransfers(issuanceId, transfers);
@@ -316,54 +358,58 @@ contract NutsPlatform is FspRole, TimerOracleRole {
      */
     function processCustomEvent(uint256 issuanceId, string memory eventName, bytes memory eventPayload) public {
         // Validation
-        require(issuanceId > 0, "Issuance id must be set.");
-        require(bytes(eventName).length > 0, "Event name must be set.");
+        require(issuanceId > 0, "NutsPlatform: Issuance id must be set.");
+        require(bytes(eventName).length > 0, "NutsPlatform: Event name must be set.");
 
-        (CommonProperties.Data memory commonProperties,
-            bytes memory customPropertiesData) = loadIssuanceData(issuanceId);
+        // Retrieve issuance common properties
+        CommonProperties.Data memory commonProperties = getIssuanceProperties(issuanceId);
 
         // Retrieve the issuance balance
         bytes memory balances = _escrow.getIssuanceBalances(issuanceId);
         Instrument instrument = Instrument(commonProperties.instrumentAddress);
-        (Instrument.IssuanceStates updatedState, bytes memory updatedProperties,
-            bytes memory transfers) = instrument.processCustomEvent(issuanceId,
-            Instrument.IssuanceStates(commonProperties.state), customPropertiesData,
+        UnifiedStorage issuanceStorage = UnifiedStorage(commonProperties.storageAddress);
+        // Grant a temporary writer role to the instrument.
+        issuanceStorage.addWriter(commonProperties.instrumentAddress);
+        (Instrument.IssuanceStates updatedState, bytes memory transfers) = instrument.processCustomEvent(issuanceId,
+            Instrument.IssuanceStates(commonProperties.state), issuanceStorage,
             balances, eventName, eventPayload);
+        // Revoke writer role afterward
+        issuanceStorage.removeWriter(commonProperties.instrumentAddress);
 
-        // Update the issuance data
-        commonProperties.state = uint256(updatedState);
-        saveIssuanceData(issuanceId, commonProperties, updatedState, updatedProperties);
+        // Persist common  properties
+        saveIssuanceProperties(issuanceId, commonProperties, updatedState);
 
         // Post transfers
         processTransfers(issuanceId, transfers);
     }
 
-    function loadIssuanceData(uint256 issuanceId) private view returns (CommonProperties.Data memory commonProperties,
-        bytes memory customPropertiesData) {
+    /**
+     * @dev Gets issuance common properties from unified storage.
+     */
+    function getIssuanceProperties(uint256 issuanceId) private view returns (CommonProperties.Data memory commonProperties) {
         // Retrieve common and custom properties
-        bytes memory commonPropertiesData = _storage.getValue(getIssuanceCommonDataKey(issuanceId));
+        bytes memory commonPropertiesData = _storage.getBytes(getIssuanceCommonDataKey(issuanceId));
         // Validate whether the issuance exists
-        require(bytes(commonPropertiesData).length > 0, "Issuance does not exist.");
+        require(bytes(commonPropertiesData).length > 0, "NutsPlatform: Issuance does not exist.");
         commonProperties = CommonProperties.decode(commonPropertiesData);
-        customPropertiesData = _storage.getValue(getIssuanceCustomDataKey(issuanceId));
     }
 
-    function saveIssuanceData(uint256 issuanceId, CommonProperties.Data memory commonProperties,
-        Instrument.IssuanceStates updatedState, bytes memory customPropertiesData) private {
+    /**
+     * @dev Updates issuance common properties to unified storage.
+     */
+    function saveIssuanceProperties(uint256 issuanceId, CommonProperties.Data memory commonProperties,
+        Instrument.IssuanceStates updatedState) private {
         // Update issuance properties
-        if (updatedState != Instrument.IssuanceStates.Unchanged) {
+        Instrument.IssuanceStates prevState = Instrument.IssuanceStates(commonProperties.state);
+        if (updatedState != Instrument.IssuanceStates.Unmodified && updatedState != prevState) {
             commonProperties.state = uint(updatedState);
+            emit IssuanceStateUpdated(issuanceId, prevState, updatedState);
         }
-        _storage.setValue(getIssuanceCommonDataKey(issuanceId), CommonProperties.encode(commonProperties));
-        _storage.setValue(getIssuanceCustomDataKey(issuanceId), customPropertiesData);
+        _storage.setBytes(getIssuanceCommonDataKey(issuanceId), CommonProperties.encode(commonProperties));
     }
 
     function getIssuanceCommonDataKey(uint256 issuanceId) private pure returns (string memory) {
         return StringUtil.concat(issuanceId, "_common");
-    }
-
-    function getIssuanceCustomDataKey(uint256 issuanceId) private pure returns (string memory) {
-        return StringUtil.concat(issuanceId, "_custom");
     }
 
     /**

@@ -7,18 +7,26 @@ var Loan = artifacts.require("./instrument/Loan.sol");
 
 const deployNutsPlatform = async function(deployer) {
   let instrumentRegistryStorage = await deployer.deploy(UnifiedStorage);
+  console.log("instrumentRegistryStorage");
   let instrumentRegistry = await deployer.deploy(InstrumentRegistry, instrumentRegistryStorage.address);
+  console.log("instrumentRegistry");
   await instrumentRegistryStorage.addWhitelistAdmin(instrumentRegistry.address);
-
+  console.log("addWhitelistAdmin");
   let nutsPlatformStorage = await deployer.deploy(UnifiedStorage);
+  console.log("nutsPlatformStorage");
   let nutsToken = await deployer.deploy(NutsToken);
+  console.log("nutsToken");
   let nutsEscrow = await deployer.deploy(NutsEscrow);
-  let nutsPlatform = await deployer.deploy(NutsPlatform, nutsPlatformStorage.address, 
-    instrumentRegistry.address, nutsToken.address, nutsEscrow.address, {gas: 6000000});
-  
+  console.log("nutsEscrow");
+  let nutsPlatform = await deployer.deploy(NutsPlatform, nutsPlatformStorage.address,
+    instrumentRegistry.address, nutsToken.address, nutsEscrow.address);
+  console.log("nutsPlatform");
   await nutsPlatformStorage.addWhitelistAdmin(nutsPlatform.address);
+  console.log("nutsPlatformStorage.addWhitelistAdmin");
   await instrumentRegistry.addWhitelistAdmin(nutsPlatform.address);
+  console.log("instrumentRegistry.addWhitelistAdmin");
   await nutsEscrow.addWhitelistAdmin(nutsPlatform.address);
+  console.log("nutsEscrow.addWhitelistAdmin");
 };
 
 module.exports = function(deployer) {
@@ -52,7 +60,7 @@ module.exports = function(deployer) {
 //     })
 //     .then(function(instance) {
 //       nutsEscrow = instance;
-//       return deployer.deploy(NutsPlatform, UnifiedStorage.address, 
+//       return deployer.deploy(NutsPlatform, UnifiedStorage.address,
 //         InstrumentRegistry.address, NutsToken.address, NutsEscrow.address, {gas: 6000000});
 //     })
 //     .then(function(instance) {

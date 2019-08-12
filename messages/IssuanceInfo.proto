@@ -9,6 +9,7 @@ message CommonProperties {
     .solidity.uint256 issuanceId = 1;
     .solidity.address instrumentAddress = 2;
     .solidity.address sellerAddress = 3;
-    .solidity.uint256 created = 4;
-    .solidity.uint256 state = 5;
+    .solidity.address storageAddress = 4;
+    .solidity.uint256 created = 5;
+    .solidity.uint256 state = 6;
 }

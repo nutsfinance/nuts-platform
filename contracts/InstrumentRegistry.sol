@@ -17,6 +17,8 @@ contract InstrumentRegistry is WhitelistAdminRole {
 
     constructor(address unifiedStorageAddress) public {
         _storage = UnifiedStorage(unifiedStorageAddress);
+        // Validation
+        // require(_storage.isWhitelistAdmin(address(this)), "InstrumentRegistry: Not admin of UnifiedStorage");
     }
 
     /**
@@ -28,15 +30,15 @@ contract InstrumentRegistry is WhitelistAdminRole {
     function create(address fspAddress, address instrumentAddress, uint256 expiration) public onlyWhitelistAdmin {
         require(fspAddress != address(0x0), "InstrumentRegistry: FSP address must be set");
         require(instrumentAddress != address(0x0), "InstrumentRegistry: Instrument address must be set");
-        bytes memory instrumentStatusData = bytes(_storage.getValue(getInstrumentStatusKey(instrumentAddress)));
+        bytes memory instrumentStatusData = bytes(_storage.getString(getInstrumentStatusKey(instrumentAddress)));
         require(instrumentStatusData.length == 0, "InstrumentRegistry: Instrument already exists");
 
         // Save new instrument
         InstrumentStatus.Data memory instrumentStatus = InstrumentStatus.Data(instrumentAddress, fspAddress, true, now, now + expiration);
-        _storage.setValue(getInstrumentStatusKey(instrumentAddress), InstrumentStatus.encode(instrumentStatus));
+        _storage.setBytes(getInstrumentStatusKey(instrumentAddress), InstrumentStatus.encode(instrumentStatus));
 
         // Update FSP status
-        bytes memory fspStatusData = bytes(_storage.getValue(getFSPStatusKey(fspAddress)));
+        bytes memory fspStatusData = bytes(_storage.getString(getFSPStatusKey(fspAddress)));
         FSPStatus.Data memory fspStatus;
         if (fspStatusData.length == 0) {
             // New FSP
@@ -46,7 +48,7 @@ contract InstrumentRegistry is WhitelistAdminRole {
             fspStatus = FSPStatus.decode(fspStatusData);
             fspStatus.addInstrumentAddresses(instrumentAddress);
         }
-        _storage.setValue(getFSPStatusKey(fspAddress), FSPStatus.encode(fspStatus));
+        _storage.setBytes(getFSPStatusKey(fspAddress), FSPStatus.encode(fspStatus));
     }
 
     /**
@@ -55,16 +57,16 @@ contract InstrumentRegistry is WhitelistAdminRole {
      * @param instrumentAddress The address of the instrumetn to deactivate.
      */
     function deactivate(address fspAddress, address instrumentAddress) public onlyWhitelistAdmin {
-        require(fspAddress != address(0x0), "FSP address must be set");
-        require(instrumentAddress != address(0x0), "Instrument address must be set");
-        bytes memory instrumentStatusData = bytes(_storage.getValue(getInstrumentStatusKey(instrumentAddress)));
+        require(fspAddress != address(0x0), "InstrumentRegistry: FSP address must be set");
+        require(instrumentAddress != address(0x0), "InstrumentRegistry: Instrument address must be set");
+        bytes memory instrumentStatusData = bytes(_storage.getString(getInstrumentStatusKey(instrumentAddress)));
         require(instrumentStatusData.length > 0, "InstrumentRegistry: Instrument does not exist");
         InstrumentStatus.Data memory instrumentStatus = InstrumentStatus.decode(instrumentStatusData);
         require(isWhitelistAdmin(fspAddress) || instrumentStatus.fspAddress == fspAddress,
-            "Only admin or creator can deactivate an instrument");
+            "InstrumentRegistry: Only admin or creator can deactivate an instrument");
 
         instrumentStatus.active = false;
-        _storage.setValue(getInstrumentStatusKey(instrumentAddress), InstrumentStatus.encode(instrumentStatus));
+        _storage.setBytes(getInstrumentStatusKey(instrumentAddress), InstrumentStatus.encode(instrumentStatus));
     }
 
     /**
@@ -73,7 +75,7 @@ contract InstrumentRegistry is WhitelistAdminRole {
      */
     function validate(address instrumentAddress) public view onlyWhitelistAdmin returns (bool) {
         require(instrumentAddress != address(0x0), "Instrument address must be set");
-        bytes memory instrumentStatusData = bytes(_storage.getValue(getInstrumentStatusKey(instrumentAddress)));
+        bytes memory instrumentStatusData = bytes(_storage.getString(getInstrumentStatusKey(instrumentAddress)));
         require(instrumentStatusData.length > 0, "InstrumentRegistry: Instrument does not exist");
         InstrumentStatus.Data memory instrumentStatus = InstrumentStatus.decode(instrumentStatusData);
         // Validity check
