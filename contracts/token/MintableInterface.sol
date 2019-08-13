@@ -5,7 +5,7 @@ pragma solidity ^0.5.0;
  *
  * Credit: https://github.com/OpenZeppelin/openzeppelin-solidity/blob/master/contracts/token/ERC20/ERC20Mintable.sol
  */
-interface IMintable {
+interface MintableInterface {
     /**
      * @dev See `ERC20._mint`.
      */

@@ -1,8 +1,8 @@
 pragma solidity ^0.5.0;
 
-import "./lib/token/ERC20.sol";
-import "./IMintable.sol";
-import "./lib/access/Ownable.sol";
+import "./MintableInterface.sol";
+import "../lib/token/ERC20.sol";
+import "../lib/access/Ownable.sol";
 
 /**
  * @dev Extension of `ERC20Mintable` that adds a cap on the number
@@ -12,7 +12,7 @@ import "./lib/access/Ownable.sol";
  *
  * No MinterRole is needed as each minter is given a cap of 0 without setting minter cap.
  */
-contract ERC20CappedMintable is ERC20, Ownable, IMintable {
+contract ERC20CappedMintable is ERC20, Ownable, MintableInterface {
 
     event MinterCapUpdated(address indexed account, uint256 cap);
 

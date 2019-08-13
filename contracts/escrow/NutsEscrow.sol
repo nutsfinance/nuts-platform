@@ -1,10 +1,11 @@
 pragma solidity ^0.5.0;
 
 import "./TokenBalance.sol";
-import "./lib/access/WhitelistAdminRole.sol";
-import "./lib/math/SafeMath.sol";
-import "./lib/token/IERC20.sol";
-import "./lib/token/SafeERC20.sol";
+import "./EscrowInterface.sol";
+import "../lib/access/WhitelistAdminRole.sol";
+import "../lib/math/SafeMath.sol";
+import "../lib/token/IERC20.sol";
+import "../lib/token/SafeERC20.sol";
 
 /**
  * @title Escrow for both user and issuance.
@@ -13,7 +14,7 @@ import "./lib/token/SafeERC20.sol";
  * as we don't expect NutsEscrow to upgrade.
  * Might review this decision later.
  */
-contract NutsEscrow is WhitelistAdminRole {
+contract NutsEscrow is EscrowInterface, WhitelistAdminRole {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
     using Balances for Balances.Data;

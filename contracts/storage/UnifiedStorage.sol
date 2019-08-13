@@ -1,16 +1,15 @@
 pragma solidity ^0.5.0;
 
-import "./access/WriterRole.sol";
-import "./ProtoBufRuntime.sol";
+import "./StorageInterface.sol";
+import "../access/WriterRole.sol";
 
 /**
  * @title A generic data storage contract.
  * Supported values include: String, address, int, uint, bool.
  * Complex types should look for serialization/deserialization frameworks.
  */
-contract UnifiedStorage is WriterRole {
+contract UnifiedStorage is StorageInterface, WriterRole {
     mapping(string => string) private _stringData;
-    mapping(string => bytes) private _bytesData;
     mapping(string => address) private _addressData;
     mapping(string => uint) private _uintData;
     mapping(string => int) private _intData;
@@ -24,12 +23,12 @@ contract UnifiedStorage is WriterRole {
        _stringData[key] = value;
     }
 
-    function getBytes(string memory key) public view onlyWriter returns (bytes memory) {
-        return ProtoBufRuntime.decodeStorage(_bytesData[key]);
+    function getBytes(string calldata key) external view returns (bytes memory) {
+        return bytes(_stringData[key]);
     }
 
-    function setBytes(string memory key, bytes memory value) public onlyWriter {
-        ProtoBufRuntime.encodeStorage(_bytesData[key], value);
+    function setBytes(string calldata key, bytes calldata value) external {
+        _stringData[key] = string(value);
     }
 
     function getAddress(string memory key) public view onlyWriter returns (address) {

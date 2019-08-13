@@ -1,24 +1,24 @@
 pragma solidity ^0.5.0;
 
-import "./lib/access/WhitelistAdminRole.sol";
+import "../lib/access/WhitelistAdminRole.sol";
+import "../lib/util/StringUtil.sol";
+import "../storage/StorageInterface.sol";
 import "./InstrumentInfo.sol";
-import "./UnifiedStorage.sol";
-import "./lib/util/StringUtil.sol";
+import "./InstrumentRegistryInterface.sol";
 
 /**
  * @title The registry of instruments.
  * All data are persisted in UnifiedStorage.
  */
-contract InstrumentRegistry is WhitelistAdminRole {
+contract InstrumentRegistry is InstrumentRegistryInterface, WhitelistAdminRole {
     using InstrumentStatus for InstrumentStatus.Data;
     using FSPStatus for FSPStatus.Data;
 
-    UnifiedStorage private _storage;
+    // Unified storge for instrument registry
+    StorageInterface private _storage;
 
     constructor(address unifiedStorageAddress) public {
-        _storage = UnifiedStorage(unifiedStorageAddress);
-        // Validation
-        // require(_storage.isWhitelistAdmin(address(this)), "InstrumentRegistry: Not admin of UnifiedStorage");
+        _storage = StorageInterface(unifiedStorageAddress);
     }
 
     /**

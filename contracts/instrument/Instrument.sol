@@ -1,12 +1,12 @@
 pragma solidity ^0.5.0;
 
-import "./UnifiedStorage.sol";
+import "../storage/StorageInterface.sol";
 
 /**
  * @title Base contract for financial instrument
  * All instrument contract must extend this contract.
  */
-contract Instrument {
+interface Instrument {
 
     // The states of an instrument.
     enum IssuanceStates {
@@ -62,50 +62,50 @@ contract Instrument {
     /**
      * @dev Create a new issuance of the financial instrument
      * @param issuanceId The id of the issuance
-     * @param unifiedStorage The storage contract created for this issuance
+     * @param issuanceStorage The storage contract created for this issuance
      * @param sellerAddress The address of the seller who creates this issuance
      * @param sellerParameters The custom parameters to the newly created issuance
      * @return updatedState The new state of the issuance.
      * @return transfers The transfers to perform after the invocation
      */
-    function createIssuance(uint256 issuanceId, UnifiedStorage unifiedStorage, address sellerAddress, bytes memory sellerParameters)
-        public returns (IssuanceStates updatedState, bytes memory transfers);
+    function createIssuance(uint256 issuanceId, StorageInterface issuanceStorage, address sellerAddress, bytes calldata sellerParameters)
+        external returns (IssuanceStates updatedState, bytes memory transfers);
 
     /**
      * @dev A buyer engages to the issuance
      * @param issuanceId The id of the issuance
      * @param state The current state of the issuance
-     * @param unifiedStorage The storage contract created for this issuance
+     * @param issuanceStorage The storage contract created for this issuance
      * @param balances The current balance of the issuance
      * @param buyerAddress The address of the buyer who engages in the issuance
      * @param buyerParameters The custom parameters to the new engagement
      * @return updatedState The new state of the issuance.
      * @return transfers The transfers to perform after the invocation
      */
-    function engage(uint256 issuanceId, IssuanceStates state, UnifiedStorage unifiedStorage,
-        bytes memory balances, address buyerAddress, bytes memory buyerParameters)
-        public returns (IssuanceStates updatedState, bytes memory transfers);
+    function engage(uint256 issuanceId, IssuanceStates state, StorageInterface issuanceStorage,
+        bytes calldata balances, address buyerAddress, bytes calldata buyerParameters)
+        external returns (IssuanceStates updatedState, bytes memory transfers);
 
     /**
      * @dev Buyer/Seller has made an Ether deposit to the issuance.
      * @param issuanceId The id of the issuance
      * @param state The current state of the issuance
-     * @param unifiedStorage The storage contract created for this issuance
+     * @param issuanceStorage The storage contract created for this issuance
      * @param balances The current balance of the issuance (after the deposit)
      * @param fromAddress The address of the Ether sender
      * @param amount The amount of Ether transfered
      * @return updatedState The new state of the issuance.
      * @return transfers The transfers to perform after the invocation
      */
-    function processDeposit(uint256 issuanceId, IssuanceStates state, UnifiedStorage unifiedStorage,
-        bytes memory balances, address fromAddress, uint256 amount)
-        public returns (IssuanceStates updatedState, bytes memory transfers);
+    function processDeposit(uint256 issuanceId, IssuanceStates state, StorageInterface issuanceStorage,
+        bytes calldata balances, address fromAddress, uint256 amount)
+        external returns (IssuanceStates updatedState, bytes memory transfers);
 
     /**
      * @dev Buyer/Seller has made an ERC20 token deposit to the issuance
      * @param issuanceId The id of the issuance
      * @param state The current state of the issuance
-     * @param unifiedStorage The storage contract created for this issuance
+     * @param issuanceStorage The storage contract created for this issuance
      * @param balances The current balance of the issuance (after the deposit)
      * @param fromAddress The address of the ERC20 token sender
      * @param tokenAddress The address of the ERC20 token
@@ -113,30 +113,30 @@ contract Instrument {
      * @return updatedState The new state of the issuance.
      * @return transfers The transfers to perform after the invocation
      */
-    function processTokenDeposit(uint256 issuanceId, IssuanceStates state, UnifiedStorage unifiedStorage,
-        bytes memory balances, address fromAddress, address tokenAddress, uint256 amount)
-        public returns (IssuanceStates updatedState, bytes memory transfers);
+    function processTokenDeposit(uint256 issuanceId, IssuanceStates state, StorageInterface issuanceStorage,
+        bytes calldata balances, address fromAddress, address tokenAddress, uint256 amount)
+        external returns (IssuanceStates updatedState, bytes memory transfers);
 
     /**
      * @dev Buyer/Seller has made an Ether withdraw from the issuance
      * @param issuanceId The id of the issuance
      * @param state The current state of the issuance
-     * @param unifiedStorage The storage contract created for this issuance
+     * @param issuanceStorage The storage contract created for this issuance
      * @param balances The current balance of the issuance (after the withdraw)
      * @param toAddress The address of the Ether receiver
      * @param amount The amount of Ether transfered
      * @return updatedState The new state of the issuance.
      * @return transfers The transfers to perform after the invocation
      */
-    function processWithdraw(uint256 issuanceId, IssuanceStates state, UnifiedStorage unifiedStorage,
-        bytes memory balances, address toAddress, uint256 amount)
-        public returns (IssuanceStates updatedState, bytes memory transfers);
+    function processWithdraw(uint256 issuanceId, IssuanceStates state, StorageInterface issuanceStorage,
+        bytes calldata balances, address toAddress, uint256 amount)
+        external returns (IssuanceStates updatedState, bytes memory transfers);
 
     /**
      * @dev Buyer/Seller has made an ERC20 token withdraw from the issuance
      * @param issuanceId The id of the issuance
      * @param state The current state of the issuance
-     * @param unifiedStorage The storage contract created for this issuance
+     * @param issuanceStorage The storage contract created for this issuance
      * @param balances The current balance of the issuance (after the withdraw)
      * @param toAddress The address of the ERC20 token receiver
      * @param tokenAddress The address of the ERC20 token
@@ -144,37 +144,37 @@ contract Instrument {
      * @return updatedState The new state of the issuance.
      * @return transfers The transfers to perform after the invocation
      */
-    function processTokenWithdraw(uint256 issuanceId, IssuanceStates state, UnifiedStorage unifiedStorage,
-        bytes memory balances, address toAddress, address tokenAddress, uint256 amount)
-        public returns (IssuanceStates updatedState, bytes memory transfers);
+    function processTokenWithdraw(uint256 issuanceId, IssuanceStates state, StorageInterface issuanceStorage,
+        bytes calldata balances, address toAddress, address tokenAddress, uint256 amount)
+        external returns (IssuanceStates updatedState, bytes memory transfers);
 
     /**
      * @dev Process scheduled event
      * @param issuanceId The id of the issuance
      * @param state The current state of the issuance
-     * @param unifiedStorage The storage contract created for this issuance
+     * @param issuanceStorage The storage contract created for this issuance
      * @param balances The current balance of the issuance (after the withdraw)
      * @param eventName Name of the custom event, eventName of EventScheduled event
      * @param eventPayload Payload of the custom event, eventPayload of EventScheduled event
      * @return updatedState The new state of the issuance.
      * @return transfers The transfers to perform after the invocation
      */
-    function processScheduledEvent(uint256 issuanceId, IssuanceStates state, UnifiedStorage unifiedStorage,
-        bytes memory balances, string memory eventName, bytes memory eventPayload)
-        public returns (IssuanceStates updatedState, bytes memory transfers);
+    function processScheduledEvent(uint256 issuanceId, IssuanceStates state, StorageInterface issuanceStorage,
+        bytes calldata balances, string calldata eventName, bytes calldata eventPayload)
+        external returns (IssuanceStates updatedState, bytes memory transfers);
 
     /**
      * @dev Process customer event
      * @param issuanceId The id of the issuance
      * @param state The current state of the issuance
-     * @param unifiedStorage The storage contract created for this issuance
+     * @param issuanceStorage The storage contract created for this issuance
      * @param balances The current balance of the issuance
      * @param eventName Name of the custom event, eventName of EventScheduled event
      * @param eventPayload Payload of the custom event, eventPayload of EventScheduled event
      * @return updatedState The new state of the issuance.
      * @return transfers The transfers to perform after the invocation
      */
-    function processCustomEvent(uint256 issuanceId, IssuanceStates state, UnifiedStorage unifiedStorage,
-        bytes memory balances, string memory eventName, bytes memory eventPayload)
-        public returns (IssuanceStates updatedState, bytes memory transfers);
+    function processCustomEvent(uint256 issuanceId, IssuanceStates state, StorageInterface issuanceStorage,
+        bytes calldata balances, string calldata eventName, bytes calldata eventPayload)
+        external returns (IssuanceStates updatedState, bytes memory transfers);
 }
