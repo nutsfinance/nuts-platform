@@ -1,32 +1,27 @@
-var UnifiedStorage = artifacts.require("./UnifiedStorage.sol");
-var NutsEscrow = artifacts.require("./NutsEscrow.sol");
-var NutsToken = artifacts.require("./NutsToken.sol");
-var InstrumentRegistry = artifacts.require("./InstrumentRegistry.sol");
-var NutsPlatform = artifacts.require("./NutsPlatform.sol");
-var Loan = artifacts.require("./instrument/Loan.sol");
+const UnifiedStorage = artifacts.require("./storage/UnifiedStorage.sol");
+const UnifiedStorageFactory = artifacts.require("./storage/StorageFactory.sol");
+const NutsEscrow = artifacts.require("./escrow/NutsEscrow.sol");
+const NutsToken = artifacts.require("./token/NutsToken.sol");
+const InstrumentRegistry = artifacts.require("./instrument/InstrumentRegistry.sol");
+const NutsPlatform = artifacts.require("./NutsPlatform.sol");
 
 const deployNutsPlatform = async function(deployer) {
+  // Deploy instrument registry
   let instrumentRegistryStorage = await deployer.deploy(UnifiedStorage);
-  console.log("instrumentRegistryStorage");
   let instrumentRegistry = await deployer.deploy(InstrumentRegistry, instrumentRegistryStorage.address);
-  console.log("instrumentRegistry");
   await instrumentRegistryStorage.addWhitelistAdmin(instrumentRegistry.address);
-  console.log("addWhitelistAdmin");
+
   let nutsPlatformStorage = await deployer.deploy(UnifiedStorage);
-  console.log("nutsPlatformStorage");
+  let unifiedStorageFactory = await deployer.deploy(UnifiedStorageFactory);
   let nutsToken = await deployer.deploy(NutsToken);
-  console.log("nutsToken");
   let nutsEscrow = await deployer.deploy(NutsEscrow);
-  console.log("nutsEscrow");
-  let nutsPlatform = await deployer.deploy(NutsPlatform, nutsPlatformStorage.address,
+  let nutsPlatform = await deployer.deploy(NutsPlatform, nutsPlatformStorage.address, unifiedStorageFactory.address,
     instrumentRegistry.address, nutsToken.address, nutsEscrow.address);
-  console.log("nutsPlatform");
+
   await nutsPlatformStorage.addWhitelistAdmin(nutsPlatform.address);
-  console.log("nutsPlatformStorage.addWhitelistAdmin");
   await instrumentRegistry.addWhitelistAdmin(nutsPlatform.address);
-  console.log("instrumentRegistry.addWhitelistAdmin");
   await nutsEscrow.addWhitelistAdmin(nutsPlatform.address);
-  console.log("nutsEscrow.addWhitelistAdmin");
+  await unifiedStorageFactory.addWhitelistAdmin(nutsPlatform.address);
 };
 
 module.exports = function(deployer) {
