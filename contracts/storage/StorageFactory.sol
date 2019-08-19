@@ -10,6 +10,8 @@ import "./UnifiedStorage.sol";
  */
 contract StorageFactory is WhitelistAdminRole {
     function createNewStorage() external onlyWhitelistAdmin returns (StorageInterface) {
-        return new UnifiedStorage();
+        UnifiedStorage s = new UnifiedStorage();
+        s.addWhitelistAdmin(msg.sender);
+        return s;
     }
 }

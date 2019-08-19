@@ -10,6 +10,7 @@ const deployNutsPlatform = async function(deployer) {
   let instrumentRegistryStorage = await deployer.deploy(UnifiedStorage);
   let instrumentRegistry = await deployer.deploy(InstrumentRegistry, instrumentRegistryStorage.address);
   await instrumentRegistryStorage.addWhitelistAdmin(instrumentRegistry.address);
+  await instrumentRegistryStorage.addWriter(instrumentRegistry.address);
 
   let nutsPlatformStorage = await deployer.deploy(UnifiedStorage);
   let unifiedStorageFactory = await deployer.deploy(UnifiedStorageFactory);
@@ -17,8 +18,8 @@ const deployNutsPlatform = async function(deployer) {
   let nutsEscrow = await deployer.deploy(NutsEscrow);
   let nutsPlatform = await deployer.deploy(NutsPlatform, nutsPlatformStorage.address, unifiedStorageFactory.address,
     instrumentRegistry.address, nutsToken.address, nutsEscrow.address);
-
   await nutsPlatformStorage.addWhitelistAdmin(nutsPlatform.address);
+  await nutsPlatformStorage.addWriter(nutsPlatform.address);
   await instrumentRegistry.addWhitelistAdmin(nutsPlatform.address);
   await nutsEscrow.addWhitelistAdmin(nutsPlatform.address);
   await unifiedStorageFactory.addWhitelistAdmin(nutsPlatform.address);

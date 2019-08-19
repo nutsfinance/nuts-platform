@@ -1,6 +1,7 @@
 pragma solidity ^0.5.0;
 
 import "./Roles.sol";
+import "../util/StringUtil.sol";
 
 /**
  * @title WhitelistAdminRole
@@ -20,7 +21,7 @@ contract WhitelistAdminRole {
     }
 
     modifier onlyWhitelistAdmin() {
-        require(isWhitelistAdmin(msg.sender), "WhitelistAdminRole: caller does not have the WhitelistAdmin role");
+        require(isWhitelistAdmin(msg.sender), StringUtil.concat("WhitelistAdminRole: caller does not have the WhitelistAdmin role. Caller: ", StringUtil.addressToHexString(msg.sender)));
         _;
     }
 

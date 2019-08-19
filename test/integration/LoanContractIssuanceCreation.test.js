@@ -7,18 +7,18 @@ const Loan = artifacts.require("../../contracts/instrument/Loan.sol");
 const ERC20Mintable = artifacts.require("../../node_modules/openzeppelin-solidity/contracts/token/ERC20/ERC20Mintable.sol");
 const soltype = require(__dirname + "../../../solidity-js");
 const ProtoBufUtils = require(__dirname + "/ProtoBufUtils.js");
-const protobufjs = soltype.importProtoFile(require("protobufjs"));
+const proto = soltype.importTypes(require(__dirname + '/../../messages-js/LoanInfo_pb.js'));
 const BigNumber = require('bignumber.js');
 
 const getEventTimestamp = async function(txHash, emitter, eventName) {
     const receipt = await web3.eth.getTransactionReceipt(txHash);
     const logs = emitter.decodeLogs(receipt.logs);
     // console.log(logs);
-    const event = logs.find(e => e.event == "EventScheduled" && e.args.eventName == eventName);
+    const event = logs.find(e => e.event == "EventTimeScheduled" && e.args.eventName == eventName);
     // console.log(event);
     // console.log(event.args);
     // console.log(event.args.timestamp);
-    return logs.find(e => e.event == "EventScheduled" && e.args.eventName == eventName).args.timestamp.toNumber();
+    return logs.find(e => e.event == "EventTimeScheduled" && e.args.eventName == eventName).args.timestamp.toNumber();
 }
 
 contract("NutsPlatform", ([owner, fsp, seller, buyer, tokenOwner]) => {
@@ -46,16 +46,6 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, tokenOwner]) => {
 
         // Seller deposits Ether to Escrow
         await this.nutsEscrow.deposit({from: seller, value: ether("20")});
-        this.SellerParameters = await new Promise(function(resolve, reject) {
-          protobufjs.load(__dirname + "../../../messages/LoanInfo.proto", function(err, root) {
-            if (err) {
-              reject(err);
-            }
-            soltype.importTypes(root);
-            let SellerParameters = root.lookupType("SellerParameters");
-            resolve(SellerParameters);
-          });
-        });
     }),
     beforeEach("deploy new collateral token", async function() {
         // Deploy new collateral token
@@ -69,7 +59,7 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, tokenOwner]) => {
     context("Issuance creation", async function() {
         it("should be able to create issuance and deposit Ether", async function() {
             // Create issuance
-            let buffer = ProtoBufUtils.getSellerParameters(this.SellerParameters, this.collateralToken.address, 300000,
+            let buffer = ProtoBufUtils.getSellerParameters(proto, this.collateralToken.address, 300000,
             '5', 3, 5, 20, 30, 10000, 5);
             let tx = await this.nutsPlatform.createIssuance(this.loan.address, buffer, {from: seller});
 
@@ -92,55 +82,55 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, tokenOwner]) => {
         it("should fail to create issuance with invalid parameters", async function() {
             console.log("Send a zero collateral token address");
             // Send a zero collateral token address
-            let buffer = ProtoBufUtils.getSellerParameters(this.SellerParameters, 0, 300000, '5', 3, 20, 5, 30, 10000, 5);
+            let buffer = ProtoBufUtils.getSellerParameters(proto, 0, 300000, '5', 3, 20, 5, 30, 10000, 5);
             await shouldFail.reverting.withMessage(this.nutsPlatform.createIssuance(this.loan.address,
                 buffer), "Collateral token address must not be 0");
 
             console.log("Send a zero collateral amount");
-            buffer = ProtoBufUtils.getSellerParameters(this.SellerParameters, this.loan.address, 0, '5', 3, 20, 5, 30, 10000, 5);
+            buffer = ProtoBufUtils.getSellerParameters(proto, this.loan.address, 0, '5', 3, 20, 5, 30, 10000, 5);
             // Send a zero collateral amount
             await shouldFail.reverting.withMessage(this.nutsPlatform.createIssuance(this.loan.address,
                 buffer), "Collateral amount must be greater than 0");
 
             console.log("Send a zero borrow amount");
-            buffer = ProtoBufUtils.getSellerParameters(this.SellerParameters, this.collateralToken.address, 300000, '0', 3, 20, 5, 30, 10000, 5);
+            buffer = ProtoBufUtils.getSellerParameters(proto, this.collateralToken.address, 300000, '0', 3, 20, 5, 30, 10000, 5);
 
             // Send a zero borrow amount
             await shouldFail.reverting.withMessage(this.nutsPlatform.createIssuance(this.loan.address,
                 buffer), "Borrow amount must be greater than 0");
 
             console.log("Send a zero deposit due days");
-            buffer = ProtoBufUtils.getSellerParameters(this.SellerParameters, this.collateralToken.address, 300000, '5', 0, 20, 5, 30, 10000, 5);
+            buffer = ProtoBufUtils.getSellerParameters(proto, this.collateralToken.address, 300000, '5', 0, 20, 5, 30, 10000, 5);
             // Send a zero deposit due days
             await shouldFail.reverting.withMessage(this.nutsPlatform.createIssuance(this.loan.address,
                 buffer), "Deposit due days must be greater than 0");
 
             console.log("Send a zero collateral due days");
-            buffer = ProtoBufUtils.getSellerParameters(this.SellerParameters, this.collateralToken.address, 300000, '5', 3, 0, 5, 30, 10000, 5);
+            buffer = ProtoBufUtils.getSellerParameters(proto, this.collateralToken.address, 300000, '5', 3, 0, 5, 30, 10000, 5);
             // Send a zero collateral due days
             await shouldFail.reverting.withMessage(this.nutsPlatform.createIssuance(this.loan.address,
                 buffer), "Collateral due days must be greater than 0");
 
             console.log("Send a zero engagement due days");
-            buffer = ProtoBufUtils.getSellerParameters(this.SellerParameters, this.collateralToken.address, 300000, '5', 3, 20, 0, 30, 10000, 5);
+            buffer = ProtoBufUtils.getSellerParameters(proto, this.collateralToken.address, 300000, '5', 3, 20, 0, 30, 10000, 5);
             // Send a zero engagement due days
             await shouldFail.reverting.withMessage(this.nutsPlatform.createIssuance(this.loan.address,
                 buffer), "Engagement due days must be greater than 0");
 
             console.log("Send a zero tenor days");
-            buffer = ProtoBufUtils.getSellerParameters(this.SellerParameters, this.collateralToken.address, 300000, '5', 3, 20, 5, 0, 10000, 5);
+            buffer = ProtoBufUtils.getSellerParameters(proto, this.collateralToken.address, 300000, '5', 3, 20, 5, 0, 10000, 5);
             // Send a zero tenor days
             await shouldFail.reverting.withMessage(this.nutsPlatform.createIssuance(this.loan.address,
                 buffer), "Tenor days must be greater than 0");
 
             console.log("Send a tenor days smaller than or equal to collateral days");
-            buffer = ProtoBufUtils.getSellerParameters(this.SellerParameters, this.collateralToken.address, 300000, '5', 3, 20, 5, 1, 10000, 5);
+            buffer = ProtoBufUtils.getSellerParameters(proto, this.collateralToken.address, 300000, '5', 3, 20, 5, 1, 10000, 5);
             // Send a tenor days smaller than or equal to collateral days
             await shouldFail.reverting.withMessage(this.nutsPlatform.createIssuance(this.loan.address,
                 buffer), "Tenor days must be greater than collateral due days");
 
             console.log("Send a zero grace period");
-            buffer = ProtoBufUtils.getSellerParameters(this.SellerParameters, this.collateralToken.address, 300000, '5', 3, 20, 5, 30, 10000, 0);
+            buffer = ProtoBufUtils.getSellerParameters(proto, this.collateralToken.address, 300000, '5', 3, 20, 5, 30, 10000, 0);
             // Send a zero grace period
             await shouldFail.reverting.withMessage(this.nutsPlatform.createIssuance(this.loan.address,
                 buffer), "Grace period must be greater than 0");
@@ -148,7 +138,7 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, tokenOwner]) => {
         }),
         it("should become unfunded if deposit is overdue", async function() {
             // Create issuance
-            let buffer = ProtoBufUtils.getSellerParameters(this.SellerParameters, this.collateralToken.address, 300000,
+            let buffer = ProtoBufUtils.getSellerParameters(proto, this.collateralToken.address, 300000,
             '5', 3, 5, 20, 30, 10000, 5);
             let tx = await this.nutsPlatform.createIssuance(this.loan.address, buffer, {from: seller});
             const issuanceId = tx.logs.find(e => e.event == "IssuanceCreated").args.issuanceId.toNumber();
@@ -174,7 +164,7 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, tokenOwner]) => {
         }),
         it("should become unfunded and return deposit if deposit is overdue", async function() {
             // Create issuance
-            let buffer = ProtoBufUtils.getSellerParameters(this.SellerParameters, this.collateralToken.address, 300000,
+            let buffer = ProtoBufUtils.getSellerParameters(proto, this.collateralToken.address, 300000,
             '5', 3, 5, 20, 30, 10000, 5);
             let tx = await this.nutsPlatform.createIssuance(this.loan.address, buffer, {from: seller});
             const issuanceId = tx.logs.find(e => e.event == "IssuanceCreated").args.issuanceId.toNumber();
@@ -211,7 +201,7 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, tokenOwner]) => {
         }),
         it("should fail to deposit more Ether than borrow amount", async function() {
             // Create issuance
-            let buffer = ProtoBufUtils.getSellerParameters(this.SellerParameters, this.collateralToken.address, 300000,
+            let buffer = ProtoBufUtils.getSellerParameters(proto, this.collateralToken.address, 300000,
             '5', 3, 5, 20, 30, 10000, 5);
             let tx = await this.nutsPlatform.createIssuance(this.loan.address, buffer, {from: seller});
             const issuanceId = tx.logs.find(e => e.event == "IssuanceCreated").args.issuanceId.toNumber();
@@ -233,7 +223,7 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, tokenOwner]) => {
         }),
         it("should fail to accept Ether deposit other than seller", async function() {
             // Create issuance
-            let buffer = ProtoBufUtils.getSellerParameters(this.SellerParameters, this.collateralToken.address, 300000,
+            let buffer = ProtoBufUtils.getSellerParameters(proto, this.collateralToken.address, 300000,
             '5', 3, 5, 20, 30, 10000, 5);
             let tx = await this.nutsPlatform.createIssuance(this.loan.address, buffer, {from: seller});
             const issuanceId = tx.logs.find(e => e.event == "IssuanceCreated").args.issuanceId.toNumber();
@@ -241,7 +231,6 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, tokenOwner]) => {
                 issuanceId: new BN(issuanceId),
                 state: new BN(1)
             });
-
             await this.nutsEscrow.deposit({from: owner, value: ether("20")});
             await shouldFail.reverting.withMessage(this.nutsPlatform.deposit(issuanceId, ether('2'), {from: owner})
                 , "Unknown transferer. Only seller or buyer can send Ether to issuance.");
@@ -255,7 +244,7 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, tokenOwner]) => {
         }),
         it("should fail to deposit any token", async function() {
             // Create issuance
-            let buffer = ProtoBufUtils.getSellerParameters(this.SellerParameters, this.collateralToken.address, 300000,
+            let buffer = ProtoBufUtils.getSellerParameters(proto, this.collateralToken.address, 300000,
             '5', 3, 5, 20, 30, 10000, 5);
             let tx = await this.nutsPlatform.createIssuance(this.loan.address, buffer, {from: seller});
             const issuanceId = tx.logs.find(e => e.event == "IssuanceCreated").args.issuanceId.toNumber();

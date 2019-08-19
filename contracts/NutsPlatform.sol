@@ -99,9 +99,12 @@ contract NutsPlatform is FspRole, TimerOracleRole {
 
         // Get the issuance id
         uint issuanceId = _storage.getUint(LAST_ISSUANCE_ID_KEY);
+        if (issuanceId == 0) {
+          issuanceId = 1;
+        }
         _storage.setUint(LAST_ISSUANCE_ID_KEY, issuanceId + 1);
         Instrument instrument = Instrument(instrumentAddress);
-        
+
         // Create a new StorageInterface instance for this issuance.
         // Nuts Platform has admin role by default.
         StorageInterface issuanceStorage = _storageFactory.createNewStorage();
@@ -226,7 +229,7 @@ contract NutsPlatform is FspRole, TimerOracleRole {
         (Instrument.IssuanceStates updatedState, bytes memory transfers) = instrument.processWithdraw(issuanceId,
             Instrument.IssuanceStates(commonProperties.state), issuanceStorage,
             balances, msg.sender, amount);
-        
+
         postProcessing(issuanceId, commonProperties, issuanceStorage, updatedState, transfers);
     }
 
@@ -256,7 +259,7 @@ contract NutsPlatform is FspRole, TimerOracleRole {
         (Instrument.IssuanceStates updatedState, bytes memory transfers) = instrument.processTokenWithdraw(issuanceId,
             Instrument.IssuanceStates(commonProperties.state), issuanceStorage,
             balances, msg.sender, tokenAddress, amount);
-        
+
         postProcessing(issuanceId, commonProperties, issuanceStorage, updatedState, transfers);
     }
 
@@ -281,7 +284,7 @@ contract NutsPlatform is FspRole, TimerOracleRole {
         (Instrument.IssuanceStates updatedState, bytes memory transfers) = instrument.processScheduledEvent(issuanceId,
             Instrument.IssuanceStates(commonProperties.state), issuanceStorage,
             balances, eventName, eventPayload);
-        
+
         postProcessing(issuanceId, commonProperties, issuanceStorage, updatedState, transfers);
     }
 

@@ -6,15 +6,15 @@ const NutsToken = artifacts.require("../../contracts/NutsToken.sol");
 const Loan = artifacts.require("../../contracts/instrument/Loan.sol");
 const ERC20Mintable = artifacts.require("../../node_modules/openzeppelin-solidity/contracts/token/ERC20/ERC20Mintable.sol");
 const soltype = require(__dirname + "../../../solidity-js");
-const protobufjs = soltype.importProtoFile(require("protobufjs"));
+const proto = soltype.importTypes(require(__dirname + '/../../messages-js/LoanInfo_pb.js'));
 const BigNumber = require('bignumber.js');
 const ProtoBufUtils = require(__dirname + "/ProtoBufUtils.js");
 
 const getEventTimestamp = async function(txHash, emitter, eventName) {
     const receipt = await web3.eth.getTransactionReceipt(txHash);
     const logs = emitter.decodeLogs(receipt.logs);
-    const event = logs.find(e => e.event == "EventScheduled" && e.args.eventName == eventName);
-    return logs.find(e => e.event == "EventScheduled" && e.args.eventName == eventName).args.timestamp.toNumber();
+    const event = logs.find(e => e.event == "EventTimeScheduled" && e.args.eventName == eventName);
+    return logs.find(e => e.event == "EventTimeScheduled" && e.args.eventName == eventName).args.timestamp.toNumber();
 }
 
 contract("NutsPlatform", ([owner, fsp, seller, buyer, buyer2, tokenOwner]) => {
@@ -48,16 +48,6 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, buyer2, tokenOwner]) => {
         console.log("Deposit Ether to Escrow: Gas used = " + tx.receipt.gasUsed);
         await this.nutsEscrow.deposit({from: buyer, value: ether("200")});
         await this.nutsEscrow.deposit({from: buyer2, value: ether("200")});
-        this.SellerParameters = await new Promise(function(resolve, reject) {
-          protobufjs.load(__dirname + "../../../messages/LoanInfo.proto", function(err, root) {
-            if (err) {
-              reject(err);
-            }
-            soltype.importTypes(root);
-            let SellerParameters = root.lookupType("SellerParameters");
-            resolve(SellerParameters);
-          });
-        });
     }),
     beforeEach("deploy new collateral token", async function() {
         // Deploy new collateral token
@@ -73,7 +63,7 @@ contract("NutsPlatform", ([owner, fsp, seller, buyer, buyer2, tokenOwner]) => {
         await this.nutsEscrow.depositToken(this.collateralToken.address, 400000, {from: seller});
 
         // Seller create new issuance
-        let buffer = ProtoBufUtils.getSellerParameters(this.SellerParameters, this.collateralToken.address, 300000,
+        let buffer = ProtoBufUtils.getSellerParameters(proto, this.collateralToken.address, 300000,
         '5', 3, 5, 20, 30, 10000, 5);
         tx = await this.nutsPlatform.createIssuance(this.loan.address, buffer, {from: seller});
         console.log("Create issuance: Gas used = " + tx.receipt.gasUsed);

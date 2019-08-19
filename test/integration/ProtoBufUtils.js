@@ -1,48 +1,37 @@
 const BigNumber = require('bignumber.js');
 const { BN, expectEvent, shouldFail, time, ether } = require('openzeppelin-test-helpers');
-function getSellerParameters(SellerParameters, collateralTokenAddress, collateralTokenAmount,
-  borrowAmount, depositDueDays, collateralDueDays, engagementDueDays, tenorDays,
-  interestRate, gracePeriod) {
-  let payload = {
-    collateralTokenAddress: {
-
-    },
-    collateralTokenAmount: {
-
-    },
-    borrowAmount: {
-
-    },
-    depositDueDays: {
-
-    },
-    collateralDueDays: {
-
-    },
-    engagementDueDays: {
-
-    },
-    tenorDays: {
-
-    },
-    interestRate: {
-
-    },
-    gracePeriod: {
-
-    }
-  }
-  let message = SellerParameters.fromObject(payload);
-  message.collateralTokenAddress.saveAsBytes(BigNumber(collateralTokenAddress.toString().toLowerCase()));
-  message.collateralTokenAmount.saveAsBytes(collateralTokenAmount);
-  message.borrowAmount.saveAsBytes(BigNumber(ether(borrowAmount).toString()));
-  message.depositDueDays.saveAsBytes(depositDueDays);
-  message.collateralDueDays.saveAsBytes(collateralDueDays);
-  message.engagementDueDays.saveAsBytes(engagementDueDays);
-  message.tenorDays.saveAsBytes(tenorDays);
-  message.interestRate.saveAsBytes(interestRate);
-  message.gracePeriod.saveAsBytes(gracePeriod);
-  return SellerParameters.encode(message).finish();
+function getSellerParameters(proto, collateralTokenAddressData, collateralTokenAmountData,
+  borrowAmountData, depositDueDaysData, collateralDueDaysData, engagementDueDaysData, tenorDaysData,
+  interestRateData, gracePeriodData) {
+  let message = new proto.SellerParameters();
+  let collateralTokenAddress = new proto.solidity.address();
+  let collateralTokenAmount = new proto.solidity.uint256();
+  let borrowAmount = new proto.solidity.uint256();
+  let depositDueDays = new proto.solidity.uint32();
+  let collateralDueDays = new proto.solidity.uint32();
+  let engagementDueDays = new proto.solidity.uint32();
+  let tenorDays = new proto.solidity.uint32();
+  let interestRate = new proto.solidity.uint32();
+  let gracePeriod = new proto.solidity.uint32();
+  collateralTokenAddress.saveAsBytes(BigNumber(collateralTokenAddressData.toString().toLowerCase()));
+  collateralTokenAmount.saveAsBytes(collateralTokenAmountData);
+  borrowAmount.saveAsBytes(BigNumber(ether(borrowAmountData).toString()));
+  depositDueDays.saveAsBytes(depositDueDaysData);
+  collateralDueDays.saveAsBytes(collateralDueDaysData);
+  engagementDueDays.saveAsBytes(engagementDueDaysData);
+  tenorDays.saveAsBytes(tenorDaysData);
+  interestRate.saveAsBytes(interestRateData);
+  gracePeriod.saveAsBytes(gracePeriodData);
+  message.setCollateraltokenaddress(collateralTokenAddress);
+  message.setCollateraltokenamount(collateralTokenAmount);
+  message.setBorrowamount(borrowAmount);
+  message.setDepositduedays(depositDueDays);
+  message.setCollateralduedays(collateralDueDays);
+  message.setEngagementduedays(engagementDueDays);
+  message.setTenordays(tenorDays);
+  message.setInterestrate(interestRate);
+  message.setGraceperiod(gracePeriod);
+  return message.serializeBinary();
 }
 
 module.exports = {

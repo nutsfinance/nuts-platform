@@ -2,6 +2,7 @@ pragma solidity ^0.5.0;
 
 import "../lib/access/Roles.sol";
 import "../lib/access/WhitelistAdminRole.sol";
+import "../lib/util/StringUtil.sol";
 
 /**
  * @dev Defines the writer role. Only the admin can grant the writer role.
@@ -16,7 +17,7 @@ contract WriterRole is WhitelistAdminRole {
     Roles.Role private _writers;
 
     modifier onlyWriter() {
-        require(isWriter(msg.sender), "WriterRole: Caller does not have the Writer role");
+        require(isWriter(msg.sender), StringUtil.concat("WriterRole: Caller does not have the Writer role. Caller: ", StringUtil.addressToHexString(msg.sender)));
         _;
     }
 
