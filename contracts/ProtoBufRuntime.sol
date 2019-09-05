@@ -1,16 +1,29 @@
 pragma solidity ^0.5.0;
-
+/**
+ * @title Runtime library for ProtoBuf serialization and/or deserialization.
+ * All ProtoBuf generated code will use this library.
+ */
 library ProtoBufRuntime {
-
+  // Types defined in ProtoBuf
   enum WireType { Varint, Fixed64, LengthDelim, StartGroup, EndGroup, Fixed32 }
+  // Constants for bytes calculation
   uint constant WORD_LENGTH = 32;
   uint constant HEADER_SIZE_LENGTH_IN_BYTES = 4;
   uint constant BYTE_SIZE = 8;
   uint constant REMAINING_LENGTH = WORD_LENGTH - HEADER_SIZE_LENGTH_IN_BYTES;
+  string constant OVERFLOW_MESSAGE = "length overflow";
 
   //Storages
-
+  /**
+   * @dev Encode to storage location using assembly to save storage space.
+   * @param location The location of storage
+   * @param encoded The encoded ProtoBuf bytes
+   */
   function encodeStorage(bytes storage location, bytes memory encoded) internal {
+    /**
+     * This code use the first four bytes as size,
+     * and then put the rest of `encoded` bytes.
+     */
     uint length = encoded.length;
     uint firstWord;
     uint wordLength = WORD_LENGTH;
@@ -37,7 +50,16 @@ library ProtoBufRuntime {
     }
   }
 
+  /**
+   * @dev Decode storage location using assembly using the format in `encodeStorage`.
+   * @param location The location of storage
+   * @return The encoded bytes
+   */
   function decodeStorage(bytes storage location) internal view returns (bytes memory) {
+    /**
+     * This code is to decode the first four bytes as size,
+     * and then decode the rest using the decoded size.
+     */
     uint firstWord;
     uint remainingLength = REMAINING_LENGTH;
     uint wordLength = WORD_LENGTH;
@@ -66,6 +88,12 @@ library ProtoBufRuntime {
     return encoded;
   }
 
+  /**
+   * @dev Fast memory copy of bytes using assembly.
+   * @param src The source memory address
+   * @param dest The destination memory address
+   * @param len The length of bytes to copy
+   */
   function copyBytes(uint src, uint dest, uint len) internal pure {
     // Copy word-length chunks while possible
     for (; len >= WORD_LENGTH; len -= WORD_LENGTH) {
@@ -85,6 +113,11 @@ library ProtoBufRuntime {
     }
   }
 
+  /**
+   * @dev Use assembly to get memory address.
+   * @param r The in-memory bytes array
+   * @return The memory address of `r`
+   */
   function getMemoryAddress(bytes memory r) internal pure returns (uint) {
     uint addr;
     assembly {
@@ -93,22 +126,54 @@ library ProtoBufRuntime {
     return addr;
   }
 
+  /**
+   * @dev Implement Math function of ceil
+   * @param a The denominator
+   * @param m The numerator
+   * @return r The result of ceil(a/m)
+   */
   function ceil(uint a, uint m) internal pure returns (uint r) {
     return (a + m - 1) / m;
   }
 
   // Decoders
+  /**
+   * This section of code `_decode_(u)int(32|64)`, `_decode_enum` and `_decode_bool`
+   * is to decode ProtoBuf native integers,
+   * using the `varint` encoding.
+   */
 
+  /**
+   * @dev Decode integers
+   * @param p The memory offset of `bs`
+   * @param bs The bytes array to be decoded
+   * @return The decoded integer
+   * @return The length of `bs` used to get decoded
+   */
   function _decode_uint32(uint p, bytes memory bs) internal pure returns (uint32, uint) {
     (uint varint, uint sz) = _decode_varint(p, bs);
     return (uint32(varint), sz);
   }
 
+  /**
+   * @dev Decode integers
+   * @param p The memory offset of `bs`
+   * @param bs The bytes array to be decoded
+   * @return The decoded integer
+   * @return The length of `bs` used to get decoded
+   */
   function _decode_uint64(uint p, bytes memory bs) internal pure returns (uint64, uint) {
     (uint varint, uint sz) = _decode_varint(p, bs);
     return (uint64(varint), sz);
   }
 
+  /**
+   * @dev Decode integers
+   * @param p The memory offset of `bs`
+   * @param bs The bytes array to be decoded
+   * @return The decoded integer
+   * @return The length of `bs` used to get decoded
+   */
   function _decode_int32(uint p, bytes memory bs) internal pure returns (int32, uint) {
     (uint varint, uint sz) = _decode_varint(p, bs);
     int32 r;
@@ -118,6 +183,13 @@ library ProtoBufRuntime {
     return (r, sz);
   }
 
+  /**
+   * @dev Decode integers
+   * @param p The memory offset of `bs`
+   * @param bs The bytes array to be decoded
+   * @return The decoded integer
+   * @return The length of `bs` used to get decoded
+   */
   function _decode_int64(uint p, bytes memory bs) internal pure returns (int64, uint) {
     (uint varint, uint sz) = _decode_varint(p, bs);
     int64 r;
@@ -127,20 +199,24 @@ library ProtoBufRuntime {
     return (r, sz);
   }
 
+  /**
+   * @dev Decode enum
+   * @param p The memory offset of `bs`
+   * @param bs The bytes array to be decoded
+   * @return The decoded enum's integer
+   * @return The length of `bs` used to get decoded
+   */
   function _decode_enum(uint p, bytes memory bs) internal pure returns (int64, uint) {
     return _decode_int64(p, bs);
   }
 
-  function _decode_sint32(uint p, bytes memory bs) internal pure returns (int32, uint) {
-    (int varint, uint sz) = _decode_varints(p, bs);
-    return (int32(varint), sz);
-  }
-
-  function _decode_sint64(uint p, bytes memory bs) internal pure returns (int64, uint) {
-    (int varint, uint sz) = _decode_varints(p, bs);
-    return (int64(varint), sz);
-  }
-
+  /**
+   * @dev Decode enum
+   * @param p The memory offset of `bs`
+   * @param bs The bytes array to be decoded
+   * @return The decoded boolean
+   * @return The length of `bs` used to get decoded
+   */
   function _decode_bool(uint p, bytes memory bs) internal pure returns (bool, uint) {
     (uint varint, uint sz) = _decode_varint(p, bs);
     if (varint == 0) {
@@ -149,15 +225,67 @@ library ProtoBufRuntime {
     return (true, sz);
   }
 
+  /**
+   * This section of code `_decode_sint(32|64)`
+   * is to decode ProtoBuf native signed integers,
+   * using the `zig-zag` encoding.
+   */
+
+  /**
+   * @dev Decode signed integers
+   * @param p The memory offset of `bs`
+   * @param bs The bytes array to be decoded
+   * @return The decoded integer
+   * @return The length of `bs` used to get decoded
+   */
+  function _decode_sint32(uint p, bytes memory bs) internal pure returns (int32, uint) {
+    (int varint, uint sz) = _decode_varints(p, bs);
+    return (int32(varint), sz);
+  }
+
+  /**
+   * @dev Decode signed integers
+   * @param p The memory offset of `bs`
+   * @param bs The bytes array to be decoded
+   * @return The decoded integer
+   * @return The length of `bs` used to get decoded
+   */
+  function _decode_sint64(uint p, bytes memory bs) internal pure returns (int64, uint) {
+    (int varint, uint sz) = _decode_varints(p, bs);
+    return (int64(varint), sz);
+  }
+
+  /**
+   * @dev Decode string
+   * @param p The memory offset of `bs`
+   * @param bs The bytes array to be decoded
+   * @return The decoded string
+   * @return The length of `bs` used to get decoded
+   */
   function _decode_string(uint p, bytes memory bs) internal pure returns (string memory, uint) {
     (bytes memory x, uint sz) = _decode_lendelim(p, bs);
     return (string(x), sz);
   }
 
+  /**
+   * @dev Decode bytes array
+   * @param p The memory offset of `bs`
+   * @param bs The bytes array to be decoded
+   * @return The decoded bytes array
+   * @return The length of `bs` used to get decoded
+   */
   function _decode_bytes(uint p, bytes memory bs) internal pure returns (bytes memory, uint) {
     return _decode_lendelim(p, bs);
   }
 
+  /**
+   * @dev Decode ProtoBuf key
+   * @param p The memory offset of `bs`
+   * @param bs The bytes array to be decoded
+   * @return The decoded field ID
+   * @return The decoded WireType specified in ProtoBuf
+   * @return The length of `bs` used to get decoded
+   */
   function _decode_key(uint p, bytes memory bs) internal pure returns (uint, WireType, uint) {
     (uint x, uint n) = _decode_varint(p, bs);
     WireType typeId  = WireType(x & 7);
@@ -165,23 +293,66 @@ library ProtoBufRuntime {
     return (fieldId, typeId, n);
   }
 
+  /**
+   * @dev Decode ProtoBuf varint
+   * @param p The memory offset of `bs`
+   * @param bs The bytes array to be decoded
+   * @return The decoded unsigned integer
+   * @return The length of `bs` used to get decoded
+   */
   function _decode_varint(uint p, bytes memory bs) internal pure returns (uint, uint) {
+    /**
+     * Read a byte.
+     * Use the lower 7 bits and shift it to the left,
+     * until the most significant bit is 0.
+     * Refer to https://developers.google.com/protocol-buffers/docs/encoding
+     */
     uint x = 0;
     uint sz = 0;
+    uint length = bs.length + WORD_LENGTH;
     assembly {
       let b := 0x80
       p := add(bs, p)
       for {} eq(0x80, and(b, 0x80)) {} {
-        b := byte(0, mload(p))
-        x := or(x, shl(mul(7, sz), and(0x7f, b)))
-        sz := add(sz, 1)
-        p := add(p, 0x01)
+        if eq(lt(sub(p, bs), length), 0) {
+          mstore(0, 0x08c379a000000000000000000000000000000000000000000000000000000000) //error function selector
+          mstore(4, 32)
+          mstore(36, 15)
+          mstore(68, 0x6c656e677468206f766572666c6f770000000000000000000000000000000000) // length overflow in hex
+          revert(0, 83)
+        }
+        let tmp := mload(p)
+        let pos := 0
+        for {} and(eq(0x80, and(b, 0x80)), lt(pos, 32)) {} {
+          if eq(lt(sub(p, bs), length), 0) {
+            mstore(0, 0x08c379a000000000000000000000000000000000000000000000000000000000) //error function selector
+            mstore(4, 32)
+            mstore(36, 15)
+            mstore(68, 0x6c656e677468206f766572666c6f770000000000000000000000000000000000) // length overflow in hex
+            revert(0, 83)
+          }
+          b := byte(pos, tmp)
+          x := or(x, shl(mul(7, sz), and(0x7f, b)))
+          sz := add(sz, 1)
+          pos := add(pos, 1)
+          p := add(p, 0x01)
+        }
       }
     }
     return (x, sz);
   }
 
+  /**
+   * @dev Decode ProtoBuf zig-zag encoding
+   * @param p The memory offset of `bs`
+   * @param bs The bytes array to be decoded
+   * @return The decoded signed integer
+   * @return The length of `bs` used to get decoded
+   */
   function _decode_varints(uint p, bytes memory bs) internal pure returns (int, uint) {
+    /**
+     * Refer to https://developers.google.com/protocol-buffers/docs/encoding
+     */
     (uint u, uint sz) = _decode_varint(p, bs);
     int s;
     assembly {
@@ -190,13 +361,26 @@ library ProtoBufRuntime {
     return (s, sz);
   }
 
+  /**
+   * @dev Decode ProtoBuf fixed-length encoding
+   * @param p The memory offset of `bs`
+   * @param bs The bytes array to be decoded
+   * @return The decoded unsigned integer
+   * @return The length of `bs` used to get decoded
+   */
   function _decode_uintf(uint p, bytes memory bs, uint sz) internal pure returns (uint, uint) {
+    /**
+     * Refer to https://developers.google.com/protocol-buffers/docs/encoding
+     */
     uint x = 0;
+    uint length = bs.length + WORD_LENGTH;
+    require(p + sz <= length, OVERFLOW_MESSAGE);
     assembly {
       let i := 0
       p := add(bs, p)
+      let tmp := mload(p)
       for {} lt(i, sz) {} {
-        x := or(x, shl(mul(8, i), byte(0, mload(p))))
+        x := or(x, shl(mul(8, i), byte(i, tmp)))
         p := add(p, 0x01)
         i := add(i, 1)
       }
@@ -204,6 +388,9 @@ library ProtoBufRuntime {
     return (x, sz);
   }
 
+  /**
+   * `_decode_(s)fixed(32|64)` is the concrete implementation of `_decode_uintf`
+   */
   function _decode_fixed32(uint p, bytes memory bs) internal pure returns (uint32, uint) {
     (uint x, uint sz) = _decode_uintf(p, bs, 4);
     return (uint32(x), sz);
@@ -232,25 +419,40 @@ library ProtoBufRuntime {
     return (int64(r), sz);
   }
 
+  /**
+   * @dev Decode bytes array
+   * @param p The memory offset of `bs`
+   * @param bs The bytes array to be decoded
+   * @return The decoded bytes array
+   * @return The length of `bs` used to get decoded
+   */
   function _decode_lendelim(uint p, bytes memory bs) internal pure returns (bytes memory, uint) {
+    /**
+     * First read the size encoded in `varint`, then use the size to read bytes.
+     */
     (uint len, uint sz) = _decode_varint(p, bs);
     bytes memory b = new bytes(len);
+    uint length = bs.length + WORD_LENGTH;
+    require(p + sz + len <= length, OVERFLOW_MESSAGE);
+    uint sourcePtr;
+    uint destPtr;
     assembly {
-      let bptr  := add(b, 32)
-      let count := 0
-      p := add(add(bs, p),sz)
-      for {} lt(count, len) {} {
-        mstore8(bptr, byte(0, mload(p)))
-        p := add(p, 1)
-        bptr := add(bptr, 1)
-        count := add(count, 1)
-      }
+      destPtr := add(b, 32)
+      sourcePtr := add(add(bs, p), sz)
     }
+    copyBytes(sourcePtr, destPtr, len);
     return (b, sz + len);
   }
 
   // Encoders
-
+  /**
+   * @dev Encode ProtoBuf key
+   * @param x The field ID
+   * @param wt The WireType specified in ProtoBuf
+   * @param p The offset of bytes array `bs`
+   * @param bs The bytes array to encode
+   * @return The length of encoded bytes
+   */
   function _encode_key(uint x, WireType wt, uint p, bytes memory bs) internal pure returns (uint) {
     uint i;
     assembly {
@@ -259,7 +461,17 @@ library ProtoBufRuntime {
     return _encode_varint(i, p, bs);
   }
 
+  /**
+   * @dev Encode ProtoBuf varint
+   * @param x The unsigned integer to be encoded
+   * @param p The offset of bytes array `bs`
+   * @param bs The bytes array to encode
+   * @return The length of encoded bytes
+   */
   function _encode_varint(uint x, uint p, bytes memory bs) internal pure returns (uint) {
+    /**
+     * Refer to https://developers.google.com/protocol-buffers/docs/encoding
+     */
     uint sz = 0;
     assembly {
       let bsptr := add(bs, p)
@@ -277,11 +489,28 @@ library ProtoBufRuntime {
     return sz;
   }
 
+  /**
+   * @dev Encode ProtoBuf zig-zag encoding
+   * @param x The signed integer to be encoded
+   * @param p The offset of bytes array `bs`
+   * @param bs The bytes array to encode
+   * @return The length of encoded bytes
+   */
   function _encode_varints(int x, uint p, bytes memory bs) internal pure returns (uint) {
+    /**
+     * Refer to https://developers.google.com/protocol-buffers/docs/encoding
+     */
     uint encodedInt = _encode_zigzag(x);
     return _encode_varint(encodedInt, p, bs);
   }
 
+  /**
+   * @dev Encode ProtoBuf bytes
+   * @param xs The bytes array to be encoded
+   * @param p The offset of bytes array `bs`
+   * @param bs The bytes array to encode
+   * @return The length of encoded bytes
+   */
   function _encode_bytes(bytes memory xs, uint p, bytes memory bs) internal pure returns (uint) {
     uint xsLength = xs.length;
     uint sz = _encode_varint(xsLength, p, bs);
@@ -299,6 +528,21 @@ library ProtoBufRuntime {
     return sz + count;
   }
 
+  /**
+   * @dev Encode ProtoBuf string
+   * @param xs The string to be encoded
+   * @param p The offset of bytes array `bs`
+   * @param bs The bytes array to encode
+   * @return The length of encoded bytes
+   */
+  function _encode_string(string memory xs, uint p, bytes memory bs) internal pure returns (uint) {
+    return  _encode_bytes(bytes(xs), p, bs);
+  }
+
+  /**
+   * `_encode_(u)int(32|64)`, `_encode_enum` and `_encode_bool`
+   * are concrete implementation of `_encode_varint`
+   */
   function _encode_uint32(uint32 x, uint p, bytes memory bs) internal pure returns (uint) {
     return _encode_varint(x, p, bs);
   }
@@ -327,6 +571,17 @@ library ProtoBufRuntime {
     return _encode_int64(x, p, bs);
   }
 
+  function _encode_bool(bool x, uint p, bytes memory bs) internal pure returns (uint) {
+    if (x) {
+      return _encode_varint(1, p, bs);
+    }
+    else return _encode_varint(0, p, bs);
+  }
+
+  /**
+   * `_encode_sint(32|64)`, `_encode_enum` and `_encode_bool`
+   * are the concrete implementation of `_encode_varints`
+   */
   function _encode_sint32(int32 x, uint p, bytes memory bs) internal pure returns (uint) {
     return _encode_varints(x, p, bs);
   }
@@ -335,17 +590,9 @@ library ProtoBufRuntime {
     return _encode_varints(x, p, bs);
   }
 
-  function _encode_string(string memory xs, uint p, bytes memory bs) internal pure returns (uint) {
-    return  _encode_bytes(bytes(xs), p, bs);
-  }
-
-  function _encode_bool(bool x, uint p, bytes memory bs) internal pure returns (uint) {
-    if (x) {
-      return _encode_varint(1, p, bs);
-    }
-    else return _encode_varint(0, p, bs);
-  }
-
+  /**
+   * `_encode_(s)fixed(32|64)` is the concrete implementation of `_encode_uintf`
+   */
   function _encode_fixed32(uint32 x, uint p, bytes memory bs) internal pure returns (uint) {
     return _encode_uintf(x, p, bs, 4);
   }
@@ -370,6 +617,13 @@ library ProtoBufRuntime {
     return _encode_uintf(twosComplement, p, bs, 8);
   }
 
+  /**
+   * @dev Encode ProtoBuf fixed-length integer
+   * @param x The unsigned integer to be encoded
+   * @param p The offset of bytes array `bs`
+   * @param bs The bytes array to encode
+   * @return The length of encoded bytes
+   */
   function _encode_uintf(uint x, uint p, bytes memory bs, uint sz) internal pure returns (uint) {
     assembly {
       let bsptr := add(sz,add(bs, p))
@@ -383,6 +637,11 @@ library ProtoBufRuntime {
     return sz;
   }
 
+  /**
+   * @dev Encode ProtoBuf zig-zag signed integer
+   * @param i The unsigned integer to be encoded
+   * @return The encoded unsigned integer
+   */
   function _encode_zigzag(int i) internal pure returns (uint) {
     if (i >= 0) {
       return uint(i) * 2;
@@ -391,11 +650,20 @@ library ProtoBufRuntime {
   }
 
   // Estimators
-
+  /**
+   * @dev Estimate the length of encoded LengthDelim
+   * @param i The length of LengthDelim
+   * @return The estimated encoded length
+   */
   function _sz_lendelim(uint i) internal pure returns (uint) {
     return i + _sz_varint(i);
   }
 
+  /**
+   * @dev Estimate the length of encoded ProtoBuf field ID
+   * @param i The field ID
+   * @return The estimated encoded length
+   */
   function _sz_key(uint i) internal pure returns (uint) {
     if (i < 16) {
       return 1;
@@ -406,9 +674,16 @@ library ProtoBufRuntime {
     else if (i < 262144) {
       return 3;
     }
-    else revert();
+    else {
+      revert("not supported");
+    }
   }
 
+  /**
+   * @dev Estimate the length of encoded ProtoBuf varint
+   * @param i The unsigned integer
+   * @return The estimated encoded length
+   */
   function _sz_varint(uint i) internal pure returns (uint) {
     uint count = 1;
     assembly {
@@ -421,6 +696,9 @@ library ProtoBufRuntime {
     return count;
   }
 
+  /**
+   * `_sz_(u)int(32|64)` and `_sz_enum` are the concrete implementation of `_sz_varint`
+   */
   function _sz_uint32(uint32 i) internal pure returns (uint) {
     return _sz_varint(i);
   }
@@ -450,6 +728,9 @@ library ProtoBufRuntime {
     else return _sz_varint(uint64(i));
   }
 
+  /**
+   * `_sz_sint(32|64)` and `_sz_enum` are the concrete implementation of zig-zag encoding
+   */
   function _sz_sint32(int32 i) internal pure returns (uint) {
     return _sz_varint(_encode_zigzag(i));
   }
@@ -459,16 +740,24 @@ library ProtoBufRuntime {
   }
 
   // Soltype extensions
-
+  /**
+   * @dev Decode Solidity integer and/or fixed-size bytes array, filling from lowest bit.
+   * @param n The maximum number of bytes to read
+   * @param p The offset of bytes array `bs`
+   * @param bs The bytes array to encode
+   * @return The bytes32 representation
+   * @return The number of bytes used to decode
+   */
   function _decode_sol_bytesN_lower(uint8 n, uint p, bytes memory bs) internal pure returns (bytes32, uint) {
     uint r;
     (uint len, uint sz) = _decode_varint(p, bs);
     if (len + sz > n + 3) {
-      revert();
+      revert(OVERFLOW_MESSAGE);
     }
     p += 3;
+    require(p < bs.length + WORD_LENGTH, OVERFLOW_MESSAGE);
     assembly {
-      r := mload(add(p,bs))
+      r := mload(add(p, bs))
     }
     for (uint i = len - 2; i < WORD_LENGTH; i++) {
       r /= 256;
@@ -476,15 +765,24 @@ library ProtoBufRuntime {
     return (bytes32(r), len + sz);
   }
 
+  /**
+   * @dev Decode Solidity integer and/or fixed-size bytes array, filling from highest bit.
+   * @param n The maximum number of bytes to read
+   * @param p The offset of bytes array `bs`
+   * @param bs The bytes array to encode
+   * @return The bytes32 representation
+   * @return The number of bytes used to decode
+   */
   function _decode_sol_bytesN(uint8 n, uint p, bytes memory bs) internal pure returns (bytes32, uint) {
     (uint len, uint sz) = _decode_varint(p, bs);
     uint wordLength = WORD_LENGTH;
     uint byteSize = BYTE_SIZE;
     if (len + sz > n + 3) {
-      revert();
+      revert(OVERFLOW_MESSAGE);
     }
     p += 3;
     bytes32 acc;
+    require(p < bs.length + WORD_LENGTH, OVERFLOW_MESSAGE);
     assembly {
       acc := mload(add(p, bs))
       let difference := sub(wordLength, sub(len, 2))
@@ -494,6 +792,9 @@ library ProtoBufRuntime {
     return (acc, len + sz);
   }
 
+  /*
+   * `_decode_sol*` are the concrete implementation of decoding Solidity types
+   */
   function _decode_sol_address(uint p, bytes memory bs) internal pure returns (address, uint) {
     (bytes32 r, uint sz) = _decode_sol_bytesN(20, p, bs);
     return (address(bytes20(r)), sz);
@@ -1018,6 +1319,9 @@ library ProtoBufRuntime {
     return _decode_sol_bytes(32, p, bs);
   }
 
+  /*
+   * `_encode_sol*` are the concrete implementation of encoding Solidity types
+   */
   function _encode_sol_address(address x, uint p, bytes memory bs) internal pure returns (uint) {
     return _encode_sol(uint(x), 20, p, bs);
   }
@@ -1410,6 +1714,13 @@ library ProtoBufRuntime {
     return _encode_sol_bytes(x, 32, p, bs);
   }
 
+  /**
+   * @dev Encode the key of Solidity integer and/or fixed-size bytes array.
+   * @param sz The number of bytes used to encode Solidity types
+   * @param p The offset of bytes array `bs`
+   * @param bs The bytes array to encode
+   * @return The number of bytes used to encode
+   */
   function _encode_sol_header(uint sz, uint p, bytes memory bs) internal pure returns (uint) {
     uint offset = p;
     p += _encode_varint(sz + 2, p, bs);
@@ -1418,6 +1729,14 @@ library ProtoBufRuntime {
     return p - offset;
   }
 
+  /**
+   * @dev Encode Solidity type
+   * @param x The unsinged integer to be encoded
+   * @param sz The number of bytes used to encode Solidity types
+   * @param p The offset of bytes array `bs`
+   * @param bs The bytes array to encode
+   * @return The number of bytes used to encode
+   */
   function _encode_sol(uint x, uint sz, uint p, bytes memory bs) internal pure returns (uint) {
     uint offset = p;
     uint size;
@@ -1428,6 +1747,14 @@ library ProtoBufRuntime {
     return p - offset;
   }
 
+  /**
+   * @dev Encode Solidity type
+   * @param x The signed integer to be encoded
+   * @param sz The number of bytes used to encode Solidity types
+   * @param p The offset of bytes array `bs`
+   * @param bs The bytes array to encode
+   * @return The number of bytes used to encode
+   */
   function _encode_sol(int x, uint sz, uint p, bytes memory bs) internal pure returns (uint) {
     uint offset = p;
     uint size;
@@ -1438,6 +1765,14 @@ library ProtoBufRuntime {
     return p - offset;
   }
 
+  /**
+   * @dev Encode Solidity type
+   * @param x The fixed-size byte array to be encoded
+   * @param sz The number of bytes used to encode Solidity types
+   * @param p The offset of bytes array `bs`
+   * @param bs The bytes array to encode
+   * @return The number of bytes used to encode
+   */
   function _encode_sol_bytes(bytes32 x, uint sz, uint p, bytes memory bs) internal pure returns (uint) {
     uint offset = p;
     uint size;
@@ -1448,6 +1783,12 @@ library ProtoBufRuntime {
     return p - offset;
   }
 
+  /**
+   * @dev Get the actual size needed to encoding an unsigned integer
+   * @param x The unsigned integer to be encoded
+   * @param sz The maximum number of bytes used to encode Solidity types
+   * @return The number of bytes needed for encoding `x`
+   */
   function _get_real_size(uint x, uint sz) internal pure returns (uint) {
     uint base = 0xff;
     uint realSize = sz;
@@ -1460,6 +1801,12 @@ library ProtoBufRuntime {
     return realSize;
   }
 
+  /**
+   * @dev Get the actual size needed to encoding an signed integer
+   * @param x The signed integer to be encoded
+   * @param sz The maximum number of bytes used to encode Solidity types
+   * @return The number of bytes needed for encoding `x`
+   */
   function _get_real_size(int x, uint sz) internal pure returns (uint) {
     int base = 0xff;
     if (x >= 0) {
@@ -1482,7 +1829,18 @@ library ProtoBufRuntime {
     return realSize;
   }
 
+  /**
+   * @dev Encode the fixed-bytes array
+   * @param x The fixed-size byte array to be encoded
+   * @param sz The maximum number of bytes used to encode Solidity types
+   * @param p The offset of bytes array `bs`
+   * @param bs The bytes array to encode
+   * @return The number of bytes needed for encoding `x`
+   */
   function _encode_sol_raw_bytes_array(bytes32 x, uint p, bytes memory bs, uint sz) internal pure returns (uint) {
+    /**
+     * The idea is to not encode the leading bytes of zero.
+     */
     uint actualSize = sz;
     for (uint i = 0; i < sz; i++) {
       uint8 current = uint8(x[sz - 1 - i]);
@@ -1504,7 +1862,19 @@ library ProtoBufRuntime {
     return actualSize;
   }
 
+  /**
+   * @dev Encode the signed integer
+   * @param x The signed integer to be encoded
+   * @param sz The maximum number of bytes used to encode Solidity types
+   * @param p The offset of bytes array `bs`
+   * @param bs The bytes array to encode
+   * @return The number of bytes needed for encoding `x`
+   */
   function _encode_sol_raw_other(int x, uint p, bytes memory bs, uint sz) internal pure returns (uint) {
+    /**
+     * The idea is to not encode the leading bytes of zero.or one,
+     * depending on whether it is positive.
+     */
     uint realSize = _get_real_size(x, sz);
     assembly {
       let bsptr := add(bs, p)
@@ -1518,6 +1888,14 @@ library ProtoBufRuntime {
     return realSize;
   }
 
+  /**
+   * @dev Encode the unsigned integer
+   * @param x The unsigned integer to be encoded
+   * @param sz The maximum number of bytes used to encode Solidity types
+   * @param p The offset of bytes array `bs`
+   * @param bs The bytes array to encode
+   * @return The number of bytes needed for encoding `x`
+   */
   function _encode_sol_raw_other(uint x, uint p, bytes memory bs, uint sz) internal pure returns (uint) {
     uint realSize = _get_real_size(x, sz);
     assembly {

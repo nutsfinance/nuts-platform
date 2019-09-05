@@ -20,17 +20,35 @@ library StakeMiningParameters {
 
   // Decoder section
 
+  /**
+   * @dev The main decoder for memory
+   * @param bs The bytes array to be decoded
+   * @return The decoded struct
+   */
   function decode(bytes memory bs) internal pure returns (Data memory) {
     (Data memory x,) = _decode(32, bs, bs.length);
     return x;
   }
 
+  /**
+   * @dev The main decoder for storage
+   * @param self The in-storage struct
+   * @param bs The bytes array to be decoded
+   */
   function decode(Data storage self, bytes memory bs) internal {
     (Data memory x,) = _decode(32, bs, bs.length);
     store(x, self);
   }
   // inner decoder
 
+  /**
+   * @dev The decoder for internal usage
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @param sz The number of bytes expected
+   * @return The decoded struct
+   * @return The number of bytes decoded
+   */
   function _decode(uint p, bytes memory bs, uint sz)
       internal pure returns (Data memory, uint) {
     Data memory r;
@@ -73,6 +91,28 @@ library StakeMiningParameters {
       else if(fieldId == 10) {
         pointer += _read_priceOracle(pointer, bs, r, counters);
       }
+      else {
+        if (wireType == ProtoBufRuntime.WireType.Fixed64) {
+          uint size;
+          (, size) = ProtoBufRuntime._decode_fixed64(pointer, bs);
+          pointer += size;
+        }
+        if (wireType == ProtoBufRuntime.WireType.Fixed32) {
+          uint size;
+          (, size) = ProtoBufRuntime._decode_fixed32(pointer, bs);
+          pointer += size;
+        }
+        if (wireType == ProtoBufRuntime.WireType.Varint) {
+          uint size;
+          (, size) = ProtoBufRuntime._decode_varint(pointer, bs);
+          pointer += size;
+        }
+        if (wireType == ProtoBufRuntime.WireType.LengthDelim) {
+          uint size;
+          (, size) = ProtoBufRuntime._decode_lendelim(pointer, bs);
+          pointer += size;
+        }
+      }
     }
     pointer = offset;
     r.supportedTokens = new address[](counters[1]);
@@ -110,13 +150,46 @@ library StakeMiningParameters {
       else if(fieldId == 10) {
         pointer += _read_priceOracle(pointer, bs, nil(), counters);
       }
+      else {
+        if (wireType == ProtoBufRuntime.WireType.Fixed64) {
+          uint size;
+          (, size) = ProtoBufRuntime._decode_fixed64(pointer, bs);
+          pointer += size;
+        }
+        if (wireType == ProtoBufRuntime.WireType.Fixed32) {
+          uint size;
+          (, size) = ProtoBufRuntime._decode_fixed32(pointer, bs);
+          pointer += size;
+        }
+        if (wireType == ProtoBufRuntime.WireType.Varint) {
+          uint size;
+          (, size) = ProtoBufRuntime._decode_varint(pointer, bs);
+          pointer += size;
+        }
+        if (wireType == ProtoBufRuntime.WireType.LengthDelim) {
+          uint size;
+          (, size) = ProtoBufRuntime._decode_lendelim(pointer, bs);
+          pointer += size;
+        }
+      }
     }
     return (r, sz);
   }
 
   // field readers
 
+  /**
+   * @dev The decoder for reading a field
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @param r The in-memory struct
+   * @param counters The counters for repeated fields
+   * @return The number of bytes decoded
+   */
   function _read_supportedTokens(uint p, bytes memory bs, Data memory r, uint[11] memory counters) internal pure returns (uint) {
+    /**
+     * if `r` is NULL, then only counting the number of fields.
+     */
     (address x, uint sz) = ProtoBufRuntime._decode_sol_address(p, bs);
     if(isNil(r)) {
       counters[1] += 1;
@@ -127,7 +200,18 @@ library StakeMiningParameters {
     return sz;
   }
 
+  /**
+   * @dev The decoder for reading a field
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @param r The in-memory struct
+   * @param counters The counters for repeated fields
+   * @return The number of bytes decoded
+   */
   function _read_supportETH(uint p, bytes memory bs, Data memory r, uint[11] memory counters) internal pure returns (uint) {
+    /**
+     * if `r` is NULL, then only counting the number of fields.
+     */
     (bool x, uint sz) = ProtoBufRuntime._decode_bool(p, bs);
     if(isNil(r)) {
       counters[2] += 1;
@@ -138,7 +222,18 @@ library StakeMiningParameters {
     return sz;
   }
 
+  /**
+   * @dev The decoder for reading a field
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @param r The in-memory struct
+   * @param counters The counters for repeated fields
+   * @return The number of bytes decoded
+   */
   function _read_mintedToken(uint p, bytes memory bs, Data memory r, uint[11] memory counters) internal pure returns (uint) {
+    /**
+     * if `r` is NULL, then only counting the number of fields.
+     */
     (address x, uint sz) = ProtoBufRuntime._decode_sol_address(p, bs);
     if(isNil(r)) {
       counters[3] += 1;
@@ -149,7 +244,18 @@ library StakeMiningParameters {
     return sz;
   }
 
+  /**
+   * @dev The decoder for reading a field
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @param r The in-memory struct
+   * @param counters The counters for repeated fields
+   * @return The number of bytes decoded
+   */
   function _read_startBlock(uint p, bytes memory bs, Data memory r, uint[11] memory counters) internal pure returns (uint) {
+    /**
+     * if `r` is NULL, then only counting the number of fields.
+     */
     (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
     if(isNil(r)) {
       counters[4] += 1;
@@ -160,7 +266,18 @@ library StakeMiningParameters {
     return sz;
   }
 
+  /**
+   * @dev The decoder for reading a field
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @param r The in-memory struct
+   * @param counters The counters for repeated fields
+   * @return The number of bytes decoded
+   */
   function _read_endBlock(uint p, bytes memory bs, Data memory r, uint[11] memory counters) internal pure returns (uint) {
+    /**
+     * if `r` is NULL, then only counting the number of fields.
+     */
     (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
     if(isNil(r)) {
       counters[5] += 1;
@@ -171,7 +288,18 @@ library StakeMiningParameters {
     return sz;
   }
 
+  /**
+   * @dev The decoder for reading a field
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @param r The in-memory struct
+   * @param counters The counters for repeated fields
+   * @return The number of bytes decoded
+   */
   function _read_tokensPerBlock(uint p, bytes memory bs, Data memory r, uint[11] memory counters) internal pure returns (uint) {
+    /**
+     * if `r` is NULL, then only counting the number of fields.
+     */
     (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
     if(isNil(r)) {
       counters[6] += 1;
@@ -182,7 +310,18 @@ library StakeMiningParameters {
     return sz;
   }
 
+  /**
+   * @dev The decoder for reading a field
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @param r The in-memory struct
+   * @param counters The counters for repeated fields
+   * @return The number of bytes decoded
+   */
   function _read_minimumBalance(uint p, bytes memory bs, Data memory r, uint[11] memory counters) internal pure returns (uint) {
+    /**
+     * if `r` is NULL, then only counting the number of fields.
+     */
     (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
     if(isNil(r)) {
       counters[7] += 1;
@@ -193,7 +332,18 @@ library StakeMiningParameters {
     return sz;
   }
 
+  /**
+   * @dev The decoder for reading a field
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @param r The in-memory struct
+   * @param counters The counters for repeated fields
+   * @return The number of bytes decoded
+   */
   function _read_teamWallet(uint p, bytes memory bs, Data memory r, uint[11] memory counters) internal pure returns (uint) {
+    /**
+     * if `r` is NULL, then only counting the number of fields.
+     */
     (address x, uint sz) = ProtoBufRuntime._decode_sol_address(p, bs);
     if(isNil(r)) {
       counters[8] += 1;
@@ -204,7 +354,18 @@ library StakeMiningParameters {
     return sz;
   }
 
+  /**
+   * @dev The decoder for reading a field
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @param r The in-memory struct
+   * @param counters The counters for repeated fields
+   * @return The number of bytes decoded
+   */
   function _read_teamPercentage(uint p, bytes memory bs, Data memory r, uint[11] memory counters) internal pure returns (uint) {
+    /**
+     * if `r` is NULL, then only counting the number of fields.
+     */
     (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
     if(isNil(r)) {
       counters[9] += 1;
@@ -215,7 +376,18 @@ library StakeMiningParameters {
     return sz;
   }
 
+  /**
+   * @dev The decoder for reading a field
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @param r The in-memory struct
+   * @param counters The counters for repeated fields
+   * @return The number of bytes decoded
+   */
   function _read_priceOracle(uint p, bytes memory bs, Data memory r, uint[11] memory counters) internal pure returns (uint) {
+    /**
+     * if `r` is NULL, then only counting the number of fields.
+     */
     (address x, uint sz) = ProtoBufRuntime._decode_sol_address(p, bs);
     if(isNil(r)) {
       counters[10] += 1;
@@ -229,6 +401,11 @@ library StakeMiningParameters {
 
   // Encoder section
 
+  /**
+   * @dev The main encoder for memory
+   * @param r The struct to be encoded
+   * @return The encoded byte array
+   */
   function encode(Data memory r) internal pure returns (bytes memory) {
     bytes memory bs = new bytes(_estimate(r));
     uint sz = _encode(r, 32, bs);
@@ -239,6 +416,13 @@ library StakeMiningParameters {
   }
   // inner encoder
 
+  /**
+   * @dev The encoder for internal usage
+   * @param r The struct to be encoded
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @return The number of bytes encoded
+   */
   function _encode(Data memory r, uint p, bytes memory bs)
       internal pure returns (uint) {
     uint offset = p;
@@ -270,8 +454,19 @@ library StakeMiningParameters {
   }
   // nested encoder
 
+  /**
+   * @dev The encoder for inner struct
+   * @param r The struct to be encoded
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @return The number of bytes encoded
+   */
   function _encode_nested(Data memory r, uint p, bytes memory bs)
       internal pure returns (uint) {
+    /**
+     * First encoded `r` into a temporary array, and encode the actual size used.
+     * Then copy the temporary array into `bs`.
+     */
     uint offset = p;
     uint pointer = p;
     bytes memory tmp = new bytes(_estimate(r));
@@ -286,6 +481,11 @@ library StakeMiningParameters {
   }
   // estimator
 
+  /**
+   * @dev The estimator for a struct
+   * @param r The struct to be encoded
+   * @return The number of bytes encoded in estimation
+   */
   function _estimate(Data memory r) internal pure returns (uint) {
     uint e;uint i;
     for(i = 0; i < r.supportedTokens.length; i++) {
@@ -304,6 +504,11 @@ library StakeMiningParameters {
   }
 
   //store function
+  /**
+   * @dev Store in-memory struct to storage
+   * @param input The in-memory struct
+   * @param output The in-storage struct
+   */
   function store(Data memory input, Data storage output) internal {
     output.supportedTokens = input.supportedTokens;
     output.supportETH = input.supportETH;
@@ -320,7 +525,15 @@ library StakeMiningParameters {
 
 
   //array helpers for SupportedTokens
+  /**
+   * @dev Add value to an array
+   * @param self The in-memory struct
+   * @param value The value to add
+   */
   function addSupportedTokens(Data memory self, address  value) internal pure {
+    /**
+     * First resize the array. Then add the new element to the end.
+     */
     address[] memory tmp = new address[](self.supportedTokens.length + 1);
     for (uint i = 0; i < self.supportedTokens.length; i++) {
       tmp[i] = self.supportedTokens[i];
@@ -331,12 +544,21 @@ library StakeMiningParameters {
 
 
   //utility functions
+  /**
+   * @dev Return an empty struct
+   * @return The empty struct
+   */
   function nil() internal pure returns (Data memory r) {
     assembly {
       r := 0
     }
   }
 
+  /**
+   * @dev Test whether a struct is empty
+   * @param x The struct to be tested
+   * @return True if it is empty
+   */
   function isNil(Data memory x) internal pure returns (bool r) {
     assembly {
       r := iszero(x)
@@ -366,17 +588,35 @@ library StakeMiningProperties {
 
   // Decoder section
 
+  /**
+   * @dev The main decoder for memory
+   * @param bs The bytes array to be decoded
+   * @return The decoded struct
+   */
   function decode(bytes memory bs) internal pure returns (Data memory) {
     (Data memory x,) = _decode(32, bs, bs.length);
     return x;
   }
 
+  /**
+   * @dev The main decoder for storage
+   * @param self The in-storage struct
+   * @param bs The bytes array to be decoded
+   */
   function decode(Data storage self, bytes memory bs) internal {
     (Data memory x,) = _decode(32, bs, bs.length);
     store(x, self);
   }
   // inner decoder
 
+  /**
+   * @dev The decoder for internal usage
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @param sz The number of bytes expected
+   * @return The decoded struct
+   * @return The number of bytes decoded
+   */
   function _decode(uint p, bytes memory bs, uint sz)
       internal pure returns (Data memory, uint) {
     Data memory r;
@@ -425,6 +665,28 @@ library StakeMiningProperties {
       else if(fieldId == 12) {
         pointer += _read_lastMintBlock(pointer, bs, r, counters);
       }
+      else {
+        if (wireType == ProtoBufRuntime.WireType.Fixed64) {
+          uint size;
+          (, size) = ProtoBufRuntime._decode_fixed64(pointer, bs);
+          pointer += size;
+        }
+        if (wireType == ProtoBufRuntime.WireType.Fixed32) {
+          uint size;
+          (, size) = ProtoBufRuntime._decode_fixed32(pointer, bs);
+          pointer += size;
+        }
+        if (wireType == ProtoBufRuntime.WireType.Varint) {
+          uint size;
+          (, size) = ProtoBufRuntime._decode_varint(pointer, bs);
+          pointer += size;
+        }
+        if (wireType == ProtoBufRuntime.WireType.LengthDelim) {
+          uint size;
+          (, size) = ProtoBufRuntime._decode_lendelim(pointer, bs);
+          pointer += size;
+        }
+      }
     }
     pointer = offset;
     r.tokens = new address[](counters[1]);
@@ -469,13 +731,46 @@ library StakeMiningProperties {
       else if(fieldId == 12) {
         pointer += _read_lastMintBlock(pointer, bs, nil(), counters);
       }
+      else {
+        if (wireType == ProtoBufRuntime.WireType.Fixed64) {
+          uint size;
+          (, size) = ProtoBufRuntime._decode_fixed64(pointer, bs);
+          pointer += size;
+        }
+        if (wireType == ProtoBufRuntime.WireType.Fixed32) {
+          uint size;
+          (, size) = ProtoBufRuntime._decode_fixed32(pointer, bs);
+          pointer += size;
+        }
+        if (wireType == ProtoBufRuntime.WireType.Varint) {
+          uint size;
+          (, size) = ProtoBufRuntime._decode_varint(pointer, bs);
+          pointer += size;
+        }
+        if (wireType == ProtoBufRuntime.WireType.LengthDelim) {
+          uint size;
+          (, size) = ProtoBufRuntime._decode_lendelim(pointer, bs);
+          pointer += size;
+        }
+      }
     }
     return (r, sz);
   }
 
   // field readers
 
+  /**
+   * @dev The decoder for reading a field
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @param r The in-memory struct
+   * @param counters The counters for repeated fields
+   * @return The number of bytes decoded
+   */
   function _read_tokens(uint p, bytes memory bs, Data memory r, uint[13] memory counters) internal pure returns (uint) {
+    /**
+     * if `r` is NULL, then only counting the number of fields.
+     */
     (address x, uint sz) = ProtoBufRuntime._decode_sol_address(p, bs);
     if(isNil(r)) {
       counters[1] += 1;
@@ -486,7 +781,18 @@ library StakeMiningProperties {
     return sz;
   }
 
+  /**
+   * @dev The decoder for reading a field
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @param r The in-memory struct
+   * @param counters The counters for repeated fields
+   * @return The number of bytes decoded
+   */
   function _read_tokenSupported(uint p, bytes memory bs, Data memory r, uint[13] memory counters) internal pure returns (uint) {
+    /**
+     * if `r` is NULL, then only counting the number of fields.
+     */
     (bool x, uint sz) = ProtoBufRuntime._decode_bool(p, bs);
     if(isNil(r)) {
       counters[2] += 1;
@@ -497,7 +803,18 @@ library StakeMiningProperties {
     return sz;
   }
 
+  /**
+   * @dev The decoder for reading a field
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @param r The in-memory struct
+   * @param counters The counters for repeated fields
+   * @return The number of bytes decoded
+   */
   function _read_mintedToken(uint p, bytes memory bs, Data memory r, uint[13] memory counters) internal pure returns (uint) {
+    /**
+     * if `r` is NULL, then only counting the number of fields.
+     */
     (address x, uint sz) = ProtoBufRuntime._decode_sol_address(p, bs);
     if(isNil(r)) {
       counters[3] += 1;
@@ -508,7 +825,18 @@ library StakeMiningProperties {
     return sz;
   }
 
+  /**
+   * @dev The decoder for reading a field
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @param r The in-memory struct
+   * @param counters The counters for repeated fields
+   * @return The number of bytes decoded
+   */
   function _read_startBlock(uint p, bytes memory bs, Data memory r, uint[13] memory counters) internal pure returns (uint) {
+    /**
+     * if `r` is NULL, then only counting the number of fields.
+     */
     (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
     if(isNil(r)) {
       counters[4] += 1;
@@ -519,7 +847,18 @@ library StakeMiningProperties {
     return sz;
   }
 
+  /**
+   * @dev The decoder for reading a field
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @param r The in-memory struct
+   * @param counters The counters for repeated fields
+   * @return The number of bytes decoded
+   */
   function _read_endBlock(uint p, bytes memory bs, Data memory r, uint[13] memory counters) internal pure returns (uint) {
+    /**
+     * if `r` is NULL, then only counting the number of fields.
+     */
     (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
     if(isNil(r)) {
       counters[5] += 1;
@@ -530,7 +869,18 @@ library StakeMiningProperties {
     return sz;
   }
 
+  /**
+   * @dev The decoder for reading a field
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @param r The in-memory struct
+   * @param counters The counters for repeated fields
+   * @return The number of bytes decoded
+   */
   function _read_tokensPerBlock(uint p, bytes memory bs, Data memory r, uint[13] memory counters) internal pure returns (uint) {
+    /**
+     * if `r` is NULL, then only counting the number of fields.
+     */
     (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
     if(isNil(r)) {
       counters[6] += 1;
@@ -541,7 +891,18 @@ library StakeMiningProperties {
     return sz;
   }
 
+  /**
+   * @dev The decoder for reading a field
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @param r The in-memory struct
+   * @param counters The counters for repeated fields
+   * @return The number of bytes decoded
+   */
   function _read_minimumBalance(uint p, bytes memory bs, Data memory r, uint[13] memory counters) internal pure returns (uint) {
+    /**
+     * if `r` is NULL, then only counting the number of fields.
+     */
     (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
     if(isNil(r)) {
       counters[7] += 1;
@@ -552,7 +913,18 @@ library StakeMiningProperties {
     return sz;
   }
 
+  /**
+   * @dev The decoder for reading a field
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @param r The in-memory struct
+   * @param counters The counters for repeated fields
+   * @return The number of bytes decoded
+   */
   function _read_teamWallet(uint p, bytes memory bs, Data memory r, uint[13] memory counters) internal pure returns (uint) {
+    /**
+     * if `r` is NULL, then only counting the number of fields.
+     */
     (address x, uint sz) = ProtoBufRuntime._decode_sol_address(p, bs);
     if(isNil(r)) {
       counters[8] += 1;
@@ -563,7 +935,18 @@ library StakeMiningProperties {
     return sz;
   }
 
+  /**
+   * @dev The decoder for reading a field
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @param r The in-memory struct
+   * @param counters The counters for repeated fields
+   * @return The number of bytes decoded
+   */
   function _read_teamPercentage(uint p, bytes memory bs, Data memory r, uint[13] memory counters) internal pure returns (uint) {
+    /**
+     * if `r` is NULL, then only counting the number of fields.
+     */
     (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
     if(isNil(r)) {
       counters[9] += 1;
@@ -574,7 +957,18 @@ library StakeMiningProperties {
     return sz;
   }
 
+  /**
+   * @dev The decoder for reading a field
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @param r The in-memory struct
+   * @param counters The counters for repeated fields
+   * @return The number of bytes decoded
+   */
   function _read_priceOracle(uint p, bytes memory bs, Data memory r, uint[13] memory counters) internal pure returns (uint) {
+    /**
+     * if `r` is NULL, then only counting the number of fields.
+     */
     (address x, uint sz) = ProtoBufRuntime._decode_sol_address(p, bs);
     if(isNil(r)) {
       counters[10] += 1;
@@ -585,7 +979,18 @@ library StakeMiningProperties {
     return sz;
   }
 
+  /**
+   * @dev The decoder for reading a field
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @param r The in-memory struct
+   * @param counters The counters for repeated fields
+   * @return The number of bytes decoded
+   */
   function _read_accountCount(uint p, bytes memory bs, Data memory r, uint[13] memory counters) internal pure returns (uint) {
+    /**
+     * if `r` is NULL, then only counting the number of fields.
+     */
     (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
     if(isNil(r)) {
       counters[11] += 1;
@@ -596,7 +1001,18 @@ library StakeMiningProperties {
     return sz;
   }
 
+  /**
+   * @dev The decoder for reading a field
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @param r The in-memory struct
+   * @param counters The counters for repeated fields
+   * @return The number of bytes decoded
+   */
   function _read_lastMintBlock(uint p, bytes memory bs, Data memory r, uint[13] memory counters) internal pure returns (uint) {
+    /**
+     * if `r` is NULL, then only counting the number of fields.
+     */
     (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
     if(isNil(r)) {
       counters[12] += 1;
@@ -610,6 +1026,11 @@ library StakeMiningProperties {
 
   // Encoder section
 
+  /**
+   * @dev The main encoder for memory
+   * @param r The struct to be encoded
+   * @return The encoded byte array
+   */
   function encode(Data memory r) internal pure returns (bytes memory) {
     bytes memory bs = new bytes(_estimate(r));
     uint sz = _encode(r, 32, bs);
@@ -620,6 +1041,13 @@ library StakeMiningProperties {
   }
   // inner encoder
 
+  /**
+   * @dev The encoder for internal usage
+   * @param r The struct to be encoded
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @return The number of bytes encoded
+   */
   function _encode(Data memory r, uint p, bytes memory bs)
       internal pure returns (uint) {
     uint offset = p;
@@ -657,8 +1085,19 @@ library StakeMiningProperties {
   }
   // nested encoder
 
+  /**
+   * @dev The encoder for inner struct
+   * @param r The struct to be encoded
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @return The number of bytes encoded
+   */
   function _encode_nested(Data memory r, uint p, bytes memory bs)
       internal pure returns (uint) {
+    /**
+     * First encoded `r` into a temporary array, and encode the actual size used.
+     * Then copy the temporary array into `bs`.
+     */
     uint offset = p;
     uint pointer = p;
     bytes memory tmp = new bytes(_estimate(r));
@@ -673,6 +1112,11 @@ library StakeMiningProperties {
   }
   // estimator
 
+  /**
+   * @dev The estimator for a struct
+   * @param r The struct to be encoded
+   * @return The number of bytes encoded in estimation
+   */
   function _estimate(Data memory r) internal pure returns (uint) {
     uint e;uint i;
     for(i = 0; i < r.tokens.length; i++) {
@@ -695,6 +1139,11 @@ library StakeMiningProperties {
   }
 
   //store function
+  /**
+   * @dev Store in-memory struct to storage
+   * @param input The in-memory struct
+   * @param output The in-storage struct
+   */
   function store(Data memory input, Data storage output) internal {
     output.tokens = input.tokens;
     output.tokenSupported = input.tokenSupported;
@@ -713,7 +1162,15 @@ library StakeMiningProperties {
 
 
   //array helpers for Tokens
+  /**
+   * @dev Add value to an array
+   * @param self The in-memory struct
+   * @param value The value to add
+   */
   function addTokens(Data memory self, address  value) internal pure {
+    /**
+     * First resize the array. Then add the new element to the end.
+     */
     address[] memory tmp = new address[](self.tokens.length + 1);
     for (uint i = 0; i < self.tokens.length; i++) {
       tmp[i] = self.tokens[i];
@@ -723,7 +1180,15 @@ library StakeMiningProperties {
   }
 
   //array helpers for TokenSupported
+  /**
+   * @dev Add value to an array
+   * @param self The in-memory struct
+   * @param value The value to add
+   */
   function addTokenSupported(Data memory self, bool  value) internal pure {
+    /**
+     * First resize the array. Then add the new element to the end.
+     */
     bool[] memory tmp = new bool[](self.tokenSupported.length + 1);
     for (uint i = 0; i < self.tokenSupported.length; i++) {
       tmp[i] = self.tokenSupported[i];
@@ -734,12 +1199,21 @@ library StakeMiningProperties {
 
 
   //utility functions
+  /**
+   * @dev Return an empty struct
+   * @return The empty struct
+   */
   function nil() internal pure returns (Data memory r) {
     assembly {
       r := 0
     }
   }
 
+  /**
+   * @dev Test whether a struct is empty
+   * @param x The struct to be tested
+   * @return True if it is empty
+   */
   function isNil(Data memory x) internal pure returns (bool r) {
     assembly {
       r := iszero(x)
@@ -759,17 +1233,35 @@ library Account {
 
   // Decoder section
 
+  /**
+   * @dev The main decoder for memory
+   * @param bs The bytes array to be decoded
+   * @return The decoded struct
+   */
   function decode(bytes memory bs) internal pure returns (Data memory) {
     (Data memory x,) = _decode(32, bs, bs.length);
     return x;
   }
 
+  /**
+   * @dev The main decoder for storage
+   * @param self The in-storage struct
+   * @param bs The bytes array to be decoded
+   */
   function decode(Data storage self, bytes memory bs) internal {
     (Data memory x,) = _decode(32, bs, bs.length);
     store(x, self);
   }
   // inner decoder
 
+  /**
+   * @dev The decoder for internal usage
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @param sz The number of bytes expected
+   * @return The decoded struct
+   * @return The number of bytes decoded
+   */
   function _decode(uint p, bytes memory bs, uint sz)
       internal pure returns (Data memory, uint) {
     Data memory r;
@@ -788,6 +1280,28 @@ library Account {
       else if(fieldId == 2) {
         pointer += _read_balances(pointer, bs, nil(), counters);
       }
+      else {
+        if (wireType == ProtoBufRuntime.WireType.Fixed64) {
+          uint size;
+          (, size) = ProtoBufRuntime._decode_fixed64(pointer, bs);
+          pointer += size;
+        }
+        if (wireType == ProtoBufRuntime.WireType.Fixed32) {
+          uint size;
+          (, size) = ProtoBufRuntime._decode_fixed32(pointer, bs);
+          pointer += size;
+        }
+        if (wireType == ProtoBufRuntime.WireType.Varint) {
+          uint size;
+          (, size) = ProtoBufRuntime._decode_varint(pointer, bs);
+          pointer += size;
+        }
+        if (wireType == ProtoBufRuntime.WireType.LengthDelim) {
+          uint size;
+          (, size) = ProtoBufRuntime._decode_lendelim(pointer, bs);
+          pointer += size;
+        }
+      }
     }
     pointer = offset;
     r.balances = new uint256[](counters[2]);
@@ -801,13 +1315,46 @@ library Account {
       else if(fieldId == 2) {
         pointer += _read_balances(pointer, bs, r, counters);
       }
+      else {
+        if (wireType == ProtoBufRuntime.WireType.Fixed64) {
+          uint size;
+          (, size) = ProtoBufRuntime._decode_fixed64(pointer, bs);
+          pointer += size;
+        }
+        if (wireType == ProtoBufRuntime.WireType.Fixed32) {
+          uint size;
+          (, size) = ProtoBufRuntime._decode_fixed32(pointer, bs);
+          pointer += size;
+        }
+        if (wireType == ProtoBufRuntime.WireType.Varint) {
+          uint size;
+          (, size) = ProtoBufRuntime._decode_varint(pointer, bs);
+          pointer += size;
+        }
+        if (wireType == ProtoBufRuntime.WireType.LengthDelim) {
+          uint size;
+          (, size) = ProtoBufRuntime._decode_lendelim(pointer, bs);
+          pointer += size;
+        }
+      }
     }
     return (r, sz);
   }
 
   // field readers
 
+  /**
+   * @dev The decoder for reading a field
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @param r The in-memory struct
+   * @param counters The counters for repeated fields
+   * @return The number of bytes decoded
+   */
   function _read_accountAddress(uint p, bytes memory bs, Data memory r, uint[3] memory counters) internal pure returns (uint) {
+    /**
+     * if `r` is NULL, then only counting the number of fields.
+     */
     (address x, uint sz) = ProtoBufRuntime._decode_sol_address(p, bs);
     if(isNil(r)) {
       counters[1] += 1;
@@ -818,7 +1365,18 @@ library Account {
     return sz;
   }
 
+  /**
+   * @dev The decoder for reading a field
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @param r The in-memory struct
+   * @param counters The counters for repeated fields
+   * @return The number of bytes decoded
+   */
   function _read_balances(uint p, bytes memory bs, Data memory r, uint[3] memory counters) internal pure returns (uint) {
+    /**
+     * if `r` is NULL, then only counting the number of fields.
+     */
     (uint256 x, uint sz) = ProtoBufRuntime._decode_sol_uint256(p, bs);
     if(isNil(r)) {
       counters[2] += 1;
@@ -832,6 +1390,11 @@ library Account {
 
   // Encoder section
 
+  /**
+   * @dev The main encoder for memory
+   * @param r The struct to be encoded
+   * @return The encoded byte array
+   */
   function encode(Data memory r) internal pure returns (bytes memory) {
     bytes memory bs = new bytes(_estimate(r));
     uint sz = _encode(r, 32, bs);
@@ -842,6 +1405,13 @@ library Account {
   }
   // inner encoder
 
+  /**
+   * @dev The encoder for internal usage
+   * @param r The struct to be encoded
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @return The number of bytes encoded
+   */
   function _encode(Data memory r, uint p, bytes memory bs)
       internal pure returns (uint) {
     uint offset = p;
@@ -857,8 +1427,19 @@ library Account {
   }
   // nested encoder
 
+  /**
+   * @dev The encoder for inner struct
+   * @param r The struct to be encoded
+   * @param p The offset of bytes array to start decode
+   * @param bs The bytes array to be decoded
+   * @return The number of bytes encoded
+   */
   function _encode_nested(Data memory r, uint p, bytes memory bs)
       internal pure returns (uint) {
+    /**
+     * First encoded `r` into a temporary array, and encode the actual size used.
+     * Then copy the temporary array into `bs`.
+     */
     uint offset = p;
     uint pointer = p;
     bytes memory tmp = new bytes(_estimate(r));
@@ -873,6 +1454,11 @@ library Account {
   }
   // estimator
 
+  /**
+   * @dev The estimator for a struct
+   * @param r The struct to be encoded
+   * @return The number of bytes encoded in estimation
+   */
   function _estimate(Data memory r) internal pure returns (uint) {
     uint e;uint i;
     e += 1 + 23;
@@ -883,6 +1469,11 @@ library Account {
   }
 
   //store function
+  /**
+   * @dev Store in-memory struct to storage
+   * @param input The in-memory struct
+   * @param output The in-storage struct
+   */
   function store(Data memory input, Data storage output) internal {
     output.accountAddress = input.accountAddress;
     output.balances = input.balances;
@@ -891,7 +1482,15 @@ library Account {
 
 
   //array helpers for Balances
+  /**
+   * @dev Add value to an array
+   * @param self The in-memory struct
+   * @param value The value to add
+   */
   function addBalances(Data memory self, uint256  value) internal pure {
+    /**
+     * First resize the array. Then add the new element to the end.
+     */
     uint256[] memory tmp = new uint256[](self.balances.length + 1);
     for (uint i = 0; i < self.balances.length; i++) {
       tmp[i] = self.balances[i];
@@ -902,12 +1501,21 @@ library Account {
 
 
   //utility functions
+  /**
+   * @dev Return an empty struct
+   * @return The empty struct
+   */
   function nil() internal pure returns (Data memory r) {
     assembly {
       r := 0
     }
   }
 
+  /**
+   * @dev Test whether a struct is empty
+   * @param x The struct to be tested
+   * @return True if it is empty
+   */
   function isNil(Data memory x) internal pure returns (bool r) {
     assembly {
       r := iszero(x)
